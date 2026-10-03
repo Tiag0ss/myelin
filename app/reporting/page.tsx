@@ -1,15 +1,5 @@
 'use client';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return (readLocaleStorage() as Locale) || 'en';
-}
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
 import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from 'react';

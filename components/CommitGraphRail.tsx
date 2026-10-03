@@ -1,6 +1,4 @@
 'use client';
-import { useI18n } from '@/lib/i18n/provider';
-
 import type { CommitGraphEdge, CommitGraphRow } from '@/lib/git/commitGraphLayout';
 
 const COL_SPACING = 14;
@@ -17,7 +15,6 @@ export default function CommitGraphRail({
   previousEdges = [],
   height = 56,
 }: CommitGraphRailProps) {
-  const { t } = useI18n();
 
   const midY = height / 2;
   const width = PAD_X * 2 + Math.max(1, row.columns) * COL_SPACING;

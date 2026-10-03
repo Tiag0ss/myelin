@@ -3132,7 +3132,6 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
   };
 
   const healthDot = (status?: string) => {
-  const { t } = useI18n();
     if (status === 'red') return 'bg-red-500';
     if (status === 'amber') return 'bg-amber-500';
     if (status === 'green') return 'bg-green-500';
@@ -3688,7 +3687,6 @@ function TagsTab({
   ];
 
   const renderSegmentedTagPreview = (tag: { Id: number; Name: string; Color: string }) => {
-  const { t } = useI18n();
     const segments = tag.Name
       .split('/')
       .map((segment) => segment.trim())
@@ -3988,7 +3986,6 @@ function AttachmentsTab({
   };
 
   const formatFileSize = (bytes: number) => {
-  const { t } = useI18n();
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
@@ -4351,7 +4348,6 @@ function SlaTab({
   };
 
   const formatHours = (h: number | null) => {
-  const { t } = useI18n();
     if (h == null) return '—';
     if (h < 1) return `${Math.round(h * 60)}m`;
     if (h === 1) return '1h';

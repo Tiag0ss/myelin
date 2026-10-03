@@ -1194,8 +1194,6 @@ const CalendarTab = dynamic(
 );
 
 export default function DashboardPage() {
-  const { t } = useI18n();
-
   return (
     <Suspense fallback={
         <div className="w-full space-y-5 animate-pulse py-6">

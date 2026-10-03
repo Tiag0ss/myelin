@@ -25,18 +25,6 @@ import { useColorVision } from '@/hooks/useColorVision';
 import { useUrlTab } from '@/hooks/useUrlTab';
 import { recordRecentNavAccess } from '@/lib/recentNavAccess';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return readLocaleStorage() ?? 'en';
-}
-
-/** Path translate without hook — for nested helpers/components that cannot call useI18n. */
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
 
 type TabType = 'overview' | 'users' | 'settings' | 'attachments' | 'history';
 const CUSTOMER_DETAIL_TABS = ['overview', 'users', 'settings', 'attachments', 'history'] as const;
@@ -857,7 +845,6 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
   });
 
   const CustomerUsersSortIcon = ({ field }: { field: 'user' | 'email' | 'role' }) => {
-  const { t } = useI18n();
     if (customerUsersSortField !== field) {
       return (
         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

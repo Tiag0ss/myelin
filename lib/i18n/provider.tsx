@@ -35,7 +35,6 @@ export function I18nProvider({
       setLocaleState(stored);
       document.documentElement.lang = htmlLang(stored);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate from storage once
   }, []);
 
   const setLocale = (l: Locale) => {

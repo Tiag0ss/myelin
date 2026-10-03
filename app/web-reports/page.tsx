@@ -1,15 +1,5 @@
 'use client';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return (readLocaleStorage() as Locale) || 'en';
-}
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
 import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
@@ -1343,7 +1333,6 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
   };
 
   const handleDrillDown = (row: any, colKey: string) => {
-  const { t } = useI18n();
     // Parse column key to filter records
     const [colValue] = colKey.split('|||');
     

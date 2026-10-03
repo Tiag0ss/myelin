@@ -65,7 +65,6 @@ function SsoAuthorizeInner() {
     };
 
     void run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handoff runs once per query
   }, [router, searchParams]);
 
   return (

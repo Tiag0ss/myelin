@@ -1,6 +1,5 @@
 'use client';
 
-import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { useAuth } from '@/contexts/AuthContext';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -77,8 +76,6 @@ function mergeMemosListFilters(
 }
 
 export default function MemosPage() {
-  const { t } = useI18n();
-
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <MemosPageContent />
@@ -319,7 +316,6 @@ function MemosPageContent() {
   };
 
   const handleClearAllFilters = () => {
-  const { t } = useI18n();
     setEnableDateFilter(false);
     resetListFilters();
   };
