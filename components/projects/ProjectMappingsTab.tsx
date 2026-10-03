@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useEffect, useState } from 'react';
 import { Project } from '@/lib/api/projects';
@@ -19,6 +20,7 @@ export function ProjectMappingsTab({
   hideInlineSave?: boolean;
   onSavingChange?: (saving: boolean) => void;
 }) {
+  const { t } = useI18n();
   const { showToast } = useToast();
   const [taskStatuses, setTaskStatuses] = useState<StatusValue[]>([]);
   const [taskPriorities, setTaskPriorities] = useState<StatusValue[]>([]);
@@ -88,7 +90,7 @@ export function ProjectMappingsTab({
         setPriorityMappings(toRows(parseProjectMapping(project.JiraTaskPriorityMappingJson)));
         setTypeMappings(toRows(parseProjectMapping(project.JiraTaskTypeMappingJson)));
       } catch (err: any) {
-        setError(err?.message || 'Failed to load mapping options');
+        setError(err?.message || t('lit.failedToLoadMappingOptions'));
       } finally {
         setIsInitializing(false);
       }
@@ -140,16 +142,16 @@ export function ProjectMappingsTab({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to save task mappings');
+        throw new Error(data.message || t('lit.failedToSaveTaskMappings'));
       }
 
       setSuccess(true);
-      showToast({ type: 'success', title: 'Mappings Saved', message: 'Task mappings updated successfully.' });
+      showToast({ type: 'success', title: t('lit.mappingsSaved'), message: t('lit.taskMappingsUpdatedSuccessfully') });
       setTimeout(() => {
         onSaved();
       }, 700);
     } catch (err: any) {
-      setError(err.message || 'Failed to save task mappings');
+      setError(err.message || t('lit.failedToSaveTaskMappings'));
     } finally {
       setIsLoading(false);
     }
@@ -170,12 +172,12 @@ export function ProjectMappingsTab({
           onClick={() => addRow(setter)}
           className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
-          Add mapping
+          {t('lit.addMapping')}
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-xs text-gray-500 dark:text-gray-400">No mappings configured.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{t('lit.noMappingsConfigured')}</p>
       ) : (
         <div className="space-y-2">
           {rows.map((row, index) => (
@@ -192,7 +194,7 @@ export function ProjectMappingsTab({
                 onChange={(e) => updateRow(setter, index, 'target', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               >
-                <option value="">Select target value</option>
+                <option value="">{t('lit.selectTargetValue')}</option>
                 {options.map((option) => (
                   <option key={`${title}-${option}`} value={option}>{option}</option>
                 ))}
@@ -202,7 +204,7 @@ export function ProjectMappingsTab({
                 onClick={() => removeRow(setter, index)}
                 className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           ))}
@@ -218,9 +220,9 @@ export function ProjectMappingsTab({
   return (
     <div>
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Status, Priority and Task Type</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.statusPriorityAndTaskType')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          These mappings apply to Jira Board issue imports. Jira Ticket import uses its own mapping flow.
+          {t('lit.theseMappingsApplyToJiraBoardIssueImportsJiraTicketImportUsesItsOwnMappingFlow')}
         </p>
 
         {error && (
@@ -231,7 +233,7 @@ export function ProjectMappingsTab({
 
         <form id="project-mappings-form" onSubmit={saveMappings} className="space-y-4">
           {isInitializing ? (
-            <div className="text-gray-600 dark:text-gray-400">Loading mapping options...</div>
+            <div className="text-gray-600 dark:text-gray-400">{t('common.loading')}</div>
           ) : (
             <>
               {renderMappingSection('Status Mapping', statusMappings, setStatusMappings, statusOptions, 'External status (e.g. In Progress)')}
@@ -244,7 +246,7 @@ export function ProjectMappingsTab({
                   disabled={isLoading}
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                 >
-                  {isLoading ? 'Saving...' : 'Save mappings'}
+                  {isLoading ? t('lit.saving') : t('lit.saveMappings')}
                 </button>
               )}
             </>

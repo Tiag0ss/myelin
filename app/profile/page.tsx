@@ -1,4 +1,15 @@
 'use client';
+
+import { t as tPath } from '@/lib/i18n/messages';
+import { LOCALES, LOCALE_LABELS, readLocaleStorage, type Locale } from '@/lib/i18n/config';
+import { useI18n } from '@/lib/i18n/provider';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 
@@ -33,92 +44,92 @@ const PROFILE_TABS = [
 ] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 const TIMEZONES = [
-  { value: '', label: 'Use system default' },
-  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: '', label: t('lit.useSystemDefault') },
+  { value: 'UTC', label: t('lit.utcCoordinatedUniversalTime') },
   // Africa
-  { value: 'Africa/Cairo', label: 'Africa/Cairo (EET)' },
-  { value: 'Africa/Casablanca', label: 'Africa/Casablanca (WET)' },
-  { value: 'Africa/Johannesburg', label: 'Africa/Johannesburg (SAST)' },
-  { value: 'Africa/Lagos', label: 'Africa/Lagos (WAT)' },
-  { value: 'Africa/Nairobi', label: 'Africa/Nairobi (EAT)' },
+  { value: t('lit.africaCairo'), label: t('lit.africaCairoEet') },
+  { value: t('lit.africaCasablanca'), label: t('lit.africaCasablancaWet') },
+  { value: t('lit.africaJohannesburg'), label: t('lit.africaJohannesburgSast') },
+  { value: t('lit.africaLagos'), label: t('lit.africaLagosWat') },
+  { value: t('lit.africaNairobi'), label: t('lit.africaNairobiEat') },
   // America
-  { value: 'America/Anchorage', label: 'America/Anchorage (AKST)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'America/Buenos Aires (ART)' },
-  { value: 'America/Bogota', label: 'America/Bogota (COT)' },
-  { value: 'America/Caracas', label: 'America/Caracas (VET)' },
-  { value: 'America/Chicago', label: 'America/Chicago (CST)' },
-  { value: 'America/Denver', label: 'America/Denver (MST)' },
-  { value: 'America/Halifax', label: 'America/Halifax (AST)' },
-  { value: 'America/Lima', label: 'America/Lima (PET)' },
-  { value: 'America/Los_Angeles', label: 'America/Los Angeles (PST)' },
-  { value: 'America/Mexico_City', label: 'America/Mexico City (CST)' },
-  { value: 'America/New_York', label: 'America/New York (EST)' },
-  { value: 'America/Phoenix', label: 'America/Phoenix (MST)' },
-  { value: 'America/Santiago', label: 'America/Santiago (CLT)' },
-  { value: 'America/Sao_Paulo', label: 'America/Sao Paulo (BRT)' },
-  { value: 'America/St_Johns', label: 'America/St Johns (NST)' },
-  { value: 'America/Toronto', label: 'America/Toronto (EST)' },
-  { value: 'America/Vancouver', label: 'America/Vancouver (PST)' },
+  { value: t('lit.americaAnchorage'), label: t('lit.americaAnchorageAkst') },
+  { value: 'America/Argentina/Buenos_Aires', label: t('lit.americaBuenosAiresArt') },
+  { value: t('lit.americaBogota'), label: t('lit.americaBogotaCot') },
+  { value: t('lit.americaCaracas'), label: t('lit.americaCaracasVet') },
+  { value: t('lit.americaChicago'), label: t('lit.americaChicagoCst') },
+  { value: t('lit.americaDenver'), label: t('lit.americaDenverMst') },
+  { value: t('lit.americaHalifax'), label: t('lit.americaHalifaxAst') },
+  { value: t('lit.americaLima'), label: t('lit.americaLimaPet') },
+  { value: 'America/Los_Angeles', label: t('lit.americaLosAngelesPst') },
+  { value: 'America/Mexico_City', label: t('lit.americaMexicoCityCst') },
+  { value: 'America/New_York', label: t('lit.americaNewYorkEst') },
+  { value: t('lit.americaPhoenix'), label: t('lit.americaPhoenixMst') },
+  { value: t('lit.americaSantiago'), label: t('lit.americaSantiagoClt') },
+  { value: 'America/Sao_Paulo', label: t('lit.americaSaoPauloBrt') },
+  { value: 'America/St_Johns', label: t('lit.americaStJohnsNst') },
+  { value: t('lit.americaToronto'), label: t('lit.americaTorontoEst') },
+  { value: t('lit.americaVancouver'), label: t('lit.americaVancouverPst') },
   // Asia
-  { value: 'Asia/Baghdad', label: 'Asia/Baghdad (AST)' },
-  { value: 'Asia/Bangkok', label: 'Asia/Bangkok (ICT)' },
-  { value: 'Asia/Colombo', label: 'Asia/Colombo (IST)' },
-  { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
-  { value: 'Asia/Hong_Kong', label: 'Asia/Hong Kong (HKT)' },
-  { value: 'Asia/Istanbul', label: 'Asia/Istanbul (TRT)' },
-  { value: 'Asia/Jakarta', label: 'Asia/Jakarta (WIB)' },
-  { value: 'Asia/Jerusalem', label: 'Asia/Jerusalem (IST)' },
-  { value: 'Asia/Karachi', label: 'Asia/Karachi (PKT)' },
-  { value: 'Asia/Kathmandu', label: 'Asia/Kathmandu (NPT)' },
-  { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
-  { value: 'Asia/Kuala_Lumpur', label: 'Asia/Kuala Lumpur (MYT)' },
-  { value: 'Asia/Manila', label: 'Asia/Manila (PHT)' },
-  { value: 'Asia/Seoul', label: 'Asia/Seoul (KST)' },
-  { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
-  { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT)' },
-  { value: 'Asia/Taipei', label: 'Asia/Taipei (CST)' },
-  { value: 'Asia/Tehran', label: 'Asia/Tehran (IRST)' },
-  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
+  { value: t('lit.asiaBaghdad'), label: t('lit.asiaBaghdadAst') },
+  { value: t('lit.asiaBangkok'), label: t('lit.asiaBangkokIct') },
+  { value: t('lit.asiaColombo'), label: t('lit.asiaColomboIst') },
+  { value: t('lit.asiaDubai'), label: t('lit.asiaDubaiGst') },
+  { value: 'Asia/Hong_Kong', label: t('lit.asiaHongKongHkt') },
+  { value: t('lit.asiaIstanbul'), label: t('lit.asiaIstanbulTrt') },
+  { value: t('lit.asiaJakarta'), label: t('lit.asiaJakartaWib') },
+  { value: t('lit.asiaJerusalem'), label: t('lit.asiaJerusalemIst') },
+  { value: t('lit.asiaKarachi'), label: t('lit.asiaKarachiPkt') },
+  { value: t('lit.asiaKathmandu'), label: t('lit.asiaKathmanduNpt') },
+  { value: t('lit.asiaKolkata'), label: t('lit.asiaKolkataIst') },
+  { value: 'Asia/Kuala_Lumpur', label: t('lit.asiaKualaLumpurMyt') },
+  { value: t('lit.asiaManila'), label: t('lit.asiaManilaPht') },
+  { value: t('lit.asiaSeoul'), label: t('lit.asiaSeoulKst') },
+  { value: t('lit.asiaShanghai'), label: t('lit.asiaShanghaiCst') },
+  { value: t('lit.asiaSingapore'), label: t('lit.asiaSingaporeSgt') },
+  { value: t('lit.asiaTaipei'), label: t('lit.asiaTaipeiCst') },
+  { value: t('lit.asiaTehran'), label: t('lit.asiaTehranIrst') },
+  { value: t('lit.asiaTokyo'), label: t('lit.asiaTokyoJst') },
   // Atlantic
-  { value: 'Atlantic/Azores', label: 'Atlantic/Azores (AZOT)' },
-  { value: 'Atlantic/Reykjavik', label: 'Atlantic/Reykjavik (GMT)' },
+  { value: t('lit.atlanticAzores'), label: t('lit.atlanticAzoresAzot') },
+  { value: t('lit.atlanticReykjavik'), label: t('lit.atlanticReykjavikGmt') },
   // Australia
-  { value: 'Australia/Adelaide', label: 'Australia/Adelaide (ACST)' },
-  { value: 'Australia/Brisbane', label: 'Australia/Brisbane (AEST)' },
-  { value: 'Australia/Darwin', label: 'Australia/Darwin (ACST)' },
-  { value: 'Australia/Melbourne', label: 'Australia/Melbourne (AEST)' },
-  { value: 'Australia/Perth', label: 'Australia/Perth (AWST)' },
-  { value: 'Australia/Sydney', label: 'Australia/Sydney (AEST)' },
+  { value: t('lit.australiaAdelaide'), label: t('lit.australiaAdelaideAcst') },
+  { value: t('lit.australiaBrisbane'), label: t('lit.australiaBrisbaneAest') },
+  { value: t('lit.australiaDarwin'), label: t('lit.australiaDarwinAcst') },
+  { value: t('lit.australiaMelbourne'), label: t('lit.australiaMelbourneAest') },
+  { value: t('lit.australiaPerth'), label: t('lit.australiaPerthAwst') },
+  { value: t('lit.australiaSydney'), label: t('lit.australiaSydneyAest') },
   // Europe
-  { value: 'Europe/Amsterdam', label: 'Europe/Amsterdam (CET)' },
-  { value: 'Europe/Athens', label: 'Europe/Athens (EET)' },
-  { value: 'Europe/Berlin', label: 'Europe/Berlin (CET)' },
-  { value: 'Europe/Brussels', label: 'Europe/Brussels (CET)' },
-  { value: 'Europe/Bucharest', label: 'Europe/Bucharest (EET)' },
-  { value: 'Europe/Budapest', label: 'Europe/Budapest (CET)' },
-  { value: 'Europe/Copenhagen', label: 'Europe/Copenhagen (CET)' },
-  { value: 'Europe/Dublin', label: 'Europe/Dublin (GMT)' },
-  { value: 'Europe/Helsinki', label: 'Europe/Helsinki (EET)' },
-  { value: 'Europe/Lisbon', label: 'Europe/Lisbon (WET)' },
-  { value: 'Europe/London', label: 'Europe/London (GMT)' },
-  { value: 'Europe/Madrid', label: 'Europe/Madrid (CET)' },
-  { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK)' },
-  { value: 'Europe/Oslo', label: 'Europe/Oslo (CET)' },
-  { value: 'Europe/Paris', label: 'Europe/Paris (CET)' },
-  { value: 'Europe/Prague', label: 'Europe/Prague (CET)' },
-  { value: 'Europe/Rome', label: 'Europe/Rome (CET)' },
-  { value: 'Europe/Stockholm', label: 'Europe/Stockholm (CET)' },
-  { value: 'Europe/Vienna', label: 'Europe/Vienna (CET)' },
-  { value: 'Europe/Warsaw', label: 'Europe/Warsaw (CET)' },
-  { value: 'Europe/Zurich', label: 'Europe/Zurich (CET)' },
+  { value: t('lit.europeAmsterdam'), label: t('lit.europeAmsterdamCet') },
+  { value: t('lit.europeAthens'), label: t('lit.europeAthensEet') },
+  { value: t('lit.europeBerlin'), label: t('lit.europeBerlinCet') },
+  { value: t('lit.europeBrussels'), label: t('lit.europeBrusselsCet') },
+  { value: t('lit.europeBucharest'), label: t('lit.europeBucharestEet') },
+  { value: t('lit.europeBudapest'), label: t('lit.europeBudapestCet') },
+  { value: t('lit.europeCopenhagen'), label: t('lit.europeCopenhagenCet') },
+  { value: t('lit.europeDublin'), label: t('lit.europeDublinGmt') },
+  { value: t('lit.europeHelsinki'), label: t('lit.europeHelsinkiEet') },
+  { value: t('lit.europeLisbon'), label: t('lit.europeLisbonWet') },
+  { value: t('lit.europeLondon'), label: t('lit.europeLondonGmt') },
+  { value: t('lit.europeMadrid'), label: t('lit.europeMadridCet') },
+  { value: t('lit.europeMoscow'), label: t('lit.europeMoscowMsk') },
+  { value: t('lit.europeOslo'), label: t('lit.europeOsloCet') },
+  { value: t('lit.europeParis'), label: t('lit.europeParisCet') },
+  { value: t('lit.europePrague'), label: t('lit.europePragueCet') },
+  { value: t('lit.europeRome'), label: t('lit.europeRomeCet') },
+  { value: t('lit.europeStockholm'), label: t('lit.europeStockholmCet') },
+  { value: t('lit.europeVienna'), label: t('lit.europeViennaCet') },
+  { value: t('lit.europeWarsaw'), label: t('lit.europeWarsawCet') },
+  { value: t('lit.europeZurich'), label: t('lit.europeZurichCet') },
   // Indian
-  { value: 'Indian/Mauritius', label: 'Indian/Mauritius (MUT)' },
+  { value: t('lit.indianMauritius'), label: t('lit.indianMauritiusMut') },
   // Pacific
-  { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST)' },
-  { value: 'Pacific/Fiji', label: 'Pacific/Fiji (FJT)' },
-  { value: 'Pacific/Guam', label: 'Pacific/Guam (ChST)' },
-  { value: 'Pacific/Honolulu', label: 'Pacific/Honolulu (HST)' },
-  { value: 'Pacific/Samoa', label: 'Pacific/Samoa (SST)' },
+  { value: t('lit.pacificAuckland'), label: t('lit.pacificAucklandNzst') },
+  { value: t('lit.pacificFiji'), label: t('lit.pacificFijiFjt') },
+  { value: t('lit.pacificGuam'), label: t('lit.pacificGuamChst') },
+  { value: t('lit.pacificHonolulu'), label: t('lit.pacificHonoluluHst') },
+  { value: t('lit.pacificSamoa'), label: t('lit.pacificSamoaSst') },
 ];
 
 type LeaveDayPortion = 'full' | 'half';
@@ -133,11 +144,13 @@ const formatLeaveUnits = (value: number): string => {
 };
 
 export default function ProfilePage() {
+  const { t } = useI18n();
+
   return (
     <Suspense
       fallback={
         <div className="w-full flex items-center justify-center">
-          <div className="text-gray-700 dark:text-gray-200">Loading…</div>
+          <div className="text-gray-700 dark:text-gray-200">{t('pages.profile.loading')}</div>
         </div>
       }
     >
@@ -147,6 +160,7 @@ export default function ProfilePage() {
 }
 
 function ProfilePageContent() {
+  const { t, locale, setLocale } = useI18n();
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const { user, token, isLoading: authLoading, isCustomerUser, updateUser } = useAuth();
   const router = useRouter();
@@ -447,7 +461,7 @@ function ProfilePageContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load vacations');
+        throw new Error(t('lit.failedToLoadVacations'));
       }
 
       const data = await response.json();
@@ -461,7 +475,7 @@ function ProfilePageContent() {
         isOverLimit: !!data.isOverLimit,
       });
     } catch (err: any) {
-      setMessage(err.message || 'Failed to load vacations');
+      setMessage(err.message || t('lit.failedToLoadVacations'));
     }
   };
 
@@ -484,7 +498,7 @@ function ProfilePageContent() {
     const requestDays = getVacationRequestDays();
 
     if (requestDays <= 0) {
-      setMessage('Invalid vacation date range');
+      setMessage(t('lit.invalidVacationDateRange'));
       return;
     }
 
@@ -506,7 +520,7 @@ function ProfilePageContent() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit vacation request');
+        throw new Error(data.message || t('lit.failedToSubmitVacationRequest'));
       }
 
       const exceededDates = Array.isArray(data.exceededDates) ? data.exceededDates : [];
@@ -523,7 +537,7 @@ function ProfilePageContent() {
       setVacationDayPortion('full');
       await loadVacationData();
     } catch (err: any) {
-      setMessage(err.message || 'Failed to submit vacation request');
+      setMessage(err.message || t('lit.failedToSubmitVacationRequest'));
     } finally {
       setIsSavingVacation(false);
     }
@@ -542,13 +556,13 @@ function ProfilePageContent() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete vacation day');
+        throw new Error(data.message || t('lit.failedToDeleteVacationDay'));
       }
 
-      setMessage('Vacation day deleted');
+      setMessage(t('lit.vacationDayDeleted'));
       await loadVacationData();
     } catch (err: any) {
-      setMessage(err.message || 'Failed to delete vacation day');
+      setMessage(err.message || t('lit.failedToDeleteVacationDay'));
     }
   };
 
@@ -571,7 +585,7 @@ function ProfilePageContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load out-of-office');
+        throw new Error(t('lit.failedToLoadOutOfOffice'));
       }
 
       const data = await response.json();
@@ -588,7 +602,7 @@ function ProfilePageContent() {
         reservedDays: Number(data.reservedDays || 0),
       });
     } catch (err: any) {
-      setMessage(err.message || 'Failed to load out-of-office');
+      setMessage(err.message || t('lit.failedToLoadOutOfOffice'));
     }
   };
 
@@ -611,7 +625,7 @@ function ProfilePageContent() {
     const requestDays = getOutOfOfficeRequestDays();
 
     if (requestDays <= 0) {
-      setMessage('Invalid out-of-office date range');
+      setMessage(t('lit.invalidOutOfOfficeDateRange'));
       return;
     }
 
@@ -633,7 +647,7 @@ function ProfilePageContent() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit out-of-office request');
+        throw new Error(data.message || t('lit.failedToSubmitOutOfOfficeRequest'));
       }
 
       const nonWorkingDates = Array.isArray(data.nonWorkingDates) ? data.nonWorkingDates : [];
@@ -646,7 +660,7 @@ function ProfilePageContent() {
       setOutOfOfficeDayPortion('full');
       await loadOutOfOfficeData();
     } catch (err: any) {
-      setMessage(err.message || 'Failed to submit out-of-office request');
+      setMessage(err.message || t('lit.failedToSubmitOutOfOfficeRequest'));
     } finally {
       setIsSavingOutOfOffice(false);
     }
@@ -665,13 +679,13 @@ function ProfilePageContent() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete out-of-office day');
+        throw new Error(data.message || t('lit.failedToDeleteOutOfOfficeDay'));
       }
 
-      setMessage('Out-of-office day deleted');
+      setMessage(t('lit.outOfOfficeDayDeleted'));
       await loadOutOfOfficeData();
     } catch (err: any) {
-      setMessage(err.message || 'Failed to delete out-of-office day');
+      setMessage(err.message || t('lit.failedToDeleteOutOfOfficeDay'));
     }
   };
 
@@ -702,13 +716,13 @@ function ProfilePageContent() {
       );
       
       if (response.ok) {
-        setMessage('Email preferences saved successfully');
+        setMessage(t('lit.emailPreferencesSavedSuccessfully'));
         setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage('Failed to save email preferences');
+        setMessage(t('lit.failedToSaveEmailPreferences'));
       }
     } catch (_err: any) {
-      setMessage('Failed to save email preferences');
+      setMessage(t('lit.failedToSaveEmailPreferences'));
     } finally {
       setIsSavingEmailPrefs(false);
     }
@@ -744,13 +758,13 @@ function ProfilePageContent() {
       
       const data = await response.json();
       if (response.ok) {
-        setMessage(data.message || 'Test email sent successfully!');
+        setMessage(data.message || t('lit.testEmailSentSuccessfully'));
       } else {
-        setMessage(data.message || 'Failed to send test email');
+        setMessage(data.message || t('lit.failedToSendTestEmail'));
       }
       setTimeout(() => setMessage(''), 5000);
     } catch (_err: any) {
-      setMessage('Failed to send test email');
+      setMessage(t('lit.failedToSendTestEmail'));
       setTimeout(() => setMessage(''), 5000);
     } finally {
       setSendingTestEmail(null);
@@ -766,7 +780,7 @@ function ProfilePageContent() {
       setRecurringAllocations(allocations);
     } catch (err: any) {
       console.error('Failed to load recurring allocations:', err);
-      setMessage('Failed to load recurring tasks');
+      setMessage(t('lit.failedToLoadRecurringTasks'));
     }
   };
 
@@ -777,29 +791,29 @@ function ProfilePageContent() {
     
     // Validate required fields
     if (!recurringForm.title.trim()) {
-      setRecurringError('Title is required');
+      setRecurringError(t('lit.titleIsRequired'));
       return;
     }
     if (!recurringForm.recurrenceType) {
-      setRecurringError('Recurrence type is required');
+      setRecurringError(t('lit.recurrenceTypeIsRequired'));
       return;
     }
     if (!recurringForm.startDate) {
-      setRecurringError('Start date is required');
+      setRecurringError(t('lit.startDateIsRequired2'));
       return;
     }
     if (!recurringForm.startTime) {
-      setRecurringError('Start time is required');
+      setRecurringError(t('lit.startTimeIsRequired'));
       return;
     }
     if (!recurringForm.endTime) {
-      setRecurringError('End time is required');
+      setRecurringError(t('lit.endTimeIsRequired'));
       return;
     }
     
     // Validate custom_days requires daysOfWeek
     if (recurringForm.recurrenceType === 'custom_days' && !recurringForm.daysOfWeek) {
-      setRecurringError('Please select at least one day of the week');
+      setRecurringError(t('lit.pleaseSelectAtLeastOneDayOfTheWeek'));
       return;
     }
     
@@ -831,10 +845,10 @@ function ProfilePageContent() {
 
       if (editingRecurring) {
         await recurringAllocationsApi.update(editingRecurring.Id, allocationData, token);
-        setMessage('Recurring task updated successfully');
+        setMessage(t('lit.recurringTaskUpdatedSuccessfully'));
       } else {
         await recurringAllocationsApi.create(allocationData, token);
-        setMessage('Recurring task created successfully');
+        setMessage(t('lit.recurringTaskCreatedSuccessfully'));
       }
       
       await loadRecurringAllocations();
@@ -845,7 +859,7 @@ function ProfilePageContent() {
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
       console.error('Error saving recurring task:', err);
-      setRecurringError(err.message || 'Failed to save recurring task');
+      setRecurringError(err.message || t('lit.failedToSaveRecurringTask'));
     } finally {
       setIsSaving(false);
     }
@@ -862,11 +876,11 @@ function ProfilePageContent() {
     setRecurringDeleteId(null);
     try {
       await recurringAllocationsApi.delete(id, token);
-      setMessage('Recurring task deleted successfully');
+      setMessage(t('lit.recurringTaskDeletedSuccessfully'));
       await loadRecurringAllocations();
       setTimeout(() => setMessage(''), 3000);
     } catch (_err: any) {
-      setMessage('Failed to delete recurring task');
+      setMessage(t('lit.failedToDeleteRecurringTask'));
     }
   };
 
@@ -903,17 +917,17 @@ function ProfilePageContent() {
   const getRecurrenceTypeLabel = (type: string, interval?: number, daysOfWeek?: string) => {
     switch (type) {
       case 'daily':
-        return 'Every day';
+        return t('lit.everyDay');
       case 'weekly':
-        return 'Every week';
+        return t('lit.everyWeek');
       case 'monthly':
-        return 'Every month';
+        return t('lit.everyMonth');
       case 'custom_days':
         if (daysOfWeek) {
           const days = daysOfWeek.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]);
           return `Every ${days.join(', ')}`;
         }
-        return 'Custom days';
+        return t('lit.customDays');
       case 'interval_days':
         return `Every ${interval} day(s)`;
       case 'interval_weeks':
@@ -1064,14 +1078,14 @@ function ProfilePageContent() {
       );
       
       if (response.ok) {
-        setMessage('Work hours settings saved successfully!');
+        setMessage(t('lit.workHoursSettingsSavedSuccessfully'));
         setTimeout(() => setMessage(''), 3000);
       } else {
         const data = await response.json();
-        setMessage(data.message || 'Failed to save work hours');
+        setMessage(data.message || t('lit.failedToSaveWorkHours'));
       }
     } catch (err: any) {
-      setMessage(err.message || 'An error occurred');
+      setMessage(err.message || t('lit.anErrorOccurred'));
     } finally {
       setIsSaving(false);
     }
@@ -1097,7 +1111,7 @@ function ProfilePageContent() {
       );
       
       if (response.ok) {
-        setMessage('Profile updated successfully!');
+        setMessage(t('lit.profileUpdatedSuccessfully'));
         setIsEditingProfile(false);
         updateUser({ hoursDisplayFormat: profileForm.hoursDisplayFormat });
         // Reload to get updated data
@@ -1105,10 +1119,10 @@ function ProfilePageContent() {
         setTimeout(() => setMessage(''), 3000);
       } else {
         const data = await response.json();
-        setMessage(data.message || 'Failed to update profile');
+        setMessage(data.message || t('lit.failedToUpdateProfile'));
       }
     } catch (err: any) {
-      setMessage(err.message || 'An error occurred');
+      setMessage(err.message || t('lit.anErrorOccurred'));
     } finally {
       setIsSaving(false);
     }
@@ -1139,12 +1153,12 @@ function ProfilePageContent() {
     const confirmPassword = readPasswordInput(confirmPasswordRef);
 
     if (newPassword !== confirmPassword) {
-      setMessage('New passwords do not match');
+      setMessage(t('lit.newPasswordsDoNotMatch'));
       return;
     }
     
     if (newPassword.length < 6) {
-      setMessage('Password must be at least 6 characters');
+      setMessage(t('lit.passwordMustBeAtLeast6Characters'));
       return;
     }
     
@@ -1168,7 +1182,7 @@ function ProfilePageContent() {
       );
       
       if (response.ok) {
-        setMessage('Password changed successfully!');
+        setMessage(t('lit.passwordChangedSuccessfully'));
         clearPasswordInput(currentPasswordRef);
         clearPasswordInput(newPasswordRef);
         clearPasswordInput(confirmPasswordRef);
@@ -1176,10 +1190,10 @@ function ProfilePageContent() {
         setTimeout(() => setMessage(''), 3000);
       } else {
         const data = await response.json();
-        setMessage(data.message || 'Failed to change password');
+        setMessage(data.message || t('lit.failedToChangePassword'));
       }
     } catch (err: any) {
-      setMessage(err.message || 'An error occurred');
+      setMessage(err.message || t('lit.anErrorOccurred'));
     } finally {
       setIsSaving(false);
     }
@@ -1192,20 +1206,20 @@ function ProfilePageContent() {
   }
 
   const profileTabs = [
-    { id: 'info', label: 'Profile Info' },
+    { id: 'info', label: t('lit.profileInfo') },
     ...(!isCustomerUser
       ? [
-          { id: 'vacations', label: 'Vacations' },
-          { id: 'outOfOffice', label: 'Out Of Office' },
-          { id: 'workHours', label: 'Work Hours' },
-          { id: 'recurringTasks', label: 'Recurring Tasks' },
+          { id: 'vacations', label: t('lit.vacations') },
+          { id: 'outOfOffice', label: t('lit.outOfOffice') },
+          { id: 'workHours', label: t('lit.workHours') },
+          { id: 'recurringTasks', label: t('lit.recurringTasks') },
         ]
       : []),
-    { id: 'attachments', label: `My Attachments (${attachments.length})` },
-    { id: 'security', label: 'Security' },
-    ...(!isCustomerUser ? [{ id: 'apiTokens', label: 'API Tokens' }] : []),
-    { id: 'emailAlerts', label: 'Email Alerts' },
-    ...(!isCustomerUser ? [{ id: 'taskForm', label: 'Task Form' }] : []),
+    { id: 'attachments', label: `${t('lit.myAttachments')} (${attachments.length})` },
+    { id: 'security', label: t('lit.security') },
+    ...(!isCustomerUser ? [{ id: 'apiTokens', label: t('pages.profile.apiTokens') }] : []),
+    { id: 'emailAlerts', label: t('pages.profile.emailPreferences') },
+    ...(!isCustomerUser ? [{ id: 'taskForm', label: t('pages.profile.taskFormVisibility') }] : []),
   ];
 
   const handleProfileTabChange = (id: string) => {
@@ -1235,7 +1249,7 @@ function ProfilePageContent() {
         <div className="rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] p-4 shadow-sm">
               {message && (
                 <div className={`mb-3 rounded px-3 py-2 text-sm ${
-                  message.includes('successfully') || message.includes('Success')
+                  message.includes('successfully') || message.includes(t('lit.success'))
                     ? 'bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-400'
                     : 'bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-400'
                 }`}>
@@ -1245,17 +1259,39 @@ function ProfilePageContent() {
               
               {activeTab === 'info' && (
                 <div className="space-y-3">
+                  <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
+                      {t('pages.profile.preferences')}
+                    </p>
+                    <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
+                      {t('chrome.language')}
+                    </label>
+                    <select
+                      className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
+                      value={locale}
+                      onChange={(e) => setLocale(e.target.value as Locale)}
+                      aria-label={t('chrome.language')}
+                    >
+                      {LOCALES.map((l) => (
+                        <option key={l} value={l}>
+                          {LOCALE_LABELS[l]}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px] text-[var(--pm-muted)]">{t('pages.profile.languageHint')}</p>
+                  </div>
+
                   <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Username</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('auth.username')}</label>
                       <p className="rounded border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)]">
                         {user.username}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">Cannot be changed</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">{t('lit.cannotBeChanged')}</p>
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">First Name</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.firstName2')}</label>
                       {isEditingProfile ? (
                         <input
                           type="text"
@@ -1264,12 +1300,12 @@ function ProfilePageContent() {
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         />
                       ) : (
-                        <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">{user.firstName || 'Not set'}</p>
+                        <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">{user.firstName || t('lit.notSet')}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Last Name</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.lastName2')}</label>
                       {isEditingProfile ? (
                         <input
                           type="text"
@@ -1278,12 +1314,12 @@ function ProfilePageContent() {
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         />
                       ) : (
-                        <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">{user.lastName || 'Not set'}</p>
+                        <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">{user.lastName || t('lit.notSet')}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Email</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('auth.email')}</label>
                       {isEditingProfile ? (
                         <input
                           type="email"
@@ -1297,7 +1333,7 @@ function ProfilePageContent() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Azure AD Object ID</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.azureAdObjectId')}</label>
                       {isEditingProfile ? (
                         <>
                           <input
@@ -1310,20 +1346,20 @@ function ProfilePageContent() {
                           <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
                             Needed for Teams call import. Find &quot;oid&quot; at{' '}
                             <a href="https://myaccount.microsoft.com" target="_blank" rel="noopener noreferrer" className="text-[var(--pm-accent-soft)] underline">
-                              myaccount.microsoft.com
+                              {t('lit.myaccountMicrosoftCom')}
                             </a>
                             {' '}→ Profile → Show JSON.
                           </p>
                         </>
                       ) : (
                         <p className="truncate px-0.5 py-1.5 font-mono text-sm text-[var(--pm-text)]">
-                          {profileForm.azureAdObjectId || <span className="italic text-[var(--pm-muted)]">Not set</span>}
+                          {profileForm.azureAdObjectId || <span className="italic text-[var(--pm-muted)]">{t('lit.notSet')}</span>}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Timezone</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.timezone')}</label>
                       {isEditingProfile ? (
                         <select
                           value={profileForm.timezone}
@@ -1336,13 +1372,13 @@ function ProfilePageContent() {
                         </select>
                       ) : (
                         <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">
-                          {profileForm.timezone ? TIMEZONES.find(tz => tz.value === profileForm.timezone)?.label || profileForm.timezone : 'System default'}
+                          {profileForm.timezone ? TIMEZONES.find(tz => tz.value === profileForm.timezone)?.label || profileForm.timezone : t('lit.systemDefault')}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Country</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.country')}</label>
                       {isEditingProfile ? (
                         <input
                           type="text"
@@ -1351,7 +1387,7 @@ function ProfilePageContent() {
                             const val = e.target.value.toUpperCase().slice(0, 2);
                             setProfileForm(prev => ({ ...prev, countryCode: val, regionCode: '' }));
                           }}
-                          placeholder="e.g. PT, DE, US"
+                          placeholder={t('lit.eGPtDeUs')}
                           maxLength={2}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         />
@@ -1361,7 +1397,7 @@ function ProfilePageContent() {
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Region / Subdivision</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.regionSubdivision')}</label>
                       {isEditingProfile ? (
                         profileRegions.length > 0 ? (
                           <select
@@ -1377,8 +1413,8 @@ function ProfilePageContent() {
                         ) : (
                           <p className="px-0.5 py-1.5 text-sm italic text-[var(--pm-muted)]">
                             {profileForm.countryCode
-                              ? 'No regional holidays for this country'
-                              : 'Set a country first'}
+                              ? t('lit.noRegionalHolidaysForThisCountry')
+                              : t('lit.setACountryFirst')}
                           </p>
                         )
                       ) : (
@@ -1387,7 +1423,7 @@ function ProfilePageContent() {
                     </div>
 
                     <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Hours Display Format</label>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.hoursDisplayFormat')}</label>
                       {isEditingProfile ? (
                         <select
                           value={profileForm.hoursDisplayFormat}
@@ -1397,8 +1433,8 @@ function ProfilePageContent() {
                           }))}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         >
-                          <option value="hms">hh:MM:ss (e.g. 01:30:00)</option>
-                          <option value="decimal">Decimal (e.g. 1.50h)</option>
+                          <option value="hms">{t('lit.hhMmSsEG013000')}</option>
+                          <option value="decimal">{t('lit.decimalEG150h')}</option>
                         </select>
                       ) : (
                         <p className="px-0.5 py-1.5 text-sm text-[var(--pm-text)]">
@@ -1410,9 +1446,9 @@ function ProfilePageContent() {
 
                   <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--pm-text)]">Show Calendar in Dashboard Overview</p>
+                      <p className="text-sm font-medium text-[var(--pm-text)]">{t('lit.showCalendarInDashboardOverview')}</p>
                       <p className="text-[11px] text-[var(--pm-muted)]">
-                        When enabled, calendar appears in Overview and the separate calendar menu is hidden.
+                        {t('lit.whenEnabledCalendarAppearsInOverviewAndTheSeparateCalendarMenuIsHidden')}
                       </p>
                     </div>
                     {isEditingProfile ? (
@@ -1424,7 +1460,7 @@ function ProfilePageContent() {
                       />
                     ) : (
                       <span className="shrink-0 text-sm text-[var(--pm-muted)]">
-                        {profileForm.dashboardCalendarInOverview ? 'Yes' : 'No'}
+                        {profileForm.dashboardCalendarInOverview ? t('common.yes') : t('common.no')}
                       </span>
                     )}
                   </div>
@@ -1434,12 +1470,12 @@ function ProfilePageContent() {
               {activeTab === 'security' && (
                 <div className="max-w-md space-y-6">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                    Change Password
+                    {t('pages.profile.changePassword')}
                   </h2>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Current Password
+                      {t('auth.currentPassword')}
                     </label>
                     <PasswordInput
                       ref={currentPasswordRef}
@@ -1452,7 +1488,7 @@ function ProfilePageContent() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      New Password
+                      {t('auth.newPassword')}
                     </label>
                     <PasswordInput
                       ref={newPasswordRef}
@@ -1463,13 +1499,13 @@ function ProfilePageContent() {
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Must be at least 6 characters
+                      {t('lit.mustBeAtLeast6Characters')}
                     </p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Confirm New Password
+                      {t('auth.confirmPassword')}
                     </label>
                     <PasswordInput
                       ref={confirmPasswordRef}
@@ -1488,7 +1524,7 @@ function ProfilePageContent() {
               {activeTab === 'workHours' && (
                 <div className="space-y-3">
                     <p className="text-sm text-[var(--pm-muted)]">
-                      Configure your work and hobby schedule for each day of the week.
+                      {t('lit.configureYourWorkAndHobbyScheduleForEachDayOfTheWeek')}
                     </p>
 
                     <div className="overflow-x-auto" data-grid-enhancer-ignore="true">
@@ -1503,40 +1539,40 @@ function ProfilePageContent() {
                         <thead>
                           <tr className="bg-[var(--pm-surface)]">
                             <th className="border border-[var(--pm-border)] px-3 py-2 text-left text-xs font-semibold text-[var(--pm-muted)]">
-                              Day of Week
+                              {t('lit.dayOfWeek2')}
                             </th>
                             <th className="border border-[var(--pm-border)] px-3 py-2 text-center text-xs font-semibold text-blue-700 dark:text-blue-300" colSpan={2}>
-                              Work
+                              {t('nav.sectionWork')}
                             </th>
                             <th className="border border-[var(--pm-border)] px-3 py-2 text-center text-xs font-semibold text-purple-700 dark:text-purple-300" colSpan={2}>
-                              Hobby
+                              {t('lit.hobby')}
                             </th>
                           </tr>
                           <tr className="bg-[var(--pm-surface)]">
                             <th className="border border-[var(--pm-border)] px-3 py-1.5"></th>
                             <th className="border border-[var(--pm-border)] px-3 py-1.5 text-xs font-medium text-[var(--pm-muted)]">
-                              Start Time
+                              {t('lit.startTime')}
                             </th>
                             <th className="border border-[var(--pm-border)] px-3 py-1.5 text-xs font-medium text-[var(--pm-muted)]">
-                              Hours
+                              {t('common.hours')}
                             </th>
                             <th className="border border-[var(--pm-border)] px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
-                              Start Time
+                              {t('lit.startTime')}
                             </th>
                             <th className="border border-[var(--pm-border)] px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
-                              Hours
+                              {t('common.hours')}
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           {[
-                            { key: 'monday', label: 'Monday' },
-                            { key: 'tuesday', label: 'Tuesday' },
-                            { key: 'wednesday', label: 'Wednesday' },
-                            { key: 'thursday', label: 'Thursday' },
-                            { key: 'friday', label: 'Friday' },
-                            { key: 'saturday', label: 'Saturday' },
-                            { key: 'sunday', label: 'Sunday' },
+                            { key: 'monday', label: t('lit.monday') },
+                            { key: 'tuesday', label: t('lit.tuesday') },
+                            { key: 'wednesday', label: t('lit.wednesday') },
+                            { key: 'thursday', label: t('lit.thursday') },
+                            { key: 'friday', label: t('lit.friday') },
+                            { key: 'saturday', label: t('lit.saturday') },
+                            { key: 'sunday', label: t('lit.sunday') },
                           ].map(({ key, label }) => (
                             <tr key={key} className="hover:bg-[var(--pm-surface)]">
                               <td className="border border-[var(--pm-border)] px-3 py-2">
@@ -1592,7 +1628,7 @@ function ProfilePageContent() {
                         <tfoot>
                           <tr className="bg-[var(--pm-surface)]">
                             <td className="border border-[var(--pm-border)] px-3 py-2 text-right text-sm font-semibold text-[var(--pm-text)]">
-                              Weekly Totals:
+                              {t('lit.weeklyTotals')}
                             </td>
                             <td className="border border-[var(--pm-border)] px-2 py-2"></td>
                             <td className="border border-[var(--pm-border)] px-2 py-2">
@@ -1612,11 +1648,11 @@ function ProfilePageContent() {
                     </div>
 
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-                      <h3 className="mb-3 text-sm font-semibold text-[var(--pm-text)]">Lunch Break Settings</h3>
+                      <h3 className="mb-3 text-sm font-semibold text-[var(--pm-text)]">{t('lit.lunchBreakSettings')}</h3>
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div>
                           <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                            Lunch Time
+                            {t('lit.lunchTime')}
                           </label>
                           <input
                             type="time"
@@ -1625,12 +1661,12 @@ function ProfilePageContent() {
                             className="box-border w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                           />
                           <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                            When your lunch break typically starts
+                            {t('lit.whenYourLunchBreakTypicallyStarts')}
                           </p>
                         </div>
                         <div>
                           <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                            Lunch Duration
+                            {t('lit.lunchDuration')}
                           </label>
                           <div className="flex w-full items-center gap-2">
                             <input
@@ -1642,10 +1678,10 @@ function ProfilePageContent() {
                               onChange={(e) => setLunchDuration(parseInt(e.target.value) || 0)}
                               className="box-border min-w-0 w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                             />
-                            <span className="shrink-0 text-sm text-[var(--pm-muted)]">minutes</span>
+                            <span className="shrink-0 text-sm text-[var(--pm-muted)]">{t('lit.minutes')}</span>
                           </div>
                           <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                            How long your lunch break usually lasts
+                            {t('lit.howLongYourLunchBreakUsuallyLasts')}
                           </p>
                         </div>
                       </div>
@@ -1656,10 +1692,10 @@ function ProfilePageContent() {
               {activeTab === 'attachments' && (
                 <div>
                   {isLoading ? (
-                    <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
                   ) : attachments.length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                      You haven't uploaded any files yet.
+                      {t('lit.youHaventUploadedAnyFilesYet')}
                     </p>
                   ) : (
                     <div className="space-y-3">
@@ -1694,9 +1730,9 @@ function ProfilePageContent() {
                             <button
                               onClick={() => handleDownloadAttachment(attachment)}
                               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors flex-shrink-0"
-                              title="Download"
+                              title={t('common.download')}
                             >
-                              ⬇️ Download
+                              ⬇️ {t('common.download')}
                             </button>
                           </div>
                         </div>
@@ -1713,7 +1749,7 @@ function ProfilePageContent() {
               {activeTab === 'emailAlerts' && (
                 <div className="space-y-3">
                   <p className="text-xs text-[var(--pm-muted)]">
-                    Choose which notifications you want to receive via email.
+                    {t('lit.chooseWhichNotificationsYouWantToReceiveViaEmail')}
                   </p>
 
                   {['Tasks', 'Projects', 'Tickets', 'Planning', 'Summaries'].map(category => {
@@ -1751,7 +1787,7 @@ function ProfilePageContent() {
                                   disabled={sendingTestEmail !== null}
                                   className="shrink-0 rounded border border-[var(--pm-border)] px-2 py-0.5 text-[11px] text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
                                 >
-                                  {sendingTestEmail === pref.type ? 'Sending…' : 'Send test'}
+                                  {sendingTestEmail === pref.type ? 'Sending…' : t('lit.sendTest')}
                                 </button>
                               )}
                             </div>
@@ -1763,7 +1799,7 @@ function ProfilePageContent() {
 
                   {emailPreferences.length === 0 && (
                     <div className="py-6 text-center text-sm text-[var(--pm-muted)]">
-                      Loading preferences…
+                      {t('lit.loadingPreferences')}
                     </div>
                   )}
                 </div>
@@ -1773,9 +1809,9 @@ function ProfilePageContent() {
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recurring Tasks</h2>
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('lit.recurringTasks')}</h2>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Define recurring time blocks that are automatically allocated to prevent scheduling conflicts
+                        {t('lit.defineRecurringTimeBlocksThatAreAutomaticallyAllocatedToPreventSchedulingConflic')}
                       </p>
                     </div>
                     <button
@@ -1786,14 +1822,14 @@ function ProfilePageContent() {
                       }}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
                     >
-                      <span>➕</span> New Recurring Task
+                      <span>➕</span> {t('lit.newRecurringTask')}
                     </button>
                   </div>
 
                   {recurringAllocations.length === 0 ? (
                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      <p className="text-lg mb-2">No recurring tasks defined</p>
-                      <p className="text-sm">Create a recurring task to automatically block time on your calendar</p>
+                      <p className="text-lg mb-2">{t('lit.noRecurringTasksDefined')}</p>
+                      <p className="text-sm">{t('lit.createARecurringTaskToAutomaticallyBlockTimeOnYourCalendar')}</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1807,7 +1843,7 @@ function ProfilePageContent() {
                               <h3 className="font-semibold text-gray-900 dark:text-white">{allocation.Title}</h3>
                               {!allocation.IsActive && (
                                 <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">
-                                  Inactive
+                                  {t('common.inactive')}
                                 </span>
                               )}
                             </div>
@@ -1852,34 +1888,34 @@ function ProfilePageContent() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Annual Total</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.annualTotal')}</p>
                       <p className="text-base font-semibold tabular-nums text-[var(--pm-text)]">{vacationSummary.annualTotal}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Approved</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.approved')}</p>
                       <p className="text-base font-semibold tabular-nums text-green-600 dark:text-green-400">{vacationSummary.approvedDays}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Pending</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.pending')}</p>
                       <p className="text-base font-semibold tabular-nums text-yellow-600 dark:text-yellow-400">{vacationSummary.pendingDays}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Remaining</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.remaining')}</p>
                       <p className="text-base font-semibold tabular-nums text-blue-600 dark:text-blue-400">{vacationSummary.remainingDays}</p>
                     </div>
                   </div>
 
                   {vacationSummary.isOverLimit && (
                     <div className="rounded border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                      Warning: Vacation allocation exceeds annual limit.
+                      {t('lit.warningVacationAllocationExceedsAnnualLimit')}
                     </div>
                   )}
 
                   <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-                    <h3 className="text-sm font-semibold text-[var(--pm-text)]">Request Vacation</h3>
+                    <h3 className="text-sm font-semibold text-[var(--pm-text)]">{t('lit.requestVacation')}</h3>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Start Date</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.startDate')}</label>
                         <input
                           type="date"
                           value={vacationStartDate}
@@ -1888,7 +1924,7 @@ function ProfilePageContent() {
                         />
                       </div>
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">End Date</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.endDate')}</label>
                         <input
                           type="date"
                           value={vacationEndDate}
@@ -1899,24 +1935,24 @@ function ProfilePageContent() {
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Day Portion</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.dayPortion')}</label>
                         <select
                           value={vacationDayPortion}
                           onChange={(e) => setVacationDayPortion(e.target.value as LeaveDayPortion)}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)]"
                         >
-                          <option value="full">Full Day (default)</option>
-                          <option value="half">Half Day</option>
+                          <option value="full">{t('lit.fullDayDefault')}</option>
+                          <option value="half">{t('lit.halfDay')}</option>
                         </select>
                       </div>
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Notes</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.notes')}</label>
                         <input
                           type="text"
                           value={vacationNotes}
                           onChange={(e) => setVacationNotes(e.target.value)}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)]"
-                          placeholder="Optional notes"
+                          placeholder={t('lit.optionalNotes')}
                         />
                       </div>
                     </div>
@@ -1930,9 +1966,9 @@ function ProfilePageContent() {
                   </div>
 
                   <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-[var(--pm-text)]">My Vacation Days</h3>
+                    <h3 className="mb-2 text-sm font-semibold text-[var(--pm-text)]">{t('lit.myVacationDays')}</h3>
                     {vacationEntries.length === 0 ? (
-                      <p className="text-sm text-[var(--pm-muted)]">No vacation records yet.</p>
+                      <p className="text-sm text-[var(--pm-muted)]">{t('lit.noVacationRecordsYet')}</p>
                     ) : (
                       <div className="space-y-1.5">
                         {vacationEntries.map((entry) => (
@@ -1940,7 +1976,7 @@ function ProfilePageContent() {
                             <span className="text-sm text-[var(--pm-text)]">{String(entry.VacationDate).split('T')[0]}</span>
                             <div className="flex items-center gap-2">
                               <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-800 dark:bg-gray-600 dark:text-gray-100">
-                                {normalizeLeaveDayPortion(entry.DayPortion) === 'half' ? 'Half Day' : 'Full Day'}
+                                {normalizeLeaveDayPortion(entry.DayPortion) === 'half' ? t('lit.halfDay') : t('lit.fullDay')}
                               </span>
                               <span className={`rounded px-2 py-0.5 text-xs ${String(entry.Status).toLowerCase() === 'approved'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -1953,7 +1989,7 @@ function ProfilePageContent() {
                                 onClick={() => setVacationDeleteTarget({ id: entry.Id, date: String(entry.VacationDate).split('T')[0] })}
                                 className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
                               >
-                                Delete
+                                {t('common.delete')}
                               </button>
                             </div>
                           </div>
@@ -1968,28 +2004,28 @@ function ProfilePageContent() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Approved</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.approved')}</p>
                       <p className="text-base font-semibold tabular-nums text-green-600 dark:text-green-400">{outOfOfficeSummary.approvedDays}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Pending</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.pending')}</p>
                       <p className="text-base font-semibold tabular-nums text-yellow-600 dark:text-yellow-400">{outOfOfficeSummary.pendingDays}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Rejected</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.rejected')}</p>
                       <p className="text-base font-semibold tabular-nums text-red-600 dark:text-red-400">{outOfOfficeSummary.rejectedDays}</p>
                     </div>
                     <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2">
-                      <p className="text-[11px] text-[var(--pm-muted)]">Reserved</p>
+                      <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.reserved')}</p>
                       <p className="text-base font-semibold tabular-nums text-blue-600 dark:text-blue-400">{outOfOfficeSummary.reservedDays}</p>
                     </div>
                   </div>
 
                   <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-                    <h3 className="text-sm font-semibold text-[var(--pm-text)]">Request Out Of Office</h3>
+                    <h3 className="text-sm font-semibold text-[var(--pm-text)]">{t('lit.requestOutOfOffice')}</h3>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Start Date</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.startDate')}</label>
                         <input
                           type="date"
                           value={outOfOfficeStartDate}
@@ -1998,7 +2034,7 @@ function ProfilePageContent() {
                         />
                       </div>
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">End Date</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.endDate')}</label>
                         <input
                           type="date"
                           value={outOfOfficeEndDate}
@@ -2009,24 +2045,24 @@ function ProfilePageContent() {
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Day Portion</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.dayPortion')}</label>
                         <select
                           value={outOfOfficeDayPortion}
                           onChange={(e) => setOutOfOfficeDayPortion(e.target.value as LeaveDayPortion)}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)]"
                         >
-                          <option value="full">Full Day (default)</option>
-                          <option value="half">Half Day</option>
+                          <option value="full">{t('lit.fullDayDefault')}</option>
+                          <option value="half">{t('lit.halfDay')}</option>
                         </select>
                       </div>
                       <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Notes</label>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.notes')}</label>
                         <input
                           type="text"
                           value={outOfOfficeNotes}
                           onChange={(e) => setOutOfOfficeNotes(e.target.value)}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)]"
-                          placeholder="Optional notes"
+                          placeholder={t('lit.optionalNotes')}
                         />
                       </div>
                     </div>
@@ -2040,9 +2076,9 @@ function ProfilePageContent() {
                   </div>
 
                   <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-[var(--pm-text)]">My Out Of Office Days</h3>
+                    <h3 className="mb-2 text-sm font-semibold text-[var(--pm-text)]">{t('lit.myOutOfOfficeDays')}</h3>
                     {outOfOfficeEntries.length === 0 ? (
-                      <p className="text-sm text-[var(--pm-muted)]">No out-of-office records yet.</p>
+                      <p className="text-sm text-[var(--pm-muted)]">{t('lit.noOutOfOfficeRecordsYet')}</p>
                     ) : (
                       <div className="space-y-1.5">
                         {outOfOfficeEntries.map((entry) => (
@@ -2050,7 +2086,7 @@ function ProfilePageContent() {
                             <span className="text-sm text-[var(--pm-text)]">{String(entry.OutOfOfficeDate || entry.VacationDate).split('T')[0]}</span>
                             <div className="flex items-center gap-2">
                               <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-800 dark:bg-gray-600 dark:text-gray-100">
-                                {normalizeLeaveDayPortion(entry.DayPortion) === 'half' ? 'Half Day' : 'Full Day'}
+                                {normalizeLeaveDayPortion(entry.DayPortion) === 'half' ? t('lit.halfDay') : t('lit.fullDay')}
                               </span>
                               <span className={`rounded px-2 py-0.5 text-xs ${String(entry.Status).toLowerCase() === 'approved'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -2063,7 +2099,7 @@ function ProfilePageContent() {
                                 onClick={() => setOutOfOfficeDeleteTarget({ id: entry.Id, date: String(entry.OutOfOfficeDate || entry.VacationDate).split('T')[0] })}
                                 className="rounded bg-red-600 px-2 py-0.5 text-xs text-white hover:bg-red-700"
                               >
-                                Delete
+                                {t('common.delete')}
                               </button>
                             </div>
                           </div>
@@ -2080,7 +2116,7 @@ function ProfilePageContent() {
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                     <div className="p-6">
                       <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                        {editingRecurring ? 'Edit Recurring Task' : 'New Recurring Task'}
+                        {editingRecurring ? t('lit.editRecurringTask') : t('lit.newRecurringTask')}
                       </h2>
 
                       {recurringError && (
@@ -2093,48 +2129,48 @@ function ProfilePageContent() {
                         {/* Title */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Title *
+                            {t('lit.title2')}
                           </label>
                           <input
                             type="text"
                             value={recurringForm.title}
                             onChange={(e) => setRecurringForm({ ...recurringForm, title: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            placeholder="e.g., Team Meeting, Gym Time"
+                            placeholder={t('lit.eGTeamMeetingGymTime')}
                           />
                         </div>
 
                         {/* Description */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Description
+                            {t('common.description')}
                           </label>
                           <textarea
                             value={recurringForm.description}
                             onChange={(e) => setRecurringForm({ ...recurringForm, description: e.target.value })}
                             rows={2}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            placeholder="Optional description"
+                            placeholder={t('lit.optionalDescription')}
                           />
                         </div>
 
                         {/* Recurrence Type */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Recurrence Pattern *
+                            {t('lit.recurrencePattern')}
                           </label>
                           <select
                             value={recurringForm.recurrenceType}
                             onChange={(e) => setRecurringForm({ ...recurringForm, recurrenceType: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
-                            <option value="daily">Every day</option>
-                            <option value="weekly">Every week</option>
-                            <option value="monthly">Every month</option>
-                            <option value="custom_days">Specific days of the week</option>
-                            <option value="interval_days">Every X days</option>
-                            <option value="interval_weeks">Every X weeks</option>
-                            <option value="interval_months">Every X months</option>
+                            <option value="daily">{t('lit.everyDay')}</option>
+                            <option value="weekly">{t('lit.everyWeek')}</option>
+                            <option value="monthly">{t('lit.everyMonth')}</option>
+                            <option value="custom_days">{t('lit.specificDaysOfTheWeek')}</option>
+                            <option value="interval_days">{t('lit.everyXDays')}</option>
+                            <option value="interval_weeks">{t('lit.everyXWeeks')}</option>
+                            <option value="interval_months">{t('lit.everyXMonths')}</option>
                           </select>
                         </div>
 
@@ -2142,7 +2178,7 @@ function ProfilePageContent() {
                         {['interval_days', 'interval_weeks', 'interval_months'].includes(recurringForm.recurrenceType) && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Interval *
+                              {t('lit.interval')}
                             </label>
                             <input
                               type="number"
@@ -2158,10 +2194,10 @@ function ProfilePageContent() {
                         {recurringForm.recurrenceType === 'custom_days' && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Select Days *
+                              {t('lit.selectDays')}
                             </label>
                             <div className="flex flex-wrap gap-2">
-                              {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
+                              {[t('lit.sunday'), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
                                 const selectedDays = recurringForm.daysOfWeek.split(',').filter(d => d);
                                 const isSelected = selectedDays.includes(String(index));
                                 return (
@@ -2195,7 +2231,7 @@ function ProfilePageContent() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Start Time *
+                              {t('lit.startTime2')}
                             </label>
                             <input
                               type="time"
@@ -2206,7 +2242,7 @@ function ProfilePageContent() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              End Time *
+                              {t('lit.endTime2')}
                             </label>
                             <input
                               type="time"
@@ -2221,7 +2257,7 @@ function ProfilePageContent() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Start Date *
+                              {t('lit.startDate2')}
                             </label>
                             <input
                               type="date"
@@ -2232,7 +2268,7 @@ function ProfilePageContent() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              End Date (optional)
+                              {t('lit.endDateOptional')}
                             </label>
                             <input
                               type="date"
@@ -2244,7 +2280,7 @@ function ProfilePageContent() {
                         </div>
 
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          This recurring task will automatically block time on your calendar to prevent scheduling conflicts.
+                          {t('lit.thisRecurringTaskWillAutomaticallyBlockTimeOnYourCalendarToPreventSchedulingConf')}
                         </p>
                       </div>
 
@@ -2258,14 +2294,14 @@ function ProfilePageContent() {
                           }}
                           className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button
                           onClick={handleSaveRecurring}
                           disabled={isSaving || !recurringForm.title.trim() || !recurringForm.startTime || !recurringForm.endTime || !recurringForm.startDate}
                           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                         >
-                          {isSaving ? 'Saving...' : 'Save Recurring Task'}
+                          {isSaving ? t('lit.saving') : t('lit.saveRecurringTask')}
                         </button>
                       </div>
                     </div>
@@ -2277,7 +2313,7 @@ function ProfilePageContent() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110] p-4">
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
                     <div className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Vacation Day</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('lit.deleteVacationDay')}</h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
                         Are you sure you want to delete your vacation day on{' '}
                         <span className="font-medium">{vacationDeleteTarget.date}</span>?
@@ -2287,13 +2323,13 @@ function ProfilePageContent() {
                           onClick={() => setVacationDeleteTarget(null)}
                           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button
                           onClick={confirmDeleteMyVacation}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       </div>
                     </div>
@@ -2305,7 +2341,7 @@ function ProfilePageContent() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110] p-4">
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
                     <div className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Out Of Office Day</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('lit.deleteOutOfOfficeDay')}</h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
                         Are you sure you want to delete your out-of-office day on{' '}
                         <span className="font-medium">{outOfOfficeDeleteTarget.date}</span>?
@@ -2315,13 +2351,13 @@ function ProfilePageContent() {
                           onClick={() => setOutOfOfficeDeleteTarget(null)}
                           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                         <button
                           onClick={confirmDeleteMyOutOfOffice}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       </div>
                     </div>
@@ -2346,7 +2382,7 @@ function ProfilePageContent() {
                   onClick={() => setIsEditingProfile(true)}
                   className={pageActionButtonClass.primary}
                 >
-                  Edit Profile
+                  {t('lit.editProfile')}
                 </button>
               ) : (
                 <>
@@ -2358,7 +2394,7 @@ function ProfilePageContent() {
                     }}
                     className={pageActionButtonClass.secondary}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -2366,7 +2402,7 @@ function ProfilePageContent() {
                     disabled={isSaving}
                     className={pageActionButtonClass.success}
                   >
-                    {isSaving ? 'Saving…' : 'Save Changes'}
+                    {isSaving ? t('common.saving') : t('pages.profile.saveProfile')}
                   </button>
                 </>
               )}
@@ -2379,7 +2415,7 @@ function ProfilePageContent() {
               disabled={isSaving}
               className={pageActionButtonClass.primary}
             >
-              {isSaving ? 'Saving…' : 'Save Settings'}
+              {isSaving ? t('common.saving') : t('lit.saveSettings')}
             </button>
           )}
           {activeTab === 'security' && (
@@ -2389,7 +2425,7 @@ function ProfilePageContent() {
               disabled={isSaving || !canChangePassword}
               className={pageActionButtonClass.primary}
             >
-              {isSaving ? 'Changing Password…' : 'Change Password'}
+              {isSaving ? t('lit.changingPassword') : t('pages.profile.changePassword')}
             </button>
           )}
           {activeTab === 'emailAlerts' && (
@@ -2399,7 +2435,7 @@ function ProfilePageContent() {
               disabled={isSavingEmailPrefs || emailPreferences.length === 0}
               className={pageActionButtonClass.primary}
             >
-              {isSavingEmailPrefs ? 'Saving…' : 'Save Preferences'}
+              {isSavingEmailPrefs ? t('common.saving') : t('lit.savePreferences')}
             </button>
           )}
           {activeTab === 'taskForm' && taskFormActions && (
@@ -2411,7 +2447,7 @@ function ProfilePageContent() {
                   disabled={taskFormActions.saving || taskFormActions.syncing}
                   className={pageActionButtonClass.secondary}
                 >
-                  {taskFormActions.syncing ? 'Resetting…' : 'Use organization default'}
+                  {taskFormActions.syncing ? t('lit.resetting') : t('lit.useOrganizationDefault')}
                 </button>
               )}
               {taskFormActions.canManage && (
@@ -2421,7 +2457,7 @@ function ProfilePageContent() {
                   disabled={taskFormActions.saving || taskFormActions.syncing}
                   className={pageActionButtonClass.primary}
                 >
-                  {taskFormActions.saving ? 'Saving…' : 'Save personal override'}
+                  {taskFormActions.saving ? t('common.saving') : t('lit.savePersonalOverride')}
                 </button>
               )}
             </>
@@ -2434,11 +2470,11 @@ function ProfilePageContent() {
       <ConfirmAlertModal
         isOpen={recurringDeleteId !== null}
         type="confirm"
-        title="Delete recurring task"
-        message="Are you sure you want to delete this recurring task? This will remove all future occurrences."
+        title={t('lit.deleteRecurringTask')}
+        message={t('lit.areYouSureYouWantToDeleteThisRecurringTaskThisWillRemoveAllFutureOccurre')}
         onClose={() => setRecurringDeleteId(null)}
         onConfirm={() => void confirmDeleteRecurring()}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

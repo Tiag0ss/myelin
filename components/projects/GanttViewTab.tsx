@@ -1,10 +1,15 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
+import { htmlLang } from '@/lib/i18n/config';
 
 import React, { useEffect, useState } from 'react';
 import { Task } from '@/lib/api/tasks';
 import { TaskTypeIconMark } from '@/lib/taskTypeIcons';
 
 export function GanttViewTab({ tasks }: { tasks: Task[] }) {
+  const { t, locale } = useI18n();
+  const dateLocale = htmlLang(locale);
+
   type ViewMode = 'Week' | 'Month' | 'Year';
   const [viewMode, setViewMode] = useState<ViewMode>('Month');
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
@@ -241,7 +246,7 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
             >
-              Week
+              {t('lit.week')}
             </button>
             <button
               onClick={() => setViewMode('Month')}
@@ -251,7 +256,7 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
             >
-              Month
+              {t('lit.month')}
             </button>
             <button
               onClick={() => setViewMode('Year')}
@@ -261,7 +266,7 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
             >
-              Year
+              {t('lit.year')}
             </button>
           </div>
           
@@ -277,13 +282,13 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
               onClick={handleToday}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              Today
+              {t('lit.today')}
             </button>
             <button
               onClick={handleNext}
               className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              Next →
+              {t('lit.next')}
             </button>
           </div>
         </div>
@@ -293,10 +298,10 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <div className="text-6xl mb-4">📅</div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No Planned Tasks in This Period
+            {t('lit.noPlannedTasksInThisPeriod')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Tasks need to be planned in the Planning section to appear in the Gantt chart
+            {t('lit.tasksNeedToBePlannedInThePlanningSectionToAppearInTheGanttChart')}
           </p>
         </div>
       ) : (
@@ -305,30 +310,32 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
           <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <div className="flex">
               <div className="w-64 flex-shrink-0 px-4 py-3 font-bold text-gray-700 dark:text-gray-300">
-                Task Name
+                {t('lit.taskName')}
               </div>
               <div className="flex-1 flex min-w-[800px]">
                 {viewMode === 'Week' && days.filter((_, i) => i % 7 === 0).map((day, idx) => (
                   <div key={idx} className="flex-1 px-2 py-3 text-center border-l border-gray-200 dark:border-gray-600">
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      Week {Math.floor((day.getTime() - new Date(day.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1}
+                      {t('lit.weekN', {
+                        n: Math.floor((day.getTime() - new Date(day.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
+                      })}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {day.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                     </div>
                   </div>
                 ))}
                 {viewMode === 'Month' && days.filter((_, i) => i % 7 === 0).map((day, idx) => (
                   <div key={idx} className="flex-1 px-2 py-3 text-center border-l border-gray-200 dark:border-gray-600">
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {day.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                     </div>
                   </div>
                 ))}
                 {viewMode === 'Year' && days.filter((_, i) => i % 30 === 0).map((day, idx) => (
                   <div key={idx} className="flex-1 px-2 py-3 text-center border-l border-gray-200 dark:border-gray-600">
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {day.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {day.toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' })}
                     </div>
                   </div>
                 ))}
@@ -359,7 +366,7 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
                             onClick={() => toggleExpand(task.Id)}
                             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-transform mt-0.5"
                             style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-                            title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                            title={isExpanded ? t('lit.collapseSubtasks') : t('lit.expandSubtasks')}
                           >
                             ▶
                           </button>
@@ -385,7 +392,7 @@ export function GanttViewTab({ tasks }: { tasks: Task[] }) {
                             )}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {task.AssigneeName || 'Unassigned'}
+                            {task.AssigneeName || t('lit.unassigned')}
                           </div>
                         </div>
                       </div>

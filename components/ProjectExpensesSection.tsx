@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function ProjectExpensesSection({ projectId, token, canViewBudgetInfo }: Props) {
+  const { t } = useI18n();
   const [enabled, setEnabled] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,13 +60,13 @@ export default function ProjectExpensesSection({ projectId, token, canViewBudget
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-          Expenses
+          {t('nav.expenses')}
         </h2>
         <Link
           href={`/expenses?projectId=${projectId}`}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
-          Open expenses
+          {t('lit.openExpenses')}
         </Link>
       </div>
       {canViewBudgetInfo && (
@@ -74,9 +76,9 @@ export default function ProjectExpensesSection({ projectId, token, canViewBudget
         </div>
       )}
       {isLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
       ) : expenses.length === 0 ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">No expenses linked to this project.</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noExpensesLinkedToThisProject')}</div>
       ) : (
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {expenses.slice(0, 8).map((e) => (

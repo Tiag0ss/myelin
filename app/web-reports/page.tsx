@@ -1,4 +1,16 @@
 'use client';
+
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 
@@ -121,6 +133,7 @@ function WebReportsPageFromQuery() {
 
 /** Pivot explorer — use `embedded` inside the Reporting hub (no page chrome / hero). */
 export function WebReportsExplorer({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useI18n();
   const { mapColor } = useColorVision();
   const { user, token, isLoading, isCustomerUser } = useAuth();
   const { permissions, isLoading: isLoadingPermissions } = usePermissions();
@@ -164,116 +177,116 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
   const dataSources: DataSource[] = [
     {
       id: 'time-entries',
-      name: 'Time Entries',
+      name: t('lit.timeEntries'),
       endpoint: '/api/time-entries/my-entries',
       fields: [
-        { key: 'WorkDate', label: 'Work Date', type: 'date' },
-        { key: 'Hours', label: 'Hours', type: 'number' },
-        { key: 'TaskName', label: 'Task Name', type: 'text' },
-        { key: 'ProjectName', label: 'Project Name', type: 'text' },
-        { key: 'Description', label: 'Description', type: 'text' },
-        { key: 'StartTime', label: 'Start Time', type: 'text' },
-        { key: 'EndTime', label: 'End Time', type: 'text' },
+        { key: 'WorkDate', label: t('lit.workDate'), type: 'date' },
+        { key: t('lit.hours2'), label: t('lit.hours2'), type: 'number' },
+        { key: 'TaskName', label: t('lit.taskName'), type: 'text' },
+        { key: 'ProjectName', label: t('lit.projectName'), type: 'text' },
+        { key: t('lit.description2'), label: t('lit.description2'), type: 'text' },
+        { key: 'StartTime', label: t('lit.startTime'), type: 'text' },
+        { key: 'EndTime', label: t('lit.endTime'), type: 'text' },
       ]
     },
     {
       id: 'tasks',
-      name: 'Tasks',
+      name: t('lit.tasks'),
       endpoint: '/api/tasks/my-tasks',
       fields: [
-        { key: 'TaskName', label: 'Task Name', type: 'text' },
-        { key: 'ProjectName', label: 'Project Name', type: 'text' },
-        { key: 'StatusName', label: 'Status', type: 'text' },
-        { key: 'PriorityName', label: 'Priority', type: 'text' },
-        { key: 'EstimatedHours', label: 'Estimated Hours', type: 'number' },
-        { key: 'PlannedStartDate', label: 'Planned Start', type: 'date' },
-        { key: 'PlannedEndDate', label: 'Planned End', type: 'date' },
-        { key: 'AssigneeName', label: 'Assigned To', type: 'text' },
-        { key: 'CreatorName', label: 'Created By', type: 'text' },
-        { key: 'DependsOnTaskName', label: 'Depends On', type: 'text' },
-        { key: 'Description', label: 'Description', type: 'text' },
-        { key: 'SubtaskCount', label: 'Subtasks Count', type: 'number' },
-        { key: 'IsHobby', label: 'Is Hobby Project', type: 'number' },
+        { key: 'TaskName', label: t('lit.taskName'), type: 'text' },
+        { key: 'ProjectName', label: t('lit.projectName'), type: 'text' },
+        { key: 'StatusName', label: t('lit.status'), type: 'text' },
+        { key: 'PriorityName', label: t('lit.priority'), type: 'text' },
+        { key: 'EstimatedHours', label: t('lit.estimatedHours'), type: 'number' },
+        { key: 'PlannedStartDate', label: t('lit.plannedStart'), type: 'date' },
+        { key: 'PlannedEndDate', label: t('lit.plannedEnd'), type: 'date' },
+        { key: 'AssigneeName', label: t('lit.assignedTo'), type: 'text' },
+        { key: 'CreatorName', label: t('lit.createdBy2'), type: 'text' },
+        { key: 'DependsOnTaskName', label: t('lit.dependsOn'), type: 'text' },
+        { key: t('lit.description2'), label: t('lit.description2'), type: 'text' },
+        { key: 'SubtaskCount', label: t('lit.subtasksCount'), type: 'number' },
+        { key: 'IsHobby', label: t('lit.isHobbyProject'), type: 'number' },
       ]
     },
     {
       id: 'projects',
-      name: 'Projects',
+      name: t('lit.projects'),
       endpoint: '/api/projects',
       fields: [
-        { key: 'ProjectName', label: 'Project Name', type: 'text' },
-        { key: 'StatusName', label: 'Status', type: 'text' },
-        { key: 'StartDate', label: 'Start Date', type: 'date' },
-        { key: 'EndDate', label: 'End Date', type: 'date' },
-        { key: 'OrganizationName', label: 'Organization', type: 'text' },
-        { key: 'CustomerName', label: 'Customer', type: 'text' },
-        { key: 'CreatorName', label: 'Created By', type: 'text' },
-        { key: 'Description', label: 'Description', type: 'text' },
-        { key: 'TotalTasks', label: 'Total Tasks', type: 'number' },
-        { key: 'CompletedTasks', label: 'Completed Tasks', type: 'number' },
-        { key: 'TotalEstimatedHours', label: 'Estimated Hours', type: 'number' },
-        { key: 'TotalWorkedHours', label: 'Worked Hours', type: 'number' },
-        { key: 'OpenTickets', label: 'Open Tickets', type: 'number' },
-        { key: 'UnplannedTasks', label: 'Unplanned Tasks', type: 'number' },
+        { key: 'ProjectName', label: t('lit.projectName'), type: 'text' },
+        { key: 'StatusName', label: t('lit.status'), type: 'text' },
+        { key: 'StartDate', label: t('lit.startDate'), type: 'date' },
+        { key: 'EndDate', label: t('lit.endDate'), type: 'date' },
+        { key: 'OrganizationName', label: t('lit.organization2'), type: 'text' },
+        { key: 'CustomerName', label: t('lit.customer2'), type: 'text' },
+        { key: 'CreatorName', label: t('lit.createdBy2'), type: 'text' },
+        { key: t('lit.description2'), label: t('lit.description2'), type: 'text' },
+        { key: 'TotalTasks', label: t('lit.totalTasks'), type: 'number' },
+        { key: 'CompletedTasks', label: t('lit.completedTasks'), type: 'number' },
+        { key: 'TotalEstimatedHours', label: t('lit.estimatedHours'), type: 'number' },
+        { key: 'TotalWorkedHours', label: t('lit.workedHours'), type: 'number' },
+        { key: 'OpenTickets', label: t('lit.openTickets'), type: 'number' },
+        { key: 'UnplannedTasks', label: t('lit.unplannedTasks'), type: 'number' },
       ]
     },
     {
       id: 'task-allocations',
-      name: 'Task Allocations',
+      name: t('lit.taskAllocations'),
       endpoint: '/api/task-allocations/my-allocations',
       fields: [
-        { key: 'AllocationDate', label: 'Allocation Date', type: 'date' },
-        { key: 'AllocatedHours', label: 'Allocated Hours', type: 'number' },
-        { key: 'TaskName', label: 'Task Name', type: 'text' },
-        { key: 'ProjectName', label: 'Project Name', type: 'text' },
-        { key: 'StartTime', label: 'Start Time', type: 'text' },
-        { key: 'EndTime', label: 'End Time', type: 'text' },
+        { key: 'AllocationDate', label: t('lit.allocationDate'), type: 'date' },
+        { key: 'AllocatedHours', label: t('lit.allocatedHours'), type: 'number' },
+        { key: 'TaskName', label: t('lit.taskName'), type: 'text' },
+        { key: 'ProjectName', label: t('lit.projectName'), type: 'text' },
+        { key: 'StartTime', label: t('lit.startTime'), type: 'text' },
+        { key: 'EndTime', label: t('lit.endTime'), type: 'text' },
       ]
     },
     {
       id: 'tickets',
-      name: 'Tickets',
+      name: t('lit.tickets'),
       endpoint: '/api/tickets',
       fields: [
-        { key: 'Title', label: 'Title', type: 'text' },
-        { key: 'StatusName', label: 'Status', type: 'text' },
-        { key: 'PriorityName', label: 'Priority', type: 'text' },
-        { key: 'TypeName', label: 'Type', type: 'text' },
-        { key: 'ProjectName', label: 'Project', type: 'text' },
-        { key: 'CustomerName', label: 'Customer', type: 'text' },
-        { key: 'AssigneeName', label: 'Assigned To', type: 'text' },
-        { key: 'CreatorName', label: 'Created By', type: 'text' },
-        { key: 'CreatedAt', label: 'Created Date', type: 'date' },
-        { key: 'ResolvedAt', label: 'Resolved Date', type: 'date' },
-        { key: 'EstimatedHours', label: 'Estimated Hours', type: 'number' },
-        { key: 'Description', label: 'Description', type: 'text' },
+        { key: t('lit.title'), label: t('lit.title'), type: 'text' },
+        { key: 'StatusName', label: t('lit.status'), type: 'text' },
+        { key: 'PriorityName', label: t('lit.priority'), type: 'text' },
+        { key: 'TypeName', label: t('lit.type2'), type: 'text' },
+        { key: 'ProjectName', label: t('lit.project3'), type: 'text' },
+        { key: 'CustomerName', label: t('lit.customer2'), type: 'text' },
+        { key: 'AssigneeName', label: t('lit.assignedTo'), type: 'text' },
+        { key: 'CreatorName', label: t('lit.createdBy2'), type: 'text' },
+        { key: 'CreatedAt', label: t('lit.createdDate'), type: 'date' },
+        { key: 'ResolvedAt', label: t('lit.resolvedDate'), type: 'date' },
+        { key: 'EstimatedHours', label: t('lit.estimatedHours'), type: 'number' },
+        { key: t('lit.description2'), label: t('lit.description2'), type: 'text' },
       ]
     },
     {
       id: 'dynamic',
-      name: 'Dynamic Query Builder',
+      name: t('lit.dynamicQueryBuilder'),
       endpoint: '/api/dynamic-reports/query',
       fields: [] // Fields will be dynamically determined by user
     },
     {
       id: 'time-entries-and-calls',
-      name: 'Time Entries + Call Records',
+      name: t('lit.timeEntriesCallRecords'),
       endpoint: '/api/time-entries/my-entries-and-calls',
       fields: [
-        { key: 'RecordType', label: 'Record Type', type: 'text' },
-        { key: 'WorkDate', label: 'Date', type: 'date' },
-        { key: 'Hours', label: 'Hours', type: 'number' },
-        { key: 'DurationMinutes', label: 'Duration (min)', type: 'number' },
-        { key: 'TaskName', label: 'Task Name', type: 'text' },
-        { key: 'ProjectName', label: 'Project Name', type: 'text' },
-        { key: 'Description', label: 'Description / Notes', type: 'text' },
-        { key: 'StartTime', label: 'Start Time', type: 'text' },
-        { key: 'EndTime', label: 'End Time', type: 'text' },
-        { key: 'CallType', label: 'Call Type', type: 'text' },
-        { key: 'Subject', label: 'Subject', type: 'text' },
-        { key: 'Participants', label: 'Participants', type: 'text' },
-        { key: 'CustomerName', label: 'Customer', type: 'text' },
-        { key: 'OrganizationName', label: 'Organization', type: 'text' },
+        { key: 'RecordType', label: t('lit.recordType'), type: 'text' },
+        { key: 'WorkDate', label: t('lit.date2'), type: 'date' },
+        { key: t('lit.hours2'), label: t('lit.hours2'), type: 'number' },
+        { key: 'DurationMinutes', label: t('lit.durationMin'), type: 'number' },
+        { key: 'TaskName', label: t('lit.taskName'), type: 'text' },
+        { key: 'ProjectName', label: t('lit.projectName'), type: 'text' },
+        { key: t('lit.description2'), label: t('lit.descriptionNotes'), type: 'text' },
+        { key: 'StartTime', label: t('lit.startTime'), type: 'text' },
+        { key: 'EndTime', label: t('lit.endTime'), type: 'text' },
+        { key: 'CallType', label: t('lit.callType'), type: 'text' },
+        { key: t('lit.subject'), label: t('lit.subject'), type: 'text' },
+        { key: t('lit.participants'), label: t('lit.participants'), type: 'text' },
+        { key: 'CustomerName', label: t('lit.customer2'), type: 'text' },
+        { key: 'OrganizationName', label: t('lit.organization2'), type: 'text' },
       ]
     }
   ];
@@ -398,11 +411,11 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
         console.log('Loaded records:', records.length, 'from', dataSource);
         setRawData(records);
       } else {
-        setError('Failed to load data');
+        setError(t('lit.failedToLoadData'));
       }
     } catch (err) {
       console.error('Failed to load data:', err);
-      setError('Failed to load data');
+      setError(t('lit.failedToLoadData'));
     } finally {
       setIsLoadingData(false);
     }
@@ -566,9 +579,9 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
     // Simplify aggregation labels
     if (aggregation) {
       const aggMap: {[key: string]: string} = {
-        'sum': 'Total',
-        'count': 'Contagem',
-        'avg': 'Média',
+        'sum': t('lit.total3'),
+        'count': t('lit.contagem'),
+        'avg': t('lit.media'),
         'min': 'Mín',
         'max': 'Máx',
         'distinctCount': 'Únicos'
@@ -1018,7 +1031,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
       printContent += `<th class="numeric">${colValue}</th>`;
     });
 
-    printContent += `<th class="numeric">Total</th></tr></thead><tbody>`;
+    printContent += `<th class="numeric">{t('common.total')}</th></tr></thead><tbody>`;
 
     // Build rows
     pivotRows.forEach((row: any) => {
@@ -1169,20 +1182,20 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
 
     try {
       await downloadTablePdf({
-        title: 'Pivot Report',
+        title: t('lit.pivotReport'),
         filename: 'pivot-report',
         headers,
         rows,
       }, token);
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      setError(error instanceof Error ? error.message : 'Failed to export PDF');
+      setError(error instanceof Error ? error.message : t('lit.failedToExportPdf'));
     }
   };
 
   const handleSaveReport = async () => {
     if (!reportNameInput.trim()) {
-      setError('Please enter a report name');
+      setError(t('lit.pleaseEnterAReportName'));
       return;
     }
 
@@ -1201,7 +1214,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
           setReportNameInput('');
           setError('');
         } else {
-          setError(result.message || 'Failed to save report');
+          setError(result.message || t('lit.failedToSaveReport'));
         }
       } else if (modalState.type === 'edit' && modalState.reportId) {
         const result = await savedReportsApi.updateSavedReport(token!, modalState.reportId, {
@@ -1216,11 +1229,11 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
           setReportNameInput('');
           setError('');
         } else {
-          setError(result.message || 'Failed to update report');
+          setError(result.message || t('lit.failedToUpdateReport'));
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || t('lit.anErrorOccurred'));
     }
   };
 
@@ -1231,10 +1244,10 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
         await loadSavedReports();
         setModalState({ type: null });
       } else {
-        setError(result.message || 'Failed to delete report');
+        setError(result.message || t('lit.failedToDeleteReport'));
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || t('lit.anErrorOccurred'));
     }
   };
 
@@ -1294,10 +1307,10 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
         setSelectedShareUsers([]);
         setUserSearchTerm('');
       } else {
-        setError('Failed to share report');
+        setError(t('lit.failedToShareReport'));
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || t('lit.anErrorOccurred'));
     }
   };
 
@@ -1321,15 +1334,16 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
       } else {
         const errorData = await response.json();
         console.error('Toggle failed:', errorData);
-        setError('Failed to toggle public status');
+        setError(t('lit.failedToTogglePublicStatus'));
       }
     } catch (err: any) {
       console.error('Toggle error:', err);
-      setError(err.message || 'An error occurred');
+      setError(err.message || t('lit.anErrorOccurred'));
     }
   };
 
   const handleDrillDown = (row: any, colKey: string) => {
+  const { t } = useI18n();
     // Parse column key to filter records
     const [colValue] = colKey.split('|||');
     
@@ -1343,7 +1357,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
       });
     }
     
-    const title = `${row.displayKey} - ${colValue !== 'Total' ? colValue : 'All'}`;
+    const title = `${row.displayKey} - ${colValue !== t('lit.total3') ? colValue : t('lit.all')}`;
     setModalState({ type: 'drillDown', drillDownData: records, drillDownTitle: title });
   };
 
@@ -1377,12 +1391,12 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
         <main className="w-full py-6 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="text-5xl mb-4">🔒</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.accessDenied2')}</h2>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Explore (Advanced Reports) is limited to admins and managers.
+              {t('lit.exploreAdvancedReportsIsLimitedToAdminsAndManagers')}
             </p>
             <Link href="/reporting" className="text-blue-600 dark:text-blue-400 hover:underline">
-              Back to Reporting
+              {t('lit.backToReporting')}
             </Link>
           </div>
         </main>
@@ -1406,8 +1420,8 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg shadow p-6 text-white mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold">📊 Advanced Reports</h1>
-                  <p className="text-purple-100 mt-1">Dynamic pivot table reporting</p>
+                  <h1 className="text-3xl font-bold">{t('lit.advancedReports')}</h1>
+                  <p className="text-purple-100 mt-1">{t('lit.dynamicPivotTableReporting')}</p>
                 </div>
                 <div className="text-5xl opacity-80">📈</div>
               </div>
@@ -1424,13 +1438,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
               <div className="p-6">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  Report Configuration
+                  {t('lit.reportConfiguration')}
                 </h2>
 
                 {/* Data Source Selection */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Data Source
+                    {t('lit.dataSource')}
                   </label>
                   <select
                     value={dataSource}
@@ -1440,13 +1454,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                     }}
                     className="w-full md:w-96 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">Select a data source...</option>
+                    <option value="">{t('lit.selectADataSource2')}</option>
                     {dataSources.map(ds => (
                       <option key={ds.id} value={ds.id}>{ds.name}</option>
                     ))}
                   </select>
                   {isLoadingData && (
-                    <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">Loading data...</p>
+                    <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">{t('common.loading')}</p>
                   )}
                   {rawData.length > 0 && (
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -1490,35 +1504,35 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                     <button
                                       onClick={() => handleOpenEditModal(report)}
                                       className="p-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                                      title="Edit report"
+                                      title={t('lit.editReport')}
                                     >
                                       ✏️
                                     </button>
                                     <button
                                       onClick={() => handleOpenShareModal(report)}
                                       className="p-1 text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
-                                      title="Share report"
+                                      title={t('lit.shareReport')}
                                     >
                                       🔗
                                     </button>
                                     <button
                                       onClick={() => handleTogglePublic(report.Id, report.IsPublic || 0)}
                                       className={`p-1 ${report.IsPublic === 1 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-600'} hover:text-yellow-600 dark:hover:text-yellow-400`}
-                                      title={report.IsPublic === 1 ? 'Make private' : 'Make public'}
+                                      title={report.IsPublic === 1 ? t('lit.makePrivate') : t('lit.makePublic')}
                                     >
                                       {report.IsPublic === 1 ? '🌐' : '🔒'}
                                     </button>
                                     <button
                                       onClick={() => handleOpenDeleteModal(report)}
                                       className="p-1 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                                      title="Delete report"
+                                      title={t('lit.deleteReport')}
                                     >
                                       🗑️
                                     </button>
                                   </>
                                 )}
                                 {Number(report.IsSystemDefault || 0) === 1 && (
-                                  <span className="p-1 text-amber-500" title="Default report">
+                                  <span className="p-1 text-amber-500" title={t('lit.defaultReport')}>
                                     🔒
                                   </span>
                                 )}
@@ -1529,7 +1543,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                        No saved reports for this data source yet.
+                        {t('lit.noSavedReportsForThisDataSourceYet')}
                       </p>
                     )}
                   </div>
@@ -1599,7 +1613,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                               onClick={handleClearFilters}
                               className="px-3 py-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 text-sm rounded transition-colors"
                             >
-                              Clear All
+                              {t('lit.clearAll2')}
                             </button>
                           )}
                         </div>
@@ -1607,7 +1621,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
 
                       {filters.length === 0 ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-3">
-                          No filters applied. Click "Add Filter" to filter your data.
+                          {t('lit.noFiltersAppliedClickAddFilterToFilterYourData')}
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -1618,7 +1632,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                             return (
                               <div key={filter.id} className="flex items-center gap-2 bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
                                 <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[30px]">
-                                  {idx === 0 ? 'Where' : 'And'}
+                                  {idx === 0 ? t('lit.where') : t('lit.and2')}
                                 </span>
                                 
                                 {/* Field Selection */}
@@ -1638,24 +1652,24 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                   onChange={(e) => handleUpdateFilter(filter.id, { operator: e.target.value as any })}
                                   className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                  <option value="equals">Equals</option>
-                                  <option value="notEquals">Not Equals</option>
-                                  <option value="contains">Contains</option>
-                                  <option value="startsWith">Starts With</option>
-                                  <option value="endsWith">Ends With</option>
+                                  <option value="equals">{t('lit.equals')}</option>
+                                  <option value="notEquals">{t('lit.notEquals')}</option>
+                                  <option value="contains">{t('lit.contains')}</option>
+                                  <option value="startsWith">{t('lit.startsWith')}</option>
+                                  <option value="endsWith">{t('lit.endsWith')}</option>
                                   {fieldType === 'number' && (
                                     <>
-                                      <option value="greaterThan">Greater Than</option>
-                                      <option value="lessThan">Less Than</option>
-                                      <option value="between">Between</option>
+                                      <option value="greaterThan">{t('lit.greaterThan')}</option>
+                                      <option value="lessThan">{t('lit.lessThan')}</option>
+                                      <option value="between">{t('lit.between')}</option>
                                     </>
                                   )}
                                   {fieldType === 'date' && (
-                                    <option value="dateRange">Date Range</option>
+                                    <option value="dateRange">{t('lit.dateRange')}</option>
                                   )}
-                                  <option value="inList">In List</option>
-                                  <option value="notEmpty">Not Empty</option>
-                                  <option value="isEmpty">Is Empty</option>
+                                  <option value="inList">{t('lit.inList')}</option>
+                                  <option value="notEmpty">{t('lit.notEmpty')}</option>
+                                  <option value="isEmpty">{t('lit.isEmpty')}</option>
                                 </select>
 
                                 {/* Value Input(s) */}
@@ -1667,7 +1681,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                         onChange={(e) => handleUpdateFilter(filter.id, { 
                                           valueList: e.target.value.split('\n').map(v => v.trim()).filter(v => v) 
                                         })}
-                                        placeholder="Enter values (one per line)"
+                                        placeholder={t('lit.enterValuesOnePerLine')}
                                         rows={3}
                                         className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
                                       />
@@ -1677,17 +1691,17 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                           type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
                                           value={filter.value}
                                           onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })}
-                                          placeholder="Value"
+                                          placeholder={t('lit.value')}
                                           className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
                                         {(filter.operator === 'between' || filter.operator === 'dateRange') && (
                                           <>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">and</span>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">{t('lit.and')}</span>
                                             <input
                                               type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
                                               value={filter.value2 || ''}
                                               onChange={(e) => handleUpdateFilter(filter.id, { value2: e.target.value })}
-                                              placeholder="Value 2"
+                                              placeholder={t('lit.value2')}
                                               className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                             />
                                           </>
@@ -1701,7 +1715,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                 <button
                                   onClick={() => handleRemoveFilter(filter.id)}
                                   className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-2"
-                                  title="Remove filter"
+                                  title={t('lit.removeFilter')}
                                 >
                                   ×
                                 </button>
@@ -1722,7 +1736,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       >
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-gray-900 dark:text-white">📋 Rows</h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Group by</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{t('lit.groupBy')}</span>
                         </div>
                         <div className="space-y-2">
                           {pivotConfig.rows.map((field, idx) => (
@@ -1746,7 +1760,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                           ))}
                           {pivotConfig.rows.length === 0 && (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">
-                              Drag fields here
+                              {t('lit.dragFieldsHere')}
                             </p>
                           )}
                         </div>
@@ -1760,7 +1774,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       >
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-gray-900 dark:text-white">📊 Columns</h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Split by</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{t('lit.splitBy')}</span>
                         </div>
                         <div className="space-y-2">
                           {pivotConfig.columns.map((field, idx) => (
@@ -1784,7 +1798,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                           ))}
                           {pivotConfig.columns.length === 0 && (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">
-                              Drag fields here
+                              {t('lit.dragFieldsHere')}
                             </p>
                           )}
                         </div>
@@ -1798,7 +1812,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       >
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-gray-900 dark:text-white">🔢 Values</h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Aggregate</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{t('lit.aggregate')}</span>
                         </div>
                         <div className="space-y-2">
                           {pivotConfig.values.map((valueConfig: ValueConfig, idx: number) => (
@@ -1818,12 +1832,12 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                 onClick={(e) => e.stopPropagation()}
                                 className="px-2 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               >
-                                <option value="sum">Sum</option>
-                                <option value="count">Count</option>
-                                <option value="distinctCount">Distinct Count</option>
-                                <option value="avg">Average</option>
-                                <option value="min">Min</option>
-                                <option value="max">Max</option>
+                                <option value="sum">{t('lit.sum')}</option>
+                                <option value="count">{t('lit.count')}</option>
+                                <option value="distinctCount">{t('lit.distinctCount')}</option>
+                                <option value="avg">{t('lit.average')}</option>
+                                <option value="min">{t('lit.min')}</option>
+                                <option value="max">{t('lit.max')}</option>
                               </select>
                               <button
                                 onClick={() => handleRemoveField('values', idx)}
@@ -1835,7 +1849,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                           ))}
                           {pivotConfig.values.length === 0 && (
                             <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">
-                              Drag numeric fields here
+                              {t('lit.dragNumericFieldsHere')}
                             </p>
                           )}
                         </div>
@@ -1847,7 +1861,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                     {dataSource !== 'dynamic' && (
                       <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                          Available Fields - Drag to Rows, Columns, or Values
+                          {t('lit.availableFieldsDragToRowsColumnsOrValues')}
                         </h3>
                         <div className="flex flex-wrap gap-2">
                           {(currentSource?.fields || []).map(field => {
@@ -1866,7 +1880,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                     ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-gray-400 dark:border-gray-500 opacity-50'
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md'
                                 }`}
-                                title={isUsed ? 'Already in use' : `Drag to add ${field.label}`}
+                                title={isUsed ? t('lit.alreadyInUse') : `Drag to add ${field.label}`}
                               >
                                 <span className="mr-2">
                                   {field.type === 'number' ? '🔢' : field.type === 'date' ? '📅' : '📝'}
@@ -1885,7 +1899,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                         onClick={handleClearAll}
                         className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                       >
-                        Clear All
+                        {t('lit.clearAll2')}
                       </button>
                       <button
                         onClick={() => setShowGrandTotals(!showGrandTotals)}
@@ -1946,7 +1960,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                   ? 'bg-blue-600 text-white' 
                                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                               }`}
-                              title="Table view"
+                              title={t('lit.tableView')}
                             >
                               📊
                             </button>
@@ -1957,7 +1971,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                   ? 'bg-blue-600 text-white' 
                                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                               }`}
-                              title="Bar chart"
+                              title={t('lit.barChart')}
                             >
                               📊
                             </button>
@@ -1968,7 +1982,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                   ? 'bg-blue-600 text-white' 
                                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                               }`}
-                              title="Line chart"
+                              title={t('lit.lineChart')}
                             >
                               📈
                             </button>
@@ -1997,13 +2011,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Report Name
+                      {t('lit.reportName')}
                     </label>
                     <input
                       type="text"
                       value={reportNameInput}
                       onChange={(e) => setReportNameInput(e.target.value)}
-                      placeholder="Enter report name..."
+                      placeholder={t('lit.enterReportName')}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       autoFocus
                     />
@@ -2011,16 +2025,16 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
 
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     <p className="mb-1">
-                      <strong>Data Source:</strong> {currentSource?.name}
+                      <strong>{t('lit.dataSource2')}</strong> {currentSource?.name}
                     </p>
                     <p className="mb-1">
-                      <strong>Rows:</strong> {pivotConfig.rows.length > 0 ? pivotConfig.rows.map(r => currentSource?.fields.find(f => f.key === r)?.label).join(', ') : 'None'}
+                      <strong>{t('lit.rows2')}</strong> {pivotConfig.rows.length > 0 ? pivotConfig.rows.map(r => currentSource?.fields.find(f => f.key === r)?.label).join(', ') : t('common.none')}
                     </p>
                     <p className="mb-1">
-                      <strong>Columns:</strong> {pivotConfig.columns.length > 0 ? pivotConfig.columns.map(c => currentSource?.fields.find(f => f.key === c)?.label).join(', ') : 'None'}
+                      <strong>{t('lit.columns2')}</strong> {pivotConfig.columns.length > 0 ? pivotConfig.columns.map(c => currentSource?.fields.find(f => f.key === c)?.label).join(', ') : t('common.none')}
                     </p>
                     <p>
-                      <strong>Values:</strong> {pivotConfig.values.length > 0 ? pivotConfig.values.map((v: ValueConfig) => `${currentSource?.fields.find(f => f.key === v.field)?.label} (${v.aggregation})`).join(', ') : 'None'}
+                      <strong>{t('lit.values')}</strong> {pivotConfig.values.length > 0 ? pivotConfig.values.map((v: ValueConfig) => `${currentSource?.fields.find(f => f.key === v.field)?.label} (${v.aggregation})`).join(', ') : t('common.none')}
                     </p>
                   </div>
 
@@ -2033,13 +2047,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       }}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleSaveReport}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
-                      {modalState.type === 'save' ? 'Save' : 'Update'}
+                      {modalState.type === 'save' ? t('common.save') : t('lit.update')}
                     </button>
                   </div>
                 </div>
@@ -2055,7 +2069,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                   </h3>
                   
                   <p className="text-gray-700 dark:text-gray-300 mb-6">
-                    Are you sure you want to delete the report <strong>"{modalState.reportName}"</strong>? This action cannot be undone.
+                    {t('lit.areYouSureYouWantToDeleteTheReport')} <strong>"{modalState.reportName}"</strong>? This action cannot be undone.
                   </p>
 
                   <div className="flex gap-3 justify-end">
@@ -2063,13 +2077,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       onClick={() => setModalState({ type: null })}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={() => handleDeleteReport(modalState.reportId!)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </div>
                 </div>
@@ -2085,7 +2099,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                   </h3>
                   
                   <p className="text-gray-700 dark:text-gray-300 mb-6">
-                    Select the page orientation for printing:
+                    {t('lit.selectThePageOrientationForPrinting')}
                   </p>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
@@ -2094,8 +2108,8 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
                     >
                       <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">📄</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">Vertical</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Portrait</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('lit.vertical')}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.portrait')}</div>
                     </button>
                     
                     <button
@@ -2103,8 +2117,8 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       className="p-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
                     >
                       <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">📃</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">Horizontal</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Landscape</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('lit.horizontal')}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.landscape')}</div>
                     </button>
                   </div>
 
@@ -2113,7 +2127,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       onClick={() => setModalState({ type: null })}
                       className="px-4 py-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg transition-colors"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -2137,14 +2151,14 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                   {/* Search and Add Users */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Add Users
+                      {t('lit.addUsers')}
                     </label>
                     <div className="relative">
                       <input
                         type="text"
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
-                        placeholder="Search users..."
+                        placeholder={t('lit.searchUsers')}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                       {userSearchTerm && (
@@ -2178,7 +2192,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                              u.Email.toLowerCase().includes(userSearchTerm.toLowerCase()))
                           ).length === 0 && (
                             <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                              No users found
+                              {t('lit.noUsersFound')}
                             </div>
                           )}
                         </div>
@@ -2193,7 +2207,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                     </label>
                     {selectedShareUsers.length === 0 ? (
                       <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                        No users selected. Report is private.
+                        {t('lit.noUsersSelectedReportIsPrivate')}
                       </p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
@@ -2229,13 +2243,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       }}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleShareReport}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                     >
-                      Share
+                      {t('lit.share')}
                     </button>
                   </div>
                 </div>
@@ -2248,7 +2262,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                   <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                      🔍 {modalState.drillDownTitle || 'Record Details'}
+                      🔍 {modalState.drillDownTitle || t('lit.recordDetails')}
                     </h3>
                     <button
                       onClick={() => setModalState({ type: null })}
@@ -2303,7 +2317,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                       onClick={() => setModalState({ type: null })}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      Close
+                      {t('common.close')}
                     </button>
                   </div>
                 </div>
@@ -2316,7 +2330,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {viewMode === 'table' ? 'Pivot Table Results' : viewMode === 'bar' ? 'Bar Chart' : 'Line Chart'}
+                      {viewMode === 'table' ? t('lit.pivotTableResults') : viewMode === 'bar' ? t('lit.barChart2') : t('lit.lineChart2')}
                     </h2>
                     {pivotConfig.rows.length > 1 && (
                       <div className="flex gap-2">
@@ -2324,13 +2338,13 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                           onClick={expandAll}
                           className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                         >
-                          Expand All
+                          {t('lit.expandAll2')}
                         </button>
                         <button
                           onClick={collapseAll}
                           className="px-3 py-1 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors"
                         >
-                          Collapse All
+                          {t('lit.collapseAll2')}
                         </button>
                       </div>
                     )}
@@ -2360,7 +2374,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                           })}
                           {showGrandTotals && (
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30">
-                              Total
+                              {t('common.total')}
                             </th>
                           )}
                         </tr>
@@ -2397,7 +2411,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                                     className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                                     style={bgColor ? { backgroundColor: bgColor } : {}}
                                     onClick={() => handleDrillDown(row, col)}
-                                    title="Click to view records"
+                                    title={t('lit.clickToViewRecords')}
                                   >
                                     {cellValue.toFixed(2)}
                                   </td>
@@ -2414,7 +2428,7 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
                         {showGrandTotals && (
                           <tr className="bg-gray-50 dark:bg-gray-700 font-bold">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white sticky left-0 bg-gray-50 dark:bg-gray-700">
-                              Grand Total
+                              {t('lit.grandTotal')}
                             </td>
                             {pivotData.columns.map((col: string) => {
                               const colTotal = pivotData.rows
@@ -2541,10 +2555,10 @@ export function WebReportsExplorer({ embedded = false }: { embedded?: boolean })
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
                 <div className="text-6xl mb-4">📊</div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Select a Data Source
+                  {t('lit.selectADataSource')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Choose a data source above to start building your pivot table report
+                  {t('lit.chooseADataSourceAboveToStartBuildingYourPivotTableReport')}
                 </p>
               </div>
             )}

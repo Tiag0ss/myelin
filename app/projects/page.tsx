@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -97,6 +98,8 @@ function mergeProjectsListFilters(
 }
 
 export default function ProjectsPage() {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { pillStyle } = useColorVision();
   const { showToast } = useToast();
@@ -258,8 +261,8 @@ export default function ProjectsPage() {
       setProjects(response.projects);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load projects');
-      showToast({ type: 'error', title: 'Failed to load projects', message: err.message || 'Please retry.' });
+      setError(err.message || t('lit.failedToLoadProjects'));
+      showToast({ type: 'error', title: t('lit.failedToLoadProjects'), message: err.message || t('lit.pleaseRetry') });
     } finally {
       setIsLoadingProjects(false);
     }
@@ -279,16 +282,16 @@ export default function ProjectsPage() {
     if (!token) return;
     
     showConfirm(
-      'Delete Project',
+      t('lit.deleteProject2'),
       'Are you sure you want to delete this project?',
       async () => {
         try {
           await projectsApi.delete(id, token);
           await loadProjects();
-          showToast({ type: 'success', title: 'Project deleted', message: 'The project was deleted successfully.' });
+          showToast({ type: 'success', title: t('lit.projectDeleted'), message: t('lit.theProjectWasDeletedSuccessfully') });
         } catch (err: any) {
-          setError(err.message || 'Failed to delete project');
-          showToast({ type: 'error', title: 'Delete failed', message: err.message || 'Please retry.' });
+          setError(err.message || t('lit.failedToDeleteProject'));
+          showToast({ type: 'error', title: t('lit.deleteFailed'), message: err.message || t('lit.pleaseRetry') });
         }
       }
     );
@@ -302,13 +305,13 @@ export default function ProjectsPage() {
   const handleProjectSaved = () => {
     handleModalClose();
     loadProjects();
-    showToast({ type: 'success', title: 'Project saved', message: 'Changes were saved successfully.' });
+    showToast({ type: 'success', title: t('lit.projectSaved'), message: t('lit.changesWereSavedSuccessfully') });
   };
 
   const handleExportProjectsCsv = () => {
     const headers = [
       'ProjectName',
-      'Description',
+      t('lit.description2'),
       'OrganizationName',
       'CustomerName',
       'StartDate',
@@ -355,7 +358,7 @@ export default function ProjectsPage() {
       const rows = parseCsv(text);
 
       if (!rows.length) {
-        throw new Error('CSV is empty or has no data rows');
+        throw new Error(t('lit.csvIsEmptyOrHasNoDataRows'));
       }
 
       let successCount = 0;
@@ -370,11 +373,11 @@ export default function ProjectsPage() {
           const organizationName = (row.OrganizationName || '').trim();
 
           if (!projectName) {
-            throw new Error('ProjectName is required');
+            throw new Error(t('lit.projectnameIsRequired'));
           }
 
           if (!organizationName) {
-            throw new Error('OrganizationName is required');
+            throw new Error(t('lit.organizationnameIsRequired'));
           }
 
           const organization = availableOrganizations.find((entry) => entry.Name.toLowerCase() === organizationName.toLowerCase());
@@ -416,7 +419,7 @@ export default function ProjectsPage() {
           await projectsApi.create(payload, token);
           successCount += 1;
         } catch (importError: any) {
-          failures.push(`Row ${rowNumber}: ${importError.message || 'Failed to import project'}`);
+          failures.push(`Row ${rowNumber}: ${importError.message || t('lit.failedToImportProject')}`);
         }
       }
 
@@ -428,7 +431,7 @@ export default function ProjectsPage() {
         setError('');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to import projects CSV');
+      setError(err.message || t('lit.failedToImportProjectsCsv'));
     } finally {
       setIsImportingCsv(false);
     }
@@ -682,7 +685,7 @@ export default function ProjectsPage() {
       }
     }
 
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'boolean') return value ? t('lit.yes') : t('lit.no');
     if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
     const text = String(value).trim();
     if (!text) return '-';
@@ -731,8 +734,8 @@ export default function ProjectsPage() {
         <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="text-5xl mb-4">🔒</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-            <p className="text-gray-600 dark:text-gray-400">You don&apos;t have permission to view projects.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.accessDenied2')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('lit.youDontHavePermissionToViewProjects')}</p>
           </div>
         </main>
       </div>
@@ -747,7 +750,7 @@ export default function ProjectsPage() {
           {/* Header + actions — health chips live in the filter bar */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h2 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">My Projects</h2>
+              <h2 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('lit.myProjects')}</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {projects.length} project{projects.length !== 1 ? 's' : ''} across your organisations
               </p>
@@ -758,7 +761,7 @@ export default function ProjectsPage() {
                   type="button"
                   onClick={() => setViewMode('grid')}
                   className={`rounded p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                  title="Grid view"
+                  title={t('lit.gridView')}
                 >
                   <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -768,7 +771,7 @@ export default function ProjectsPage() {
                   type="button"
                   onClick={() => setViewMode('list')}
                   className={`rounded p-1.5 transition-colors ${viewMode === 'list' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                  title="List view"
+                  title={t('lit.listView')}
                 >
                   <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -782,7 +785,7 @@ export default function ProjectsPage() {
                   disabled={isImportingCsv}
                   className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
                 >
-                  {isImportingCsv ? 'Importing...' : 'Import CSV'}
+                  {isImportingCsv ? 'Importing...' : t('lit.importCsv')}
                 </button>
               )}
               <button
@@ -790,7 +793,7 @@ export default function ProjectsPage() {
                 onClick={handleExportProjectsCsv}
                 className="h-10 px-4 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
               >
-                Export CSV
+                {t('lit.exportCsv')}
               </button>
               {permissions?.canCreateProjects && (
                 <button
@@ -799,7 +802,7 @@ export default function ProjectsPage() {
                   className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center gap-2"
                 >
                   <span className="text-base leading-none">+</span>
-                  New Project
+                  {t('pages.projects.newProject')}
                 </button>
               )}
             </div>
@@ -814,7 +817,7 @@ export default function ProjectsPage() {
                 onClick={loadProjects}
                 className="h-9 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           )}
@@ -828,17 +831,17 @@ export default function ProjectsPage() {
           ) : projects.length === 0 ? (
             <EmptyState
               icon={<NavModuleIcon href="/projects" size={40} className="text-[var(--pm-muted)] opacity-70" />}
-              title="No projects yet"
-              message="Get started by creating your first project or reload if you expected data."
-              primaryAction={permissions?.canCreateProjects ? { label: 'Create Project', onClick: handleCreateProject } : undefined}
-              secondaryAction={{ label: 'Reload', onClick: loadProjects }}
+              title={t('lit.noProjectsYet')}
+              message={t('lit.getStartedByCreatingYourFirstProjectOrReloadIfYouExpectedData')}
+              primaryAction={permissions?.canCreateProjects ? { label: t('pages.projects.createProject'), onClick: handleCreateProject } : undefined}
+              secondaryAction={{ label: t('lit.reload'), onClick: loadProjects }}
             />
           ) : (
             /* Has projects — show filter bar + view */
             <>
               <CollapsibleFilterPanel
                 className="mb-2"
-                title="Project filters"
+                title={t('lit.projectFilters')}
                 activeCount={[
                   filterText.trim() ? 1 : 0,
                   filterOrg ? 1 : 0,
@@ -910,7 +913,7 @@ export default function ProjectsPage() {
                     </svg>
                     <input
                       type="text"
-                      placeholder="Search projects..."
+                      placeholder={t('lit.searchProjects')}
                       value={filterText}
                       onChange={e => setFilterText(e.target.value)}
                       className="w-full pl-9 pr-4 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -918,12 +921,12 @@ export default function ProjectsPage() {
                   </div>
                   <select value={filterOrg} onChange={e => setFilterOrg(e.target.value)}
                     className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    <option value="">All Organisations</option>
+                    <option value="">{t('lit.allOrganisations')}</option>
                     {orgs.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                     className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    <option value="">All Statuses</option>
+                    <option value="">{t('lit.allStatuses2')}</option>
                     {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <select value={`${sortField}-${sortDirection}`}
@@ -933,22 +936,22 @@ export default function ProjectsPage() {
                       setSortDirection(d as SortDirection);
                     }}
                     className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    <option value="name-asc">Name A→Z</option>
-                    <option value="name-desc">Name Z→A</option>
-                    <option value="rag-asc">Health (worst first)</option>
-                    <option value="progress-desc">Progress (most first)</option>
-                    <option value="progress-asc">Progress (least first)</option>
-                    {canViewBudgetInfo && <option value="budget-desc">Budget burn (highest)</option>}
-                    <option value="hours-desc">Hours worked (most)</option>
-                    {internalTicketsEnabled && <option value="tickets-desc">Open tickets (most)</option>}
-                    <option value="endDate-asc">End date (soonest)</option>
-                    <option value="endDate-desc">End date (latest)</option>
+                    <option value="name-asc">{t('lit.nameAZ')}</option>
+                    <option value="name-desc">{t('lit.nameZA')}</option>
+                    <option value="rag-asc">{t('lit.healthWorstFirst')}</option>
+                    <option value="progress-desc">{t('lit.progressMostFirst')}</option>
+                    <option value="progress-asc">{t('lit.progressLeastFirst')}</option>
+                    {canViewBudgetInfo && <option value="budget-desc">{t('lit.budgetBurnHighest')}</option>}
+                    <option value="hours-desc">{t('lit.hoursWorkedMost')}</option>
+                    {internalTicketsEnabled && <option value="tickets-desc">{t('lit.openTicketsMost')}</option>}
+                    <option value="endDate-asc">{t('lit.endDateSoonest')}</option>
+                    <option value="endDate-desc">{t('lit.endDateLatest')}</option>
                   </select>
                 </div>
                 <div className="mt-2">
                   <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                     <input type="checkbox" checked={hideCompleted} onChange={e => setHideCompleted(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                    Hide closed / cancelled
+                    {t('lit.hideClosedCancelled')}
                   </label>
                 </div>
               </CollapsibleFilterPanel>
@@ -956,15 +959,15 @@ export default function ProjectsPage() {
               {filteredAndSortedProjects.length === 0 ? (
                   <EmptyState
                     icon={<Search size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-                    title="No projects match the selected filters"
-                    message="Try adjusting search, organization, status, or hidden-completed settings."
+                    title={t('lit.noProjectsMatchTheSelectedFilters')}
+                    message={t('lit.tryAdjustingSearchOrganizationStatusOrHiddenCompletedSettings')}
                     primaryAction={{
-                      label: 'Clear filters',
+                      label: t('lit.clearFilters'),
                       onClick: () => {
                         resetListFilters();
                       }
                     }}
-                    secondaryAction={{ label: 'Reload', onClick: loadProjects }}
+                    secondaryAction={{ label: t('lit.reload'), onClick: loadProjects }}
                   />
               ) : effectiveViewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -990,32 +993,32 @@ export default function ProjectsPage() {
                     <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th data-column-key="project" aria-sort={getAriaSort('name')} className="cursor-pointer select-none px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => handleSort('name')}>
-                          <div className="flex items-center">Project</div>
+                          <div className="flex items-center">{t('common.project')}</div>
                         </th>
                         <th data-column-key="health" aria-sort={getAriaSort('rag')} className="cursor-pointer select-none px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => handleSort('rag')}>
-                          <div className="flex items-center justify-center">Health</div>
+                          <div className="flex items-center justify-center">{t('lit.health')}</div>
                         </th>
                         <th data-column-key="status" aria-sort={getAriaSort('status')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => handleSort('status')}>
-                          <div className="flex items-center justify-center">Status</div>
+                          <div className="flex items-center justify-center">{t('common.status')}</div>
                         </th>
                         <th data-column-key="progress" aria-sort={getAriaSort('progress')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => handleSort('progress')}>
-                          <div className="flex items-center justify-center">Progress</div>
+                          <div className="flex items-center justify-center">{t('lit.progress')}</div>
                         </th>
                         <th data-column-key="hours" aria-sort={getAriaSort('hours')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => handleSort('hours')}>
-                          <div className="flex items-center justify-center">Hours</div>
+                          <div className="flex items-center justify-center">{t('common.hours')}</div>
                         </th>
                         {canViewBudgetInfo && (
                           <th data-column-key="budget" aria-sort={getAriaSort('budget')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => handleSort('budget')}>
-                            <div className="flex items-center justify-center">Budget</div>
+                            <div className="flex items-center justify-center">{t('lit.budget')}</div>
                           </th>
                         )}
                         {internalTicketsEnabled && (
                           <th data-column-key="tickets" aria-sort={getAriaSort('tickets')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => handleSort('tickets')}>
-                            <div className="flex items-center justify-center">Tickets</div>
+                            <div className="flex items-center justify-center">{t('common.tickets')}</div>
                           </th>
                         )}
                         <th data-column-key="dates" aria-sort={getAriaSort('endDate')} className="cursor-pointer select-none px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => handleSort('endDate')}>
-                          <div className="flex items-center justify-center">Dates</div>
+                          <div className="flex items-center justify-center">{t('lit.dates')}</div>
                         </th>
                         {additionalProjectColumnKeys.map((columnKey) => (
                           <th
@@ -1028,7 +1031,7 @@ export default function ProjectsPage() {
                           </th>
                         ))}
                         <th data-column-key="actions" scope="col" className="relative px-3 py-2">
-                          <span className="sr-only">Actions</span>
+                          <span className="sr-only">{t('common.actions')}</span>
                         </th>
                       </tr>
                     </thead>
@@ -1057,24 +1060,24 @@ export default function ProjectsPage() {
                                     size={14}
                                     strokeWidth={2}
                                     className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                                    aria-label="Pinned"
+                                    aria-label={t('nav.pinned')}
                                   />
                                 )}
                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{project.ProjectName}</div>
-                                {!!project.IsGlobal && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Global Project</span>}
-                                {!!project.IsHobby && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">Hobby</span>}
-                                {!!isOverdue && <span className="text-red-500 text-xs font-semibold">Overdue</span>}
+                                {!!project.IsGlobal && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('lit.globalProject')}</span>}
+                                {!!project.IsHobby && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{t('lit.hobby')}</span>}
+                                {!!isOverdue && <span className="text-red-500 text-xs font-semibold">{t('lit.overdue2')}</span>}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {project.OrganizationName}{project.CustomerName && <span className="ml-2 text-blue-500">• {project.CustomerName}</span>}
                               </div>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              <span title={rag.reasons.join(', ') || 'On track'} className="text-lg leading-none cursor-default">{ragDot}</span>
+                              <span title={rag.reasons.join(', ') || t('lit.onTrack')} className="text-lg leading-none cursor-default">{ragDot}</span>
                             </td>
                             <td className="px-3 py-2 text-center">
                               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold" style={pillStyle(project.StatusColor, { alpha: '20' })}>
-                                {project.StatusName || 'Unknown'}
+                                {project.StatusName || t('lit.unknown')}
                               </span>
                             </td>
                             <td className="px-3 py-2">
@@ -1126,8 +1129,8 @@ export default function ProjectsPage() {
                                     e.stopPropagation();
                                     handleToggleProjectPin(project.Id);
                                   }}
-                                  title={isPinned(project.Id) ? 'Unpin project' : 'Pin project to top'}
-                                  aria-label={isPinned(project.Id) ? 'Unpin project' : 'Pin project to top'}
+                                  title={isPinned(project.Id) ? t('lit.unpinProject') : t('lit.pinProjectToTop')}
+                                  aria-label={isPinned(project.Id) ? t('lit.unpinProject') : t('lit.pinProjectToTop')}
                                   className={`rounded p-1.5 transition-colors ${
                                     isPinned(project.Id)
                                       ? 'text-[var(--pm-accent)] hover:text-[var(--pm-accent-soft)]'
@@ -1142,8 +1145,8 @@ export default function ProjectsPage() {
                                 </button>
                                 <button
                                   onClick={e => { e.stopPropagation(); router.push(`/projects/${project.Id}`); }}
-                                  title="Open project"
-                                  aria-label="Open project"
+                                  title={t('lit.openProject')}
+                                  aria-label={t('lit.openProject')}
                                   className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1154,8 +1157,8 @@ export default function ProjectsPage() {
                                 {permissions?.canManageProjects && (
                                   <button
                                     onClick={e => { e.stopPropagation(); handleEditProject(project); }}
-                                    title="Edit project"
-                                    aria-label="Edit project"
+                                    title={t('lit.editProject')}
+                                    aria-label={t('lit.editProject')}
                                     className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1166,8 +1169,8 @@ export default function ProjectsPage() {
                                 {permissions?.canDeleteProjects && (
                                   <button
                                     onClick={e => { e.stopPropagation(); handleDeleteProject(project.Id); }}
-                                    title="Delete project"
-                                    aria-label="Delete project"
+                                    title={t('lit.deleteProject')}
+                                    aria-label={t('lit.deleteProject')}
                                     className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1205,7 +1208,7 @@ export default function ProjectsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-xl w-full mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Import Projects from CSV</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.importProjectsFromCsv')}</h2>
                 <button
                   onClick={() => setShowImportModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1222,11 +1225,11 @@ export default function ProjectsPage() {
                   ProjectName,Description,OrganizationName,CustomerName,StartDate,EndDate,IsHobby,IsGlobal,IsVisibleToCustomer,Budget,BudgetType
                 </code>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                  <a href="/templates/projects_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                  <a href="/templates/projects_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                 </p>
               </div>
 
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -1239,7 +1242,7 @@ export default function ProjectsPage() {
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>
@@ -1254,7 +1257,7 @@ export default function ProjectsPage() {
         message={modalMessage?.message || ''}
         onClose={closeConfirmModal}
         onConfirm={handleModalConfirm}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
       <ScrollToTopButton />
@@ -1294,6 +1297,8 @@ function ProjectCard({
   canEdit: boolean;
   canDelete: boolean;
 }) {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { pillStyle } = useColorVision();
   const router = useRouter();
@@ -1328,7 +1333,7 @@ function ProjectCard({
                   size={14}
                   strokeWidth={2}
                   className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                  aria-label="Pinned"
+                  aria-label={t('nav.pinned')}
                 />
               )}
               <span className="truncate">{project.ProjectName}</span>
@@ -1339,7 +1344,7 @@ function ProjectCard({
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span title={rag.reasons.join(', ') || 'On track'} className="text-lg leading-none">{ragDot}</span>
+            <span title={rag.reasons.join(', ') || t('lit.onTrack')} className="text-lg leading-none">{ragDot}</span>
             {project.StatusName && (
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
                 style={pillStyle(project.StatusColor, { alpha: '20' })}>
@@ -1347,8 +1352,8 @@ function ProjectCard({
               </span>
             )}
             <div className="flex items-center gap-2">
-              {!!project.IsGlobal && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Global Project</span>}
-              {!!project.IsHobby && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">Hobby</span>}
+              {!!project.IsGlobal && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t('lit.globalProject')}</span>}
+              {!!project.IsHobby && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">{t('lit.hobby')}</span>}
             </div>
           </div>
         </div>
@@ -1361,7 +1366,7 @@ function ProjectCard({
         {/* Task progress */}
         <div className="mb-3">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-500 dark:text-gray-400">Progress</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('lit.progress')}</span>
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-gray-900 dark:text-white">{progressPercent}%</span>
               {unplannedTasks > 0 && (
@@ -1399,21 +1404,21 @@ function ProjectCard({
         {/* Stats row */}
         <div className={`grid ${internalTicketsEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2 pt-3 border-t border-gray-100 dark:border-gray-700 text-center`}>
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Hours</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.hours')}</div>
             <div className="text-sm font-semibold text-gray-900 dark:text-white">
               {workedHours.toFixed(0) !== '0' || estimatedHours > 0 ? decimalHoursToHMS(workedHours) : '0:00:00'}{estimatedHours > 0 ? ` / ${decimalHoursToHMS(estimatedHours)}` : ''}
             </div>
           </div>
           {internalTicketsEnabled && (
             <div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Tickets</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.tickets')}</div>
               <div className={`text-sm font-semibold ${(project.OpenTickets || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
                 {project.OpenTickets || 0}
               </div>
             </div>
           )}
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">End</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.end')}</div>
             <div className={`text-sm font-semibold ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
               {project.EndDate
                 ? new Date(project.EndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
@@ -1432,8 +1437,8 @@ function ProjectCard({
                 ? 'bg-[var(--pm-accent)]/15 text-[var(--pm-accent-soft)] hover:bg-[var(--pm-accent)]/25'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
-            title={pinned ? 'Unpin project' : 'Pin project to top'}
-            aria-label={pinned ? 'Unpin project' : 'Pin project to top'}
+            title={pinned ? t('lit.unpinProject') : t('lit.pinProjectToTop')}
+            aria-label={pinned ? t('lit.unpinProject') : t('lit.pinProjectToTop')}
           >
             {pinned ? <PinOff size={16} strokeWidth={1.75} /> : <Pin size={16} strokeWidth={1.75} />}
           </button>
@@ -1441,13 +1446,13 @@ function ProjectCard({
             onClick={(e) => { e.stopPropagation(); router.push(`/projects/${project.Id}`); }}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            Open
+            {t('common.open')}
           </button>
           {canEdit && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(project); }}
               className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm transition-colors"
-              title="Edit"
+              title={t('common.edit')}
             >
               ✏️
             </button>
@@ -1456,7 +1461,7 @@ function ProjectCard({
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(project.Id); }}
               className="bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg text-sm transition-colors"
-              title="Delete"
+              title={t('common.delete')}
             >
               🗑
             </button>

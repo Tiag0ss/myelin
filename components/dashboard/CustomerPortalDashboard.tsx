@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
@@ -82,6 +84,8 @@ export default function CustomerPortalDashboard({
   loadPortalData,
   internalTicketsEnabled,
 }: CustomerPortalDashboardProps) {
+  const { t } = useI18n();
+
   const router = useRouter();
   const { pillStyle } = useColorVision();
 
@@ -98,9 +102,9 @@ export default function CustomerPortalDashboard({
         ) : portalError ? (
           <EmptyState
             icon={<AlertTriangle size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-            title="Unable to load portal data"
+            title={t('lit.unableToLoadPortalData')}
             message={portalError}
-            primaryAction={{ label: 'Retry', onClick: loadPortalData }}
+            primaryAction={{ label: t('lit.retry'), onClick: loadPortalData }}
           />
         ) : portalData ? (
           <div className="max-w-6xl mx-auto space-y-8">
@@ -120,7 +124,7 @@ export default function CustomerPortalDashboard({
                   {portalData.customer.Phone && <span>{portalData.customer.Phone}</span>}
                   {portalData.customer.Website && (
                     <a href={portalData.customer.Website} target="_blank" rel="noreferrer" className="hover:text-blue-600">
-                      Website
+                      {t('lit.website')}
                     </a>
                   )}
                 </div>
@@ -132,7 +136,7 @@ export default function CustomerPortalDashboard({
                     onClick={() => router.push('/tickets')}
                     className="h-10 px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    All tickets
+                    {t('lit.allTickets')}
                   </button>
                   <button
                     type="button"
@@ -142,7 +146,7 @@ export default function CustomerPortalDashboard({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    New Ticket
+                    {t('lit.newTicket2')}
                   </button>
                 </div>
               )}
@@ -155,7 +159,7 @@ export default function CustomerPortalDashboard({
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                       <div>
                         <h2 className="text-lg font-semibold text-amber-950 dark:text-amber-100">
-                          Needs your attention
+                          {t('lit.needsYourAttention')}
                         </h2>
                         <p className="text-sm text-amber-800/90 dark:text-amber-200/80 mt-1">
                           {Number(portalData.stats.waiting)} ticket{Number(portalData.stats.waiting) === 1 ? '' : 's'} waiting for a customer response.
@@ -211,24 +215,24 @@ export default function CustomerPortalDashboard({
                   </div>
                 ) : (
                   <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
-                    No tickets are waiting for your response right now.
+                    {t('lit.noTicketsAreWaitingForYourResponseRightNow')}
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   {[
-                    { label: 'Total', value: portalData.stats.total, color: 'text-gray-900 dark:text-white', bg: 'bg-white dark:bg-gray-800', href: '/tickets' },
-                    { label: 'Open', value: portalData.stats.open, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', href: '/tickets' },
-                    { label: 'In Progress', value: portalData.stats.inProgress, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/30', href: '/tickets' },
+                    { label: t('lit.total3'), value: portalData.stats.total, color: 'text-gray-900 dark:text-white', bg: 'bg-white dark:bg-gray-800', href: '/tickets' },
+                    { label: t('lit.open2'), value: portalData.stats.open, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', href: '/tickets' },
+                    { label: t('lit.inProgress3'), value: portalData.stats.inProgress, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/30', href: '/tickets' },
                     {
-                      label: 'Needs you',
+                      label: t('lit.needsYou'),
                       value: portalData.stats.waiting,
                       color: 'text-amber-700 dark:text-amber-300',
                       bg: 'bg-amber-50 dark:bg-amber-900/30',
                       href: '/tickets',
                     },
-                    { label: 'Resolved', value: portalData.stats.closed, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', href: '/tickets' },
-                    { label: 'Urgent', value: portalData.stats.urgent, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', href: '/tickets' },
+                    { label: t('lit.resolved2'), value: portalData.stats.closed, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30', href: '/tickets' },
+                    { label: t('lit.urgent'), value: portalData.stats.urgent, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30', href: '/tickets' },
                   ].map((s) => (
                     <button
                       key={s.label}
@@ -246,16 +250,16 @@ export default function CustomerPortalDashboard({
                   <div>
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent updates</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.recentUpdates')}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Latest ticket activity (excluding items that already need your reply). Full list is on Tickets.
+                          {t('lit.latestTicketActivityExcludingItemsThatAlreadyNeedYourReplyFullListIsOnTickets')}
                         </p>
                       </div>
                       <Link
                         href="/tickets"
                         className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                       >
-                        View all
+                        {t('lit.viewAll')}
                       </Link>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
@@ -291,13 +295,13 @@ export default function CustomerPortalDashboard({
 
                 {Number(portalData.stats.total) === 0 && (
                   <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">No tickets yet for your account.</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">{t('lit.noTicketsYetForYourAccount')}</p>
                     <button
                       type="button"
                       onClick={() => router.push('/tickets?new=1')}
                       className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
                     >
-                      New Ticket
+                      {t('lit.newTicket2')}
                     </button>
                   </div>
                 )}
@@ -306,7 +310,7 @@ export default function CustomerPortalDashboard({
 
             {portalData.projects.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your projects</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.yourProjects')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {portalData.projects.map((project) => {
                     const pct =
@@ -363,7 +367,7 @@ export default function CustomerPortalDashboard({
                             onClick={() => router.push('/tickets?new=1')}
                             className="mt-3 h-9 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm font-medium text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                           >
-                            New ticket
+                            {t('lit.newTicket')}
                           </button>
                         )}
                       </div>
@@ -375,9 +379,9 @@ export default function CustomerPortalDashboard({
 
             {portalData.projects.length === 0 && (
               <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-6 text-center">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">No visible projects yet</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.noVisibleProjectsYet')}</h2>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  When your provider marks a project as visible to customers, it will appear here with progress.
+                  {t('lit.whenYourProviderMarksAProjectAsVisibleToCustomersItWillAppearHereWithProgress')}
                 </p>
                 {internalTicketsEnabled && (
                   <button
@@ -385,7 +389,7 @@ export default function CustomerPortalDashboard({
                     onClick={() => router.push('/tickets?new=1')}
                     className="mt-4 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    Open a support ticket
+                    {t('lit.openASupportTicket')}
                   </button>
                 )}
               </div>

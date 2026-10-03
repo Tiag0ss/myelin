@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
@@ -26,7 +27,7 @@ const emptyForm = (): ScheduleForm => ({
 });
 
 export function ReportingSchedulesPanel({
-  projectId,
+projectId,
   token,
   onAlert,
 }: {
@@ -34,6 +35,8 @@ export function ReportingSchedulesPanel({
   token: string;
   onAlert: (title: string, message: string) => void;
 }) {
+  const { t } = useI18n();
+
   const [schedules, setSchedules] = useState<any[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -110,12 +113,12 @@ export function ReportingSchedulesPanel({
         ? `${getApiUrl()}/api/project-report-schedules/${editingSchedule.Id}`
         : `${getApiUrl()}/api/project-report-schedules`;
       const res = await fetch(url, {
-        method: editingSchedule ? 'PUT' : 'POST',
+        method: editingSchedule ? 'PUT' : t('lit.post'),
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to save schedule');
+      if (!res.ok) throw new Error(data.message || t('lit.failedToSaveSchedule'));
       setShowScheduleModal(false);
       await loadSchedules();
     } catch (err: any) {
@@ -148,10 +151,10 @@ export function ReportingSchedulesPanel({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      onAlert('Report Sent', data.message || 'Report sent successfully');
+      onAlert(t('lit.reportSent'), data.message || t('lit.reportSentSuccessfully'));
       await loadSchedules();
     } catch (err: any) {
-      onAlert('Error', err.message || 'Failed to send report');
+      onAlert(t('common.error'), err.message || t('lit.failedToSendReport'));
     } finally {
       setSendingNow(null);
     }
@@ -162,9 +165,9 @@ export function ReportingSchedulesPanel({
 <div className="space-y-6">
   <div className="flex items-center justify-between">
     <div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">Scheduled Reports</h2>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.scheduledReports')}</h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Automatically send PDF project reports via email on a weekly or monthly basis.
+        {t('lit.automaticallySendPdfProjectReportsViaEmailOnAWeeklyOrMonthlyBasis')}
       </p>
     </div>
     <button
@@ -176,13 +179,13 @@ export function ReportingSchedulesPanel({
   </div>
 
   {schedulesLoading ? (
-    <div className="text-gray-500 dark:text-gray-400">Loading schedules…</div>
+    <div className="text-gray-500 dark:text-gray-400">{t('lit.loadingSchedules')}</div>
   ) : schedules.length === 0 ? (
     <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
       <div className="text-4xl mb-4">📅</div>
-      <p className="text-gray-500 dark:text-gray-400">No scheduled reports yet.</p>
+      <p className="text-gray-500 dark:text-gray-400">{t('lit.noScheduledReportsYet')}</p>
       <button onClick={openNewSchedule} className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-        Create First Schedule
+        {t('lit.createFirstSchedule')}
       </button>
     </div>
   ) : (
@@ -208,17 +211,17 @@ export function ReportingSchedulesPanel({
                 </span>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                <strong>Sends:</strong>{' '}
+                <strong>{t('lit.sends')}</strong>{' '}
                 {s.Frequency === 'weekly'
                   ? `Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][s.DayOfWeek ?? 1]}`
                   : `On the ${s.DayOfMonth ?? 1}${[,'st','nd','rd'][s.DayOfMonth] || 'th'} of each month`}
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                <strong>Recipients:</strong> {s.Recipients || '—'}
+                <strong>{t('lit.recipients2')}</strong> {s.Recipients || '—'}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500">
                 Includes:{' '}
-                {[s.IncludeTaskTable && 'Task table', s.IncludeTimeEntries && 'Time entries', s.IncludeBudget && 'Budget'].filter(Boolean).join(', ') || 'Nothing selected'}
+                {[s.IncludeTaskTable && 'Task table', s.IncludeTimeEntries && 'Time entries', s.IncludeBudget && 'Budget'].filter(Boolean).join(', ') || t('lit.nothingSelected')}
                 {s.LastSentAt ? ` · Last sent: ${new Date(s.LastSentAt).toLocaleDateString('en-US', { dateStyle: 'medium' })}` : ' · Never sent'}
               </p>
             </div>
@@ -227,7 +230,7 @@ export function ReportingSchedulesPanel({
                 onClick={() => sendNow(s.Id)}
                 disabled={sendingNow === s.Id}
                 className="px-3 py-1.5 text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
-                title="Send report now (for testing)"
+                title={t('lit.sendReportNowForTesting')}
               >
                 {sendingNow === s.Id ? '⏳ Sending…' : '▶ Send Now'}
               </button>
@@ -256,7 +259,7 @@ export function ReportingSchedulesPanel({
   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
     <div className="p-6">
       <h3 className="text-lg font-bold mb-5 text-gray-900 dark:text-white">
-        {editingSchedule ? 'Edit Report Schedule' : 'New Report Schedule'}
+        {editingSchedule ? t('lit.editReportSchedule') : t('lit.newReportSchedule')}
       </h3>
 
       {scheduleError && (
@@ -267,7 +270,7 @@ export function ReportingSchedulesPanel({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.frequency')}</label>
           <div className="flex gap-3">
             {(['weekly', 'monthly'] as const).map(f => (
               <button
@@ -287,7 +290,7 @@ export function ReportingSchedulesPanel({
 
         {scheduleForm.frequency === 'weekly' ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of week</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.dayOfWeek')}</label>
             <select
               value={scheduleForm.dayOfWeek}
               onChange={e => setScheduleForm(prev => ({ ...prev, dayOfWeek: parseInt(e.target.value) }))}
@@ -300,7 +303,7 @@ export function ReportingSchedulesPanel({
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of month (1–28)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.dayOfMonth128')}</label>
             <input
               type="number"
               min={1}
@@ -314,24 +317,24 @@ export function ReportingSchedulesPanel({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Recipients <span className="text-gray-400">(comma-separated emails)</span>
+            {t('lit.recipients')} <span className="text-gray-400">(comma-separated emails)</span>
           </label>
           <input
             type="text"
             value={scheduleForm.recipients}
             onChange={e => setScheduleForm(prev => ({ ...prev, recipients: e.target.value }))}
-            placeholder="manager@example.com, cto@example.com"
+            placeholder={t('lit.managerExampleComCtoExampleCom')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Include in PDF</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.includeInPdf')}</label>
           <div className="space-y-2">
             {[
-              { key: 'includeTaskTable', label: 'Task table (status, estimated, worked hours)' },
-              { key: 'includeTimeEntries', label: 'Time entries (last 200 entries in period)' },
-              { key: 'includeBudget', label: 'Budget progress bar' },
+              { key: 'includeTaskTable', label: t('lit.taskTableStatusEstimatedWorkedHours') },
+              { key: 'includeTimeEntries', label: t('lit.timeEntriesLast200EntriesInPeriod') },
+              { key: 'includeBudget', label: t('lit.budgetProgressBar') },
             ].map(opt => (
               <label key={opt.key} className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -353,7 +356,7 @@ export function ReportingSchedulesPanel({
             onChange={e => setScheduleForm(prev => ({ ...prev, isEnabled: e.target.checked }))}
             className="w-4 h-4 text-blue-600 rounded"
           />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('common.enabled')}</span>
         </label>
       </div>
 
@@ -362,14 +365,14 @@ export function ReportingSchedulesPanel({
           onClick={() => setShowScheduleModal(false)}
           className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           onClick={saveSchedule}
           disabled={scheduleSaving}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
         >
-          {scheduleSaving ? 'Saving…' : (editingSchedule ? 'Update Schedule' : 'Create Schedule')}
+          {scheduleSaving ? t('lit.saving2') : (editingSchedule ? t('lit.updateSchedule') : t('lit.createSchedule'))}
         </button>
       </div>
     </div>
@@ -380,20 +383,20 @@ export function ReportingSchedulesPanel({
       {confirmDeleteSchedule !== null && (
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
-    <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Delete Schedule</h3>
-    <p className="text-gray-600 dark:text-gray-300 mb-6">Are you sure you want to delete this report schedule? This cannot be undone.</p>
+    <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('lit.deleteSchedule')}</h3>
+    <p className="text-gray-600 dark:text-gray-300 mb-6">{t('lit.areYouSureYouWantToDeleteThisReportScheduleThisCannotBeUndone')}</p>
     <div className="flex justify-end gap-3">
       <button
         onClick={() => setConfirmDeleteSchedule(null)}
         className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
-        Cancel
+        {t('common.cancel')}
       </button>
       <button
         onClick={() => deleteSchedule(confirmDeleteSchedule)}
         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
       >
-        Delete
+        {t('common.delete')}
       </button>
     </div>
   </div>

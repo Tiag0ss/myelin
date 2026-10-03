@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { getApiUrl } from '@/lib/api/config';
 
@@ -21,6 +22,8 @@ interface ChangeHistoryProps {
 }
 
 export default function ChangeHistory({ entityType, entityId }: ChangeHistoryProps) {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,11 +76,11 @@ export default function ChangeHistory({ entityType, entityId }: ChangeHistoryPro
     <div>
       {isLoading ? (
         <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-          Loading history...
+          {t('lit.loadingHistory')}
         </div>
       ) : history.length === 0 ? (
         <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-          No changes recorded yet
+          {t('lit.noChangesRecordedYet')}
         </div>
       ) : (
         <div className="space-y-3">
@@ -91,8 +94,8 @@ export default function ChangeHistory({ entityType, entityId }: ChangeHistoryPro
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {entry.ChangeType === 'created' ? 'Created' : 
-                       entry.FieldName ? `Changed ${entry.FieldName}` : 'Updated'}
+                      {entry.ChangeType === 'created' ? t('lit.created') : 
+                       entry.FieldName ? `Changed ${entry.FieldName}` : t('lit.updated2')}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(entry.CreatedAt)}
@@ -103,13 +106,13 @@ export default function ChangeHistory({ entityType, entityId }: ChangeHistoryPro
                     <div className="text-sm text-gray-700 dark:text-gray-300 mt-2">
                       <div className="flex gap-4">
                         <div className="flex-1">
-                          <span className="text-gray-500 dark:text-gray-400">From:</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('lit.from')}</span>
                           <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
                             {entry.OldValue || <span className="italic text-gray-400">(empty)</span>}
                           </div>
                         </div>
                         <div className="flex-1">
-                          <span className="text-gray-500 dark:text-gray-400">To:</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('lit.to2')}</span>
                           <div className="mt-1 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
                             {entry.NewValue || <span className="italic text-gray-400">(empty)</span>}
                           </div>
@@ -119,7 +122,7 @@ export default function ChangeHistory({ entityType, entityId }: ChangeHistoryPro
                   )}
                   
                   <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    by <span className="font-medium">{entry.ChangedByUsername}</span>
+                    {t('lit.by')} <span className="font-medium">{entry.ChangedByUsername}</span>
                   </div>
                 </div>
               </div>

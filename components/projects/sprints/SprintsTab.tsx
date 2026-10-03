@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { User, usersApi } from '@/lib/api/users';
@@ -16,6 +17,8 @@ import type {
 } from '@/components/projects/sprints/types';
 
 export function SprintsTab({ projectId, organizationId, token }: { projectId: number; organizationId: number; token: string }) {
+  const { t } = useI18n();
+
   const API_URL = getApiUrl();
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [velocityTrend, setVelocityTrend] = useState<VelocityTrendEntry[]>([]);
@@ -75,13 +78,13 @@ export function SprintsTab({ projectId, organizationId, token }: { projectId: nu
         setRetrospectiveClosure(retroData.closureBySprint || []);
       }
     } catch {
-      setError('Failed to load sprint data');
+      setError(t('lit.failedToLoadSprintData'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center h-64 text-gray-500">Loading sprints…</div>;
+  if (isLoading) return <div className="flex items-center justify-center h-64 text-gray-500">{t('lit.loadingSprints')}</div>;
 
   return (
     <div className="space-y-3">
@@ -99,8 +102,8 @@ export function SprintsTab({ projectId, organizationId, token }: { projectId: nu
           <div className="min-w-0 flex-1">
             <PageTabs
               tabs={[
-                { id: 'sprints', label: 'Sprint Planning' },
-                { id: 'retrospectives', label: 'Retrospective Actions' },
+                { id: 'sprints', label: t('lit.sprintPlanning') },
+                { id: 'retrospectives', label: t('lit.retrospectiveActions') },
               ]}
               activeId={sprintsViewTab}
               onChange={(id) => setSprintsViewTab(id as 'sprints' | 'retrospectives')}

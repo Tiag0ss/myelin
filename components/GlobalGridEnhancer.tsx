@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -102,12 +103,24 @@ const sanitizePreference = (raw: Partial<GridPreference> | null | undefined, ava
   };
 };
 
-const isActionHeader = (label: string) => {
+const isActionHeader = (label: string, actionsLabel: string) => {
   const lowered = label.trim().toLowerCase();
-  return lowered === 'actions' || lowered.length === 0;
+  if (lowered.length === 0) return true;
+  const actions = actionsLabel.trim().toLowerCase();
+  return (
+    lowered === 'actions' ||
+    lowered === actions ||
+    lowered === 'acções' ||
+    lowered === 'acoes' ||
+    lowered === 'acciones' ||
+    lowered === 'actions'
+  );
 };
 
 export default function GlobalGridEnhancer() {
+  const { t, locale } = useI18n();
+  const actionsLabel = t('common.actions');
+
   const pathname = usePathname();
   const { token } = useAuth();
   const [preferencesMap, setPreferencesMap] = useState<Map<string, RuntimeGridPreference>>(new Map());
@@ -215,7 +228,7 @@ export default function GlobalGridEnhancer() {
           const columnId = columnIds[index];
           if (!columnId) return;
           const label = (headerCell.textContent || '').trim();
-          if (!isActionHeader(label)) return;
+          if (!isActionHeader(label, actionsLabel)) return;
           actionColumnIds.add(columnId);
           const measuredWidth = Math.max(80, Math.round(headerCell.getBoundingClientRect().width || 120));
           actionColumnDefaultWidths[columnId] = Math.max(60, Math.min(1400, measuredWidth));
@@ -512,7 +525,7 @@ export default function GlobalGridEnhancer() {
             if (!columnId) return;
 
             const label = (headerCell.textContent || '').trim();
-            if (isActionHeader(label)) return;
+            if (isActionHeader(label, actionsLabel)) return;
             if (headerCell.dataset.gridSortIgnore === 'true') return;
             if (headerCell.dataset.gridSortBound === 'true') return;
 
@@ -520,7 +533,10 @@ export default function GlobalGridEnhancer() {
             headerCell.style.cursor = 'pointer';
             headerCell.tabIndex = 0;
             headerCell.setAttribute('role', 'button');
-            headerCell.setAttribute('aria-label', `${label || 'Column'} sort`);
+            headerCell.setAttribute(
+              'aria-label',
+              t('lit.columnSortAria', { column: label || t('lit.column') })
+            );
 
             const applySortForColumn = () => {
               const currentlySorted = runtimePref.sortField === columnId;
@@ -568,7 +584,7 @@ export default function GlobalGridEnhancer() {
 
           allHeaders.forEach((headerCell) => {
             const label = (headerCell.textContent || '').trim();
-            const isAction = isActionHeader(label);
+            const isAction = isActionHeader(label, actionsLabel);
 
             if (!isAction) {
               // Source: make draggable
@@ -665,7 +681,7 @@ export default function GlobalGridEnhancer() {
           headers.forEach((headerCell, position) => {
             const columnId = visibleOrder[position];
             if (!columnId) return;
-            if (isActionHeader((headerCell.textContent || '').trim())) return;
+            if (isActionHeader((headerCell.textContent || '').trim(), actionsLabel)) return;
             if (headerCell.dataset.gridResizeBound === 'true') return;
 
             headerCell.dataset.gridResizeBound = 'true';
@@ -759,7 +775,7 @@ export default function GlobalGridEnhancer() {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'h-9 px-3 rounded-lg text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 transition-colors';
-          button.textContent = 'Columns';
+          button.textContent = t('lit.columns');
 
           const densityGroup = document.createElement('div');
           densityGroup.className = 'h-9 flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-1';
@@ -767,7 +783,7 @@ export default function GlobalGridEnhancer() {
           const comfyButton = document.createElement('button');
           comfyButton.type = 'button';
           comfyButton.className = `h-7 px-3 text-sm rounded-md transition-colors ${runtimePref.rowDensity === 'comfortable' ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`;
-          comfyButton.textContent = 'Comfy';
+          comfyButton.textContent = t('lit.comfy');
           comfyButton.addEventListener('click', () => {
             commitRuntimePref({ ...runtimePref, rowDensity: 'comfortable' });
             refreshTable();
@@ -778,7 +794,7 @@ export default function GlobalGridEnhancer() {
           const compactButton = document.createElement('button');
           compactButton.type = 'button';
           compactButton.className = `h-7 px-3 text-sm rounded-md transition-colors ${runtimePref.rowDensity === 'compact' ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`;
-          compactButton.textContent = 'Compact';
+          compactButton.textContent = t('lit.compact');
           compactButton.addEventListener('click', () => {
             commitRuntimePref({ ...runtimePref, rowDensity: 'compact' });
             refreshTable();
@@ -796,15 +812,15 @@ export default function GlobalGridEnhancer() {
 
           const panelTitle = document.createElement('div');
           panelTitle.className = 'text-sm font-semibold text-gray-900 dark:text-white mb-2';
-          panelTitle.textContent = 'Table Columns';
+          panelTitle.textContent = t('lit.tableColumns');
           panel.appendChild(panelTitle);
 
           const fixedColumnsCount = runtimePref.columnOrder.filter((columnId) => runtimePref.columnSizeMode[columnId] === 'fixed').length;
           const panelSummary = document.createElement('div');
           panelSummary.className = 'text-xs text-gray-600 dark:text-gray-300 mb-2';
           panelSummary.textContent = fixedColumnsCount > 0
-            ? `${fixedColumnsCount} fixed column${fixedColumnsCount > 1 ? 's' : ''}`
-            : 'No fixed columns';
+            ? t('lit.nFixedColumns', { count: fixedColumnsCount })
+            : t('lit.noFixedColumns');
           panel.appendChild(panelSummary);
 
           const list = document.createElement('div');
@@ -814,8 +830,10 @@ export default function GlobalGridEnhancer() {
             const originalIndex = columnIds.indexOf(columnId);
             if (originalIndex < 0) return;
 
-            const headerLabel = (headerCells[originalIndex].textContent || '').trim() || `Column ${index + 1}`;
-            if (isActionHeader(headerLabel)) return;
+            const headerLabel =
+              (headerCells[originalIndex].textContent || '').trim() ||
+              t('lit.columnN', { n: index + 1 });
+            if (isActionHeader(headerLabel, actionsLabel)) return;
 
             const item = document.createElement('div');
             item.className = 'flex items-center gap-2 flex-wrap';
@@ -848,6 +866,8 @@ export default function GlobalGridEnhancer() {
             upButton.type = 'button';
             upButton.className = 'px-2 py-1 rounded text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600';
             upButton.textContent = '↑';
+            upButton.title = t('lit.moveColumnUp');
+            upButton.setAttribute('aria-label', t('lit.moveColumnUp'));
             upButton.disabled = isReorderDisabled || index === 0;
 
             upButton.addEventListener('click', () => {
@@ -865,6 +885,8 @@ export default function GlobalGridEnhancer() {
             downButton.type = 'button';
             downButton.className = 'px-2 py-1 rounded text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600';
             downButton.textContent = '↓';
+            downButton.title = t('lit.moveColumnDown');
+            downButton.setAttribute('aria-label', t('lit.moveColumnDown'));
             downButton.disabled = isReorderDisabled || index === runtimePref.columnOrder.length - 1;
 
             downButton.addEventListener('click', () => {
@@ -880,7 +902,7 @@ export default function GlobalGridEnhancer() {
 
             const modeSelect = document.createElement('select');
             modeSelect.className = 'px-2 py-1 rounded text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100';
-            modeSelect.innerHTML = '<option value="grow">Grow</option><option value="fixed">Fixed</option>';
+            modeSelect.innerHTML = `<option value="grow">${t('lit.grow')}</option><option value="fixed">${t('lit.fixed')}</option>`;
             modeSelect.value = runtimePref.columnSizeMode[columnId] === 'fixed' ? 'fixed' : 'grow';
 
             modeSelect.addEventListener('change', () => {
@@ -950,7 +972,7 @@ export default function GlobalGridEnhancer() {
           const resetButton = document.createElement('button');
           resetButton.type = 'button';
           resetButton.className = 'mt-3 h-9 px-3 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 transition-colors';
-          resetButton.textContent = 'Reset';
+          resetButton.textContent = t('common.reset');
           resetButton.addEventListener('click', () => {
             commitRuntimePref({ ...baselinePreference });
             refreshTable();
@@ -1011,7 +1033,7 @@ export default function GlobalGridEnhancer() {
       saveTimersRef.current.forEach((timer) => clearTimeout(timer));
       saveTimersRef.current.clear();
     };
-  }, [pathname, shouldEnhance, preferencesMap, token]);
+  }, [pathname, shouldEnhance, preferencesMap, token, locale, t, actionsLabel]);
 
   return null;
 }

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useState } from 'react';
 import { User } from '@/lib/api/users';
@@ -10,7 +11,7 @@ import type {
 } from '@/components/projects/sprints/types';
 
 export function RetrospectiveActionsPanel({
-  sprints,
+sprints,
   retrospectiveActions,
   retrospectiveClosure,
   retroUsers,
@@ -26,6 +27,8 @@ export function RetrospectiveActionsPanel({
   onReload: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const { t } = useI18n();
+
   const API_URL = getApiUrl();
   const [isSavingRetro, setIsSavingRetro] = useState(false);
   const [retroForm, setRetroForm] = useState({
@@ -39,7 +42,7 @@ export function RetrospectiveActionsPanel({
   const saveRetrospectiveAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!retroForm.sprintId || !retroForm.title.trim()) {
-      onError('Sprint and retrospective action title are required');
+      onError(t('lit.sprintAndRetrospectiveActionTitleAreRequired'));
       return;
     }
 
@@ -59,14 +62,14 @@ export function RetrospectiveActionsPanel({
 
       if (!response.ok) {
         const data = await response.json();
-        onError(data.message || 'Failed to create retrospective action');
+        onError(data.message || t('lit.failedToCreateRetrospectiveAction'));
         return;
       }
 
       setRetroForm({ sprintId: '', title: '', description: '', ownerUserId: '', dueDate: '' });
       await onReload();
     } catch {
-      onError('Failed to create retrospective action');
+      onError(t('lit.failedToCreateRetrospectiveAction'));
     } finally {
       setIsSavingRetro(false);
     }
@@ -81,7 +84,7 @@ export function RetrospectiveActionsPanel({
       });
       await onReload();
     } catch {
-      onError('Failed to update retrospective action status');
+      onError(t('lit.failedToUpdateRetrospectiveActionStatus'));
     }
   };
 
@@ -93,48 +96,48 @@ export function RetrospectiveActionsPanel({
       });
       await onReload();
     } catch {
-      onError('Failed to delete retrospective action');
+      onError(t('lit.failedToDeleteRetrospectiveAction'));
     }
   };
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Retrospective Actions</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">{t('lit.retrospectiveActions')}</h3>
         <form onSubmit={saveRetrospectiveAction} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Sprint</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.sprint')}</label>
             <select
               value={retroForm.sprintId}
               onChange={(e) => setRetroForm((prev) => ({ ...prev, sprintId: e.target.value }))}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               required
             >
-              <option value="">Select sprint</option>
+              <option value="">{t('lit.selectSprint')}</option>
               {sprints.map((sprint) => (
                 <option key={sprint.Id} value={sprint.Id}>{sprint.Name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Action</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.action')}</label>
             <input
               type="text"
               value={retroForm.title}
               onChange={(e) => setRetroForm((prev) => ({ ...prev, title: e.target.value }))}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="Define one improvement action"
+              placeholder={t('lit.defineOneImprovementAction')}
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Owner (optional)</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.ownerOptional')}</label>
             <select
               value={retroForm.ownerUserId}
               onChange={(e) => setRetroForm((prev) => ({ ...prev, ownerUserId: e.target.value }))}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="">Unassigned</option>
+              <option value="">{t('lit.unassigned')}</option>
               {retroUsers.map((userOption) => (
                 <option key={userOption.Id} value={userOption.Id}>
                   {userOption.FirstName && userOption.LastName
@@ -145,7 +148,7 @@ export function RetrospectiveActionsPanel({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Due date (optional)</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.dueDateOptional')}</label>
             <input
               type="date"
               value={retroForm.dueDate}
@@ -154,13 +157,13 @@ export function RetrospectiveActionsPanel({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Description (optional)</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.descriptionOptional')}</label>
             <textarea
               value={retroForm.description}
               onChange={(e) => setRetroForm((prev) => ({ ...prev, description: e.target.value }))}
               rows={2}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="Expected impact and context"
+              placeholder={t('lit.expectedImpactAndContext')}
             />
           </div>
           <button
@@ -168,7 +171,7 @@ export function RetrospectiveActionsPanel({
             disabled={isSavingRetro}
             className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            {isSavingRetro ? 'Saving...' : 'Add Action'}
+            {isSavingRetro ? t('lit.saving') : t('lit.addAction')}
           </button>
         </form>
       </div>
@@ -176,23 +179,23 @@ export function RetrospectiveActionsPanel({
       <div className="xl:col-span-2 space-y-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Closure Rate by Sprint</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('lit.closureRateBySprint')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sprint</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Closed</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Closure Rate</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.sprint')}</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.closed')}</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.total')}</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.closureRate')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {retrospectiveClosure.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No retrospective data yet.
+                      {t('lit.noRetrospectiveDataYet')}
                     </td>
                   </tr>
                 ) : (
@@ -212,25 +215,25 @@ export function RetrospectiveActionsPanel({
 
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Action Tracker</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('lit.actionTracker')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Action</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sprint</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Owner</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="relative px-4 py-2"><span className="sr-only">Actions</span></th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.action')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.sprint')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.owner')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.due')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
+                  <th scope="col" className="relative px-4 py-2"><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {retrospectiveActions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No retrospective actions yet.
+                      {t('lit.noRetrospectiveActionsYet')}
                     </td>
                   </tr>
                 ) : (
@@ -242,14 +245,14 @@ export function RetrospectiveActionsPanel({
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{item.SprintName || '-'}</td>
                       <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {item.OwnerFirstName && item.OwnerLastName ? `${item.OwnerFirstName} ${item.OwnerLastName}` : item.OwnerUsername || 'Unassigned'}
+                        {item.OwnerFirstName && item.OwnerLastName ? `${item.OwnerFirstName} ${item.OwnerLastName}` : item.OwnerUsername || t('lit.unassigned')}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{item.DueDate ? String(item.DueDate).split('T')[0] : '-'}</td>
                       <td className="px-4 py-2 text-sm">
                         {Number(item.IsClosed) === 1 ? (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Closed</span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{t('lit.closed')}</span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Open</span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{t('common.open')}</span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -257,8 +260,8 @@ export function RetrospectiveActionsPanel({
                           <button
                             type="button"
                             onClick={() => toggleRetrospectiveAction(item)}
-                            title={Number(item.IsClosed) === 1 ? 'Reopen action' : 'Close action'}
-                            aria-label={Number(item.IsClosed) === 1 ? 'Reopen action' : 'Close action'}
+                            title={Number(item.IsClosed) === 1 ? t('lit.reopenAction') : t('lit.closeAction')}
+                            aria-label={Number(item.IsClosed) === 1 ? t('lit.reopenAction') : t('lit.closeAction')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,8 +271,8 @@ export function RetrospectiveActionsPanel({
                           <button
                             type="button"
                             onClick={() => deleteRetrospectiveAction(item.Id)}
-                            title="Delete action"
-                            aria-label="Delete action"
+                            title={t('lit.deleteAction')}
+                            aria-label={t('lit.deleteAction')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

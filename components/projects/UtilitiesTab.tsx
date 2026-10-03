@@ -1,9 +1,12 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 
 export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: number; token: string; onTasksUpdated: () => void }) {
+  const { t } = useI18n();
+
   const [results, setResults] = useState<{ action: string; message: string; details: any[] } | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -37,7 +40,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to run utility');
+        throw new Error(data.message || t('lit.failedToRunUtility'));
       }
 
       setResults({
@@ -48,7 +51,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
 
       onTasksUpdated();
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || t('lit.anErrorOccurred'));
     } finally {
       setIsRunning(null);
     }
@@ -58,40 +61,40 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
     {
       id: 'recalculate-hours',
       icon: '🔢',
-      name: 'Recalculate Parent Hours',
-      description: 'Updates the estimated hours of all parent tasks based on the sum of their children. Processes multi-level hierarchies from bottom to top.',
+      name: t('lit.recalculateParentHours'),
+      description: t('lit.updatesTheEstimatedHoursOfAllParentTasksBasedOnTheSumOfTheirChildrenProc'),
       endpoint: 'recalculate-hours',
       confirmNeeded: false,
     },
     {
       id: 'reassign-from-planning',
       icon: '👤',
-      name: 'Reassign from Planning',
-      description: 'Updates the AssignedTo field of tasks to match the user they are planned/allocated to in the Gantt chart.',
+      name: t('lit.reassignFromPlanning'),
+      description: t('lit.updatesTheAssignedtoFieldOfTasksToMatchTheUserTheyArePlannedAllocatedToI'),
       endpoint: 'reassign-from-planning',
       confirmNeeded: false,
     },
     {
       id: 'update-due-dates',
       icon: '📅',
-      name: 'Update Due Dates from Planning',
-      description: 'Sets the DueDate of each task to its PlannedEndDate, keeping due dates in sync with the planning schedule.',
+      name: t('lit.updateDueDatesFromPlanning'),
+      description: t('lit.setsTheDuedateOfEachTaskToItsPlannedenddateKeepingDueDatesInSyncWithTheP'),
       endpoint: 'update-due-dates',
       confirmNeeded: false,
     },
     {
       id: 'sync-parent-status',
       icon: '🔄',
-      name: 'Sync Parent Status from Children',
-      description: 'Updates parent task status based on children: "Done" if all children are done, "In Progress" if any child is in progress, or "To Do" if all are pending.',
+      name: t('lit.syncParentStatusFromChildren'),
+      description: t('lit.updatesParentTaskStatusBasedOnChildrenDoneIfAllChildrenAreDoneInProgress'),
       endpoint: 'sync-parent-status',
       confirmNeeded: false,
     },
     {
       id: 'clear-planning',
       icon: '🗑️',
-      name: 'Clear All Planning',
-      description: 'Removes all task allocations, child allocations, planned dates, and assignments. Use this to start planning from scratch.',
+      name: t('lit.clearAllPlanning'),
+      description: t('lit.removesAllTaskAllocationsChildAllocationsPlannedDatesAndAssignmentsUseTh'),
       endpoint: 'clear-planning',
       confirmNeeded: true,
     },
@@ -99,7 +102,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
 
   return (
     <div>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">Bulk operations to keep your project data consistent and up to date.</p>
+      <p className="text-gray-600 dark:text-gray-400 mb-6">{t('lit.bulkOperationsToKeepYourProjectDataConsistentAndUpToDate')}</p>
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-400 rounded-lg">
@@ -136,7 +139,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Running...
+                    {t('lit.running')}
                   </span>
                 ) : (
                   'Run'
@@ -161,29 +164,29 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Task</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.task')}</th>
                     {results.details[0]?.oldHours !== undefined && (
                       <>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Old Hours</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">New Hours</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.oldHours')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.newHours')}</th>
                       </>
                     )}
                     {results.details[0]?.oldUser !== undefined && (
                       <>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Previous</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">New Assignment</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.previous')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.newAssignment')}</th>
                       </>
                     )}
                     {results.details[0]?.oldDueDate !== undefined && (
                       <>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Old Due Date</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">New Due Date</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.oldDueDate')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.newDueDate')}</th>
                       </>
                     )}
                     {results.details[0]?.oldStatus !== undefined && (
                       <>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Old Status</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">New Status</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.oldStatus')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.newStatus')}</th>
                       </>
                     )}
                   </tr>
@@ -206,7 +209,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
                       )}
                       {item.oldDueDate !== undefined && (
                         <>
-                          <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{item.oldDueDate || 'None'}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{item.oldDueDate || t('common.none')}</td>
                           <td className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400">{item.newDueDate}</td>
                         </>
                       )}
@@ -224,7 +227,7 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
           )}
 
           {results.details.length === 0 && (
-            <p className="text-gray-500 dark:text-gray-400 italic">No changes were needed — everything is already up to date.</p>
+            <p className="text-gray-500 dark:text-gray-400 italic">{t('lit.noChangesWereNeededEverythingIsAlreadyUpToDate')}</p>
           )}
         </div>
       )}
@@ -250,13 +253,13 @@ export function UtilitiesTab({ projectId, token, onTasksUpdated }: { projectId: 
                   onClick={() => setConfirmAction(null)}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={confirmAction.action}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
-                  Confirm
+                  {t('chrome.confirmDefaultTitle')}
                 </button>
               </div>
             </div>

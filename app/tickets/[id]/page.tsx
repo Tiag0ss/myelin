@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
 import {
@@ -92,6 +94,8 @@ interface OrgMember {
 const CATEGORIES = ['Support', 'Bug', 'Feature Request', 'Question', 'Other'];
 
 export default function TicketDetailPage() {
+  const { t } = useI18n();
+
   const { pillStyle } = useColorVision();
   const { user, token, isLoading, isCustomerUser } = useAuth();
   const { permissions } = usePermissions();
@@ -308,11 +312,11 @@ export default function TicketDetailPage() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setError('Ticket not found');
+          setError(t('lit.ticketNotFound'));
         } else if (res.status === 403) {
-          setError('Access denied');
+          setError(t('lit.accessDenied'));
         } else {
-          throw new Error('Failed to load ticket');
+          throw new Error(t('lit.failedToLoadTicket'));
         }
         return;
       }
@@ -437,7 +441,7 @@ export default function TicketDetailPage() {
       await loadTicketApplications();
     } catch (err) {
       console.error('Failed to load ticket:', err);
-      setError('Failed to load ticket');
+      setError(t('lit.failedToLoadTicket'));
     } finally {
       setLoading(false);
     }
@@ -512,7 +516,7 @@ export default function TicketDetailPage() {
       setShowProjectPicker(false);
       setShowCreateTaskModal(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to open create task form');
+      setError(err.message || t('lit.failedToOpenCreateTaskForm'));
     } finally {
       setOpeningCreateTask(false);
     }
@@ -538,7 +542,7 @@ export default function TicketDetailPage() {
       }
       setShowProjectPicker(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to load organizations');
+      setError(err.message || t('lit.failedToLoadOrganizations'));
     }
   };
 
@@ -575,7 +579,7 @@ export default function TicketDetailPage() {
       await uploadTicketAttachment(parseInt(Array.isArray(ticketId) ? ticketId[0] : ticketId), fileName, fileType, fileSize, fileData, token);
       await loadAttachments();
     } catch (err: any) {
-      throw new Error(err.message || 'Failed to upload attachment');
+      throw new Error(err.message || t('lit.failedToUploadAttachment'));
     }
   };
 
@@ -604,7 +608,7 @@ export default function TicketDetailPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      showAlert('Download failed', err.message || 'Failed to download attachment');
+      showAlert(t('lit.downloadFailed'), err.message || t('lit.failedToDownloadAttachment'));
     }
   };
 
@@ -630,7 +634,7 @@ export default function TicketDetailPage() {
       // Clean up URL after a delay
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err: any) {
-      showAlert('Preview failed', err.message || 'Failed to preview attachment');
+      showAlert(t('lit.previewFailed2'), err.message || t('lit.failedToPreviewAttachment'));
     }
   };
 
@@ -638,14 +642,14 @@ export default function TicketDetailPage() {
     if (!token) return;
 
     showConfirm(
-      'Delete attachment',
+      t('lit.deleteAttachment2'),
       'Are you sure you want to delete this attachment?',
       () => void (async () => {
         try {
           await deleteTicketAttachment(attachmentId, token);
           await loadAttachments();
         } catch (err: any) {
-          showAlert('Delete failed', err.message || 'Failed to delete attachment');
+          showAlert(t('lit.deleteFailed'), err.message || t('lit.failedToDeleteAttachment'));
         }
       })()
     );
@@ -653,7 +657,7 @@ export default function TicketDetailPage() {
 
   const handleSave = async () => {
     if (!editForm.title.trim()) {
-      setError('Title is required');
+      setError(t('lit.titleIsRequired'));
       return;
     }
 
@@ -688,7 +692,7 @@ export default function TicketDetailPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to update ticket');
+        throw new Error(data.message || t('lit.failedToUpdateTicket'));
       }
 
       // Save applications
@@ -713,7 +717,7 @@ export default function TicketDetailPage() {
       setIsEditing(false);
       await loadTicket();
     } catch (err: any) {
-      setError(err.message || 'Failed to update ticket');
+      setError(err.message || t('lit.failedToUpdateTicket'));
     } finally {
       setSaving(false);
     }
@@ -730,7 +734,7 @@ export default function TicketDetailPage() {
       const res = await fetch(
         `${getApiUrl()}/api/tickets/${ticketId}/comments`,
         {
-          method: 'POST',
+          method: t('lit.post'),
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -744,7 +748,7 @@ export default function TicketDetailPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to add comment');
+        throw new Error(data.message || t('lit.failedToAddComment'));
       }
 
       const data = await res.json();
@@ -794,7 +798,7 @@ export default function TicketDetailPage() {
       setCommentAttachments([]);
       await loadTicket();
     } catch (err: any) {
-      setError(err.message || 'Failed to add comment');
+      setError(err.message || t('lit.failedToAddComment'));
     } finally {
       setAddingComment(false);
     }
@@ -802,7 +806,7 @@ export default function TicketDetailPage() {
 
   const handleDeleteTicket = () => {
     showConfirm(
-      'Delete Ticket',
+      t('lit.deleteTicket2'),
       'Are you sure you want to delete this ticket? This action cannot be undone.',
       () => void (async () => {
         try {
@@ -814,10 +818,10 @@ export default function TicketDetailPage() {
             router.push('/tickets');
           } else {
             const data = await res.json();
-            setError(data.message || 'Failed to delete ticket');
+            setError(data.message || t('lit.failedToDeleteTicket'));
           }
         } catch (_err) {
-          setError('Failed to delete ticket');
+          setError(t('lit.failedToDeleteTicket'));
         }
       })()
     );
@@ -911,12 +915,12 @@ export default function TicketDetailPage() {
         <div className="max-w-4xl mx-auto py-12 px-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center border border-gray-200 dark:border-gray-700">
             <div className="text-4xl mb-3">🎫</div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Internal Ticket System Disabled</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('lit.internalTicketSystemDisabled')}</h2>
             <Link
               href="/dashboard"
               className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
-              Back to Dashboard
+              {t('lit.backToDashboard')}
             </Link>
           </div>
         </div>
@@ -945,7 +949,7 @@ export default function TicketDetailPage() {
               href="/tickets"
               className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
-              Back to Tickets
+              {t('lit.backToTickets')}
             </Link>
           </div>
         </div>
@@ -963,7 +967,7 @@ export default function TicketDetailPage() {
     }
 
     if (field.DataType === 'tinyint(1)') {
-      return Number(value) === 1 || value === true ? 'Yes' : 'No';
+      return Number(value) === 1 || value === true ? t('lit.yes') : t('lit.no');
     }
 
     if (field.DataType === 'date') {
@@ -994,7 +998,7 @@ export default function TicketDetailPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Tickets
+            {t('lit.backToTickets')}
           </Link>
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -1050,14 +1054,14 @@ export default function TicketDetailPage() {
                     onClick={() => setIsEditing(false)}
                     className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
                   >
-                    {saving ? 'Saving...' : 'Save'}
+                    {saving ? t('common.loading') : t('common.save')}
                   </button>
                 </>
               ) : (
@@ -1070,14 +1074,14 @@ export default function TicketDetailPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Create Task
+                      {t('lit.createTask')}
                     </button>
                   )}
                   {permissions?.canManageTickets && (
                     <button
                       onClick={() => setIsEditing(true)}
-                      title="Edit ticket"
-                      aria-label="Edit ticket"
+                      title={t('lit.editTicket')}
+                      aria-label={t('lit.editTicket')}
                       className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
                       ✏️
@@ -1086,8 +1090,8 @@ export default function TicketDetailPage() {
                   {permissions?.canDeleteTickets && (
                     <button
                       onClick={handleDeleteTicket}
-                      title="Delete ticket"
-                      aria-label="Delete ticket"
+                      title={t('lit.deleteTicket')}
+                      aria-label={t('lit.deleteTicket')}
                       className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
                     >
                       🗑️
@@ -1116,7 +1120,7 @@ export default function TicketDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              Details
+              {t('common.details')}
             </button>
             <button
               onClick={() => setActiveTab('comments')}
@@ -1138,7 +1142,7 @@ export default function TicketDetailPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              History
+              {t('lit.history')}
             </button>
             <button
               onClick={() => {
@@ -1181,19 +1185,19 @@ export default function TicketDetailPage() {
             {/* Details Tab */}
             {activeTab === 'details' && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Description</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('common.description')}</h2>
               {isEditing ? (
                 <RichTextEditor
                   content={editForm.description}
                   onChange={(html) => setEditForm(prev => ({ ...prev, description: html }))}
-                  placeholder="Add a description..."
+                  placeholder={t('lit.addADescription')}
                 />
               ) : (
                 <div className="prose dark:prose-invert max-w-none">
                   {ticket.Description ? (
                     <div dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(ticket.Description) }} />
                   ) : (
-                    <p className="text-gray-400 dark:text-gray-500 italic">No description provided</p>
+                    <p className="text-gray-400 dark:text-gray-500 italic">{t('lit.noDescriptionProvided')}</p>
                   )}
                 </div>
               )}
@@ -1209,7 +1213,7 @@ export default function TicketDetailPage() {
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {comments.length === 0 ? (
                   <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-                    No comments yet. Be the first to comment!
+                    {t('lit.noCommentsYetBeTheFirstToComment')}
                   </div>
                 ) : (
                   comments.map((comment) => (
@@ -1226,7 +1230,7 @@ export default function TicketDetailPage() {
                             </span>
                             {comment.IsInternal === 1 && (
                               <span className="px-2 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">
-                                Internal Note
+                                {t('lit.internalNote')}
                               </span>
                             )}
                             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -1254,7 +1258,7 @@ export default function TicketDetailPage() {
                                         <button
                                           onClick={() => handlePreviewAttachment(att.Id)}
                                           className="p-1 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
-                                          title="Preview"
+                                          title={t('lit.preview')}
                                         >
                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1265,7 +1269,7 @@ export default function TicketDetailPage() {
                                       <button
                                         onClick={() => handleDownloadAttachment(att.Id)}
                                         className="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                        title="Download"
+                                        title={t('common.download')}
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1289,7 +1293,7 @@ export default function TicketDetailPage() {
                 <RichTextEditor
                   content={newComment}
                   onChange={setNewComment}
-                  placeholder="Write a comment..."
+                  placeholder={t('lit.writeAComment')}
                 />
                 
                 {/* Comment Attachments */}
@@ -1335,7 +1339,7 @@ export default function TicketDetailPage() {
                         onChange={(e) => setIsInternalComment(e.target.checked)}
                         className="w-4 h-4 text-yellow-500 border-gray-300 rounded focus:ring-yellow-500"
                       />
-                      Internal note (not visible to customer)
+                      {t('lit.internalNoteNotVisibleToCustomer')}
                     </label>
                   )}
                   <button
@@ -1343,7 +1347,7 @@ export default function TicketDetailPage() {
                     disabled={addingComment || !newComment.trim()}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                   >
-                    {addingComment ? 'Adding...' : 'Add Comment'}
+                    {addingComment ? 'Adding...' : t('lit.addComment')}
                   </button>
                 </div>
               </form>
@@ -1360,7 +1364,7 @@ export default function TicketDetailPage() {
             {/* Tasks Tab */}
             {activeTab === 'tasks' && !isCustomerUser && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Associated Tasks</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.associatedTasks')}</h2>
                 {loadingTasks ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
@@ -1371,14 +1375,14 @@ export default function TicketDetailPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      No tasks created from this ticket yet
+                      {t('lit.noTasksCreatedFromThisTicketYet')}
                     </p>
                     {permissions?.canCreateTaskFromTicket && (
                       <button
                         onClick={handleOpenCreateTaskModal}
                         className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm"
                       >
-                        Create First Task
+                        {t('lit.createFirstTask')}
                       </button>
                     )}
                   </div>
@@ -1393,7 +1397,7 @@ export default function TicketDetailPage() {
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-medium text-gray-900 dark:text-white">{task.TaskName}</h3>
                           <span className="px-2 py-1 text-xs font-medium rounded" style={pillStyle(task.StatusColor, { alpha: '20' })}>
-                            {task.StatusName || 'Unknown'}
+                            {task.StatusName || t('lit.unknown')}
                           </span>
                         </div>
                         
@@ -1406,7 +1410,7 @@ export default function TicketDetailPage() {
                         
                         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                           <span className="px-2 py-0.5 rounded" style={pillStyle(task.PriorityColor, { alpha: '20' })}>
-                            {task.PriorityName || 'Unknown'}
+                            {task.PriorityName || t('lit.unknown')}
                           </span>
                           
                           {task.AssigneeName && (
@@ -1460,7 +1464,7 @@ export default function TicketDetailPage() {
             {activeTab === 'attachments' && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Upload Attachment</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.uploadAttachment')}</h3>
                   <AttachmentUploader onUpload={handleUploadAttachment} />
                 </div>
 
@@ -1493,12 +1497,12 @@ export default function TicketDetailPage() {
             {!isCustomerUser && permissions?.canManageTickets && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-                  Quick Actions
+                  {t('lit.quickActions')}
                 </h3>
                 {isCurrentStatusClosed() && (
                   <div className="mb-3 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-lg flex items-center gap-2">
                     <span>🔒</span>
-                    <span>This ticket is closed. You can reopen it by selecting a new status below.</span>
+                    <span>{t('lit.thisTicketIsClosedYouCanReopenItBySelectingANewStatusBelow')}</span>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -1519,12 +1523,12 @@ export default function TicketDetailPage() {
             {/* Details */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-                Details
+                {t('common.details')}
               </h3>
               <dl className="space-y-4">
                 {/* Status */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Status</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('common.status')}</dt>
                   {isEditing && !isCustomerUser ? (
                     <select
                       value={editForm.status}
@@ -1542,7 +1546,7 @@ export default function TicketDetailPage() {
 
                 {/* Priority */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Priority</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('common.priority')}</dt>
                   {isEditing && !isCustomerUser ? (
                     <select
                       value={editForm.priority}
@@ -1560,7 +1564,7 @@ export default function TicketDetailPage() {
 
                 {/* Category */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Category</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('pages.expenses.category')}</dt>
                   {isEditing && !isCustomerUser ? (
                     <select
                       value={editForm.category}
@@ -1580,14 +1584,14 @@ export default function TicketDetailPage() {
                 {/* Organization (Manager/Admin only) */}
                 {(!!user?.isManager || !!user?.isAdmin) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Organization</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('common.organization')}</dt>
                     {isEditing ? (
                       <SearchableSelect
                         value={editForm.organizationId}
                         onChange={handleOrganizationChange}
                         options={organizations.map(org => ({ value: org.Id, label: org.Name }))}
-                        placeholder="Select Organization"
-                        emptyText="Select Organization"
+                        placeholder={t('lit.selectOrganization2')}
+                        emptyText={t('lit.selectOrganization2')}
                         className="mt-1"
                       />
                     ) : (
@@ -1601,14 +1605,14 @@ export default function TicketDetailPage() {
                 {/* Customer (Manager/Admin only) */}
                 {(!!user?.isManager || !!user?.isAdmin) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Customer</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('common.customer')}</dt>
                     {isEditing ? (
                       <SearchableSelect
                         value={editForm.customerId}
                         onChange={(value) => setEditForm(prev => ({ ...prev, customerId: value }))}
                         options={customers.map(customer => ({ value: customer.Id, label: customer.Name }))}
-                        placeholder="Select Customer"
-                        emptyText="No Customer"
+                        placeholder={t('lit.selectCustomer')}
+                        emptyText={t('lit.noCustomer2')}
                         className="mt-1"
                       />
                     ) : (
@@ -1622,14 +1626,14 @@ export default function TicketDetailPage() {
                 {/* Project (Manager/Admin only) */}
                 {(!!user?.isManager || !!user?.isAdmin) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Project</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('common.project')}</dt>
                     {isEditing ? (
                       <SearchableSelect
                         value={editForm.projectId}
                         onChange={(value) => setEditForm(prev => ({ ...prev, projectId: value }))}
                         options={projects.map(project => ({ value: project.Id, label: project.ProjectName }))}
-                        placeholder="Select Project"
-                        emptyText="No Project"
+                        placeholder={t('lit.selectProject')}
+                        emptyText={t('lit.noProject')}
                         className="mt-1"
                       />
                     ) : (
@@ -1643,7 +1647,7 @@ export default function TicketDetailPage() {
                 {/* Assignee */}
                 {!isCustomerUser && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Assignee</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('pages.tickets.assignee')}</dt>
                     {isEditing ? (
                       <SearchableSelect
                         value={editForm.assignedToUserId}
@@ -1652,8 +1656,8 @@ export default function TicketDetailPage() {
                           value: member.Id,
                           label: getDisplayName(member.FirstName, member.LastName, member.Username)
                         }))}
-                        placeholder="Select Assignee"
-                        emptyText="Unassigned"
+                        placeholder={t('lit.selectAssignee')}
+                        emptyText={t('lit.unassigned')}
                         className="mt-1"
                       />
                     ) : (
@@ -1666,7 +1670,7 @@ export default function TicketDetailPage() {
                             {getDisplayName(ticket.AssigneeFirstName, ticket.AssigneeLastName, ticket.AssigneeUsername || '')}
                           </div>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500">Unassigned</span>
+                          <span className="text-gray-400 dark:text-gray-500">{t('lit.unassigned')}</span>
                         )}
                       </dd>
                     )}
@@ -1676,7 +1680,7 @@ export default function TicketDetailPage() {
                 {/* Developer */}
                 {!isCustomerUser && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Developer</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.developer')}</dt>
                     {isEditing ? (
                       <SearchableSelect
                         value={editForm.developerUserId}
@@ -1685,8 +1689,8 @@ export default function TicketDetailPage() {
                           value: member.Id,
                           label: getDisplayName(member.FirstName, member.LastName, member.Username)
                         }))}
-                        placeholder="Select Developer"
-                        emptyText="No developer assigned"
+                        placeholder={t('lit.selectDeveloper')}
+                        emptyText={t('lit.noDeveloperAssigned')}
                         className="mt-1"
                       />
                     ) : (
@@ -1699,7 +1703,7 @@ export default function TicketDetailPage() {
                             {getDisplayName(ticket.DeveloperFirstName, ticket.DeveloperLastName, ticket.DeveloperUsername || '')}
                           </div>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500">No developer</span>
+                          <span className="text-gray-400 dark:text-gray-500">{t('lit.noDeveloper')}</span>
                         )}
                       </dd>
                     )}
@@ -1709,7 +1713,7 @@ export default function TicketDetailPage() {
                 {/* Scheduled Date */}
                 {!isCustomerUser && (isEditing || hasMeaningfulTicketDate(ticket.ScheduledDate)) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Scheduled Date</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.scheduledDate')}</dt>
                     {isEditing ? (
                       <input
                         type="date"
@@ -1736,7 +1740,7 @@ export default function TicketDetailPage() {
                 {/* Applications */}
                 {(!!user?.isManager || !!user?.isAdmin) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Applications</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('nav.applications')}</dt>
                     {isEditing ? (
                       <SearchableMultiSelect
                         values={editForm.applicationIds}
@@ -1749,7 +1753,7 @@ export default function TicketDetailPage() {
                           label: app.Name,
                           subtitle: app.OrganizationName
                         }))}
-                        placeholder="Select Applications"
+                        placeholder={t('lit.selectApplications')}
                         className="mt-1"
                       />
                     ) : (
@@ -1764,7 +1768,7 @@ export default function TicketDetailPage() {
                             ))}
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400 dark:text-gray-500">No applications</span>
+                          <span className="text-sm text-gray-400 dark:text-gray-500">{t('lit.noApplications')}</span>
                         )}
                       </dd>
                     )}
@@ -1773,7 +1777,7 @@ export default function TicketDetailPage() {
 
                 {isEditing && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400 mb-2">Custom Fields</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.customFields')}</dt>
                     <CustomFieldsFormSection
                       tableName="Tickets"
                       token={token || undefined}
@@ -1785,7 +1789,7 @@ export default function TicketDetailPage() {
 
                 {!isEditing && ticketCustomFields.some((field) => hasMeaningfulCustomFieldValue(ticketCustomFieldValues[field.FieldName])) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400 mb-2">Custom Fields</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.customFields')}</dt>
                     <dd>
                       <div className="grid grid-cols-1 gap-3">
                         {ticketCustomFields
@@ -1811,7 +1815,7 @@ export default function TicketDetailPage() {
 
                 {/* Created By */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Created By</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.createdBy2')}</dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                     {getDisplayName(ticket.CreatorFirstName, ticket.CreatorLastName, ticket.CreatorUsername)}
                   </dd>
@@ -1819,7 +1823,7 @@ export default function TicketDetailPage() {
 
                 {/* Created At */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Created</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.created')}</dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                     {formatDate(ticket.CreatedAt)}
                   </dd>
@@ -1827,7 +1831,7 @@ export default function TicketDetailPage() {
 
                 {/* Updated At */}
                 <div>
-                  <dt className="text-sm text-gray-500 dark:text-gray-400">Last Updated</dt>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.lastUpdated')}</dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                     {formatDate(ticket.UpdatedAt)}
                   </dd>
@@ -1836,7 +1840,7 @@ export default function TicketDetailPage() {
                 {/* Resolved At */}
                 {hasMeaningfulTicketDate(ticket.ResolvedAt) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Resolved</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.resolved2')}</dt>
                     <dd className="mt-1 text-sm text-green-600 dark:text-green-400">
                       ✓ {formatDate(ticket.ResolvedAt!)}
                     </dd>
@@ -1846,7 +1850,7 @@ export default function TicketDetailPage() {
                 {/* Closed At */}
                 {hasMeaningfulTicketDate(ticket.ClosedAt) && (
                   <div>
-                    <dt className="text-sm text-gray-500 dark:text-gray-400">Closed</dt>
+                    <dt className="text-sm text-gray-500 dark:text-gray-400">{t('lit.closed')}</dt>
                     <dd className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                       {formatDate(ticket.ClosedAt!)}
                     </dd>
@@ -1864,7 +1868,7 @@ export default function TicketDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
             <div className="p-6 space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Select project for task</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.selectProjectForTask')}</h2>
                 <button
                   type="button"
                   onClick={() => setShowProjectPicker(false)}
@@ -1879,20 +1883,20 @@ export default function TicketDetailPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.organization')}</label>
                 <select
                   value={selectedOrgId || ''}
                   onChange={(e) => void handleOrgChange(e.target.value ? parseInt(e.target.value, 10) : 0)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">Select Organization</option>
+                  <option value="">{t('lit.selectOrganization2')}</option>
                   {organizations.map((org) => (
                     <option key={org.Id} value={org.Id}>{org.Name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.project')}</label>
                 <select
                   value={pickerProjectId || ''}
                   onChange={(e) => setPickerProjectId(e.target.value ? parseInt(e.target.value, 10) : null)}
@@ -1900,7 +1904,7 @@ export default function TicketDetailPage() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60"
                 >
                   <option value="">
-                    {loadingProjects ? 'Loading projects...' : !selectedOrgId ? 'First select an organization' : 'Select Project'}
+                    {loadingProjects ? 'Loading projects...' : !selectedOrgId ? t('lit.firstSelectAnOrganization') : t('lit.selectProject')}
                   </option>
                   {projects.map((project) => (
                     <option key={project.Id} value={project.Id}>{project.ProjectName}</option>
@@ -1913,7 +1917,7 @@ export default function TicketDetailPage() {
                   onClick={() => setShowProjectPicker(false)}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1921,7 +1925,7 @@ export default function TicketDetailPage() {
                   onClick={() => pickerProjectId && void openCreateTaskWithProject(pickerProjectId)}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg"
                 >
-                  {openingCreateTask ? 'Opening…' : 'Continue'}
+                  {openingCreateTask ? 'Opening…' : t('lit.continue')}
                 </button>
               </div>
             </div>
@@ -1962,7 +1966,7 @@ export default function TicketDetailPage() {
           dialog?.onConfirm?.();
           setDialog(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
 

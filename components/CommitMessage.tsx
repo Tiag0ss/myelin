@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n/provider';
 import { tasksApi } from '@/lib/api/tasks';
 
 interface CommitMessageProps {
@@ -50,6 +51,7 @@ export default function CommitMessage({
   taskNamesById,
   onTaskClick,
 }: CommitMessageProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const { subject, body, hasBody } = splitCommitMessage(message);
   const taskIds = showTaskBadges ? extractTaskIdsFromCommitMessage(message) : [];
@@ -132,9 +134,9 @@ export default function CommitMessage({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className="inline-flex items-center justify-center shrink-0 px-1.5 py-0.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            title={expanded ? 'Hide commit details' : 'Show commit details'}
+            title={expanded ? t('lit.hideCommitDetails') : t('lit.showCommitDetails')}
             aria-expanded={expanded}
-            aria-label={expanded ? 'Hide commit details' : 'Show commit details'}
+            aria-label={expanded ? t('lit.hideCommitDetails') : t('lit.showCommitDetails')}
           >
             …
           </button>

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useState } from 'react';
 import {
@@ -29,6 +30,8 @@ export function ReportingSummaryPanel({
   pillStyle: PillStyle;
   onShowTaskDetail: (task: any) => void;
 }) {
+  const { t } = useI18n();
+
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
 
   const toggleExpand = (taskId: number) => {
@@ -85,7 +88,7 @@ export function ReportingSummaryPanel({
             className="px-2 py-1 text-xs font-semibold rounded-full"
             style={pillStyle(task.StatusColor, { alpha: '20' })}
           >
-            {task.StatusName || 'Unknown'}
+            {task.StatusName || t('lit.unknown')}
           </span>
         </td>
         <td className={`px-4 py-3 text-sm text-right ${level === 0 ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -105,7 +108,7 @@ export function ReportingSummaryPanel({
             onClick={() => onShowTaskDetail(task)}
             className={`${level === 0 ? 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm' : 'text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-xs'}`}
           >
-            Details
+            {t('common.details')}
           </button>
         </td>
       </tr>
@@ -124,25 +127,25 @@ export function ReportingSummaryPanel({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Estimated Hours</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.totalEstimatedHours')}</div>
           <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
             {decimalHoursToHMS(totalEstimatedHours)}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Allocated Hours</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.totalAllocatedHours')}</div>
           <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
             {decimalHoursToHMS(totalTaskAllocatedHours)}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">To Allocate</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.toAllocate')}</div>
           <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
             {decimalHoursToHMS(totalToAllocateHours)}
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Worked Hours</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('lit.totalWorkedHours')}</div>
           <div className="text-3xl font-bold text-green-600 dark:text-green-400">
             {decimalHoursToHMS(totalTaskWorkedHours)}
           </div>
@@ -151,37 +154,37 @@ export function ReportingSummaryPanel({
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tasks Summary</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('lit.tasksSummary')}</h2>
 
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading tasks...</div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.loadingTasks')}</div>
           ) : tasks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">No tasks found</div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.noTasksFound')}</div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Task Name
+                      {t('lit.taskName')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Status
+                      {t('common.status')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estimated
+                      {t('lit.estimated')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Allocated
+                      {t('lit.allocated')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      To Allocate
+                      {t('lit.toAllocate')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Worked
+                      {t('lit.worked')}
                     </th>
                     <th scope="col" className="relative px-4 py-3">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -191,7 +194,7 @@ export function ReportingSummaryPanel({
                 <tfoot className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <td colSpan={2} className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100 text-right">
-                      Total:
+                      {t('lit.total2')}
                     </td>
                     <td className="px-4 py-3 text-sm font-bold text-right text-gray-900 dark:text-gray-100">
                       {decimalHoursToHMS(totalEstimatedHours)}

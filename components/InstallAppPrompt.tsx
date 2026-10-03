@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
@@ -21,6 +23,8 @@ interface InstallAppPromptProps {
  * Uses the deferred install prompt when available; on iOS Safari shows Add to Home Screen tips.
  */
 export default function InstallAppPrompt({ className = '' }: InstallAppPromptProps) {
+  const { t } = useI18n();
+
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [tick, setTick] = useState(0);
@@ -59,11 +63,11 @@ export default function InstallAppPrompt({ className = '' }: InstallAppPromptPro
     <div
       className={`rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 px-4 py-3 shadow-sm ${className}`}
       role="region"
-      aria-label="Install app"
+      aria-label={t('auth.installApp')}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Install app</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('auth.installApp')}</p>
           <p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-400">
             {ios
               ? 'On iPhone/iPad: tap Share in Safari, then Add to Home Screen for a full-screen experience.'
@@ -76,7 +80,7 @@ export default function InstallAppPrompt({ className = '' }: InstallAppPromptPro
           type="button"
           className="shrink-0 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
           onClick={dismiss}
-          aria-label="Dismiss install prompt"
+          aria-label={t('lit.dismissInstallPrompt')}
         >
           ✕
         </button>
@@ -88,7 +92,7 @@ export default function InstallAppPrompt({ className = '' }: InstallAppPromptPro
             className="h-9 px-3 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
             onClick={() => void install()}
           >
-            Install app
+            {t('auth.installApp')}
           </button>
         ) : null}
         <button
@@ -96,7 +100,7 @@ export default function InstallAppPrompt({ className = '' }: InstallAppPromptPro
           className="h-9 px-3 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600"
           onClick={dismiss}
         >
-          Not now
+          {t('lit.notNow')}
         </button>
       </div>
     </div>

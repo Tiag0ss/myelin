@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 export type GlobalSearchResultsData = {
   total: number;
@@ -63,6 +64,7 @@ export default function GlobalSearchResults({
   hasMore = false,
   onLoadMore,
 }: GlobalSearchResultsProps) {
+  const { t } = useI18n();
   return (
     <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto z-50">
       {results.total === 0 ? (
@@ -79,7 +81,7 @@ export default function GlobalSearchResults({
                 onClick={onLoadMore}
                 className="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/60 disabled:opacity-50"
               >
-                {isSearching ? 'Loading…' : 'Load More'}
+                {isSearching ? 'Loading…' : t('lit.loadMore2')}
               </button>
             </div>
           )}
@@ -103,7 +105,7 @@ export default function GlobalSearchResults({
                       {task.TaskName}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {task.ProjectName} • {task.StatusName || 'Unknown'}
+                      {task.ProjectName} • {task.StatusName || t('lit.unknown')}
                     </div>
                   </div>
                 </button>
@@ -131,7 +133,7 @@ export default function GlobalSearchResults({
                       {ticket.Title}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {ticket.ProjectName || ticket.OrganizationName} • {ticket.StatusName || 'Unknown'}
+                      {ticket.ProjectName || ticket.OrganizationName} • {ticket.StatusName || t('lit.unknown')}
                     </div>
                   </div>
                 </button>
@@ -158,7 +160,7 @@ export default function GlobalSearchResults({
                       {project.ProjectName}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {project.OrganizationName} • {project.StatusName || 'Unknown'}
+                      {project.OrganizationName} • {project.StatusName || t('lit.unknown')}
                     </div>
                   </div>
                 </button>

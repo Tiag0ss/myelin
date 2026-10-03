@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -121,6 +122,7 @@ function mergeApplicationsListFilters(
 }
 
 export default function ApplicationsPage() {
+  const { t } = useI18n();
   const { user, token, isLoading: authLoading } = useAuth();
   const { pinnedIds, isPinned, togglePinned } = usePinnedListItems('applications', user?.id);
   const { permissions, isLoading: permissionsLoading } = usePermissions();
@@ -443,7 +445,7 @@ export default function ApplicationsPage() {
       }
     }
 
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'boolean') return value ? t('lit.yes') : t('lit.no');
     if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
     const text = String(value).trim();
     if (!text) return '-';
@@ -497,7 +499,7 @@ export default function ApplicationsPage() {
         setCustomers(data.data || []);
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to load data';
+      const message = err.message || t('lit.failedToLoadData');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -587,7 +589,7 @@ export default function ApplicationsPage() {
     });
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Failed to upload application image');
+      throw new Error(data.message || t('lit.failedToUploadApplicationImage'));
     }
   };
 
@@ -598,7 +600,7 @@ export default function ApplicationsPage() {
     });
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Failed to remove application image');
+      throw new Error(data.message || t('lit.failedToRemoveApplicationImage'));
     }
   };
 
@@ -608,14 +610,14 @@ export default function ApplicationsPage() {
     setIsSaving(true);
 
     try {
-      if (!formData.Name.trim()) throw new Error('Name is required');
-      if (!formData.OrganizationId) throw new Error('Organization is required');
+      if (!formData.Name.trim()) throw new Error(t('lit.nameIsRequired'));
+      if (!formData.OrganizationId) throw new Error(t('lit.organizationIsRequired'));
 
       const url = editingApp
         ? `${getApiUrl()}/api/applications/${editingApp.Id}`
         : `${getApiUrl()}/api/applications`;
 
-      const method = editingApp ? 'PUT' : 'POST';
+      const method = editingApp ? 'PUT' : t('lit.post');
 
       const vcsFields = (() => {
         if (formData.GitHubIntegrationId) {
@@ -673,12 +675,12 @@ export default function ApplicationsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to save application');
+        throw new Error(data.message || t('lit.failedToSaveApplication'));
       }
 
       const applicationId = editingApp?.Id ?? Number(data.id);
       if (!applicationId) {
-        throw new Error('Application saved but id was missing');
+        throw new Error(t('lit.applicationSavedButIdWasMissing'));
       }
 
       if (imageFile) {
@@ -689,9 +691,9 @@ export default function ApplicationsPage() {
 
       closeModal();
       loadData();
-      showToast({ type: 'success', message: editingApp ? 'Application updated successfully' : 'Application created successfully' });
+      showToast({ type: 'success', message: editingApp ? t('lit.applicationUpdatedSuccessfully') : t('lit.applicationCreatedSuccessfully') });
     } catch (err: any) {
-      const message = err.message || 'Failed to save application';
+      const message = err.message || t('lit.failedToSaveApplication');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -701,7 +703,7 @@ export default function ApplicationsPage() {
 
   const handleDelete = (app: Application) => {
     setConfirmModal({
-      title: 'Delete Application',
+      title: t('lit.deleteApplication'),
       message: `Are you sure you want to delete "${app.Name}"? This action cannot be undone.`,
       onConfirm: async () => {
         try {
@@ -711,9 +713,9 @@ export default function ApplicationsPage() {
           });
           setConfirmModal(null);
           loadData();
-          showToast({ type: 'success', message: 'Application deleted successfully' });
+          showToast({ type: 'success', message: t('lit.applicationDeletedSuccessfully') });
         } catch (err: any) {
-          const message = err.message || 'Failed to delete application';
+          const message = err.message || t('lit.failedToDeleteApplication');
           setError(message);
           showToast({ type: 'error', message });
           setConfirmModal(null);
@@ -755,7 +757,7 @@ export default function ApplicationsPage() {
       const rows = parseCsv(text);
 
       if (!rows.length) {
-        throw new Error('CSV is empty or has no data rows');
+        throw new Error(t('lit.csvIsEmptyOrHasNoDataRows'));
       }
 
       let successCount = 0;
@@ -770,11 +772,11 @@ export default function ApplicationsPage() {
           const organizationName = (row.OrganizationName || '').trim();
 
           if (!name) {
-            throw new Error('Name is required');
+            throw new Error(t('lit.nameIsRequired'));
           }
 
           if (!organizationName) {
-            throw new Error('OrganizationName is required');
+            throw new Error(t('lit.organizationnameIsRequired'));
           }
 
           const organization = organizations.find((org) => org.Name.toLowerCase() === organizationName.toLowerCase());
@@ -814,12 +816,12 @@ export default function ApplicationsPage() {
 
           if (!response.ok) {
             const data = await response.json();
-            throw new Error(data.message || 'Failed to create application');
+            throw new Error(data.message || t('lit.failedToCreateApplication'));
           }
 
           successCount += 1;
         } catch (importError: any) {
-          failures.push(`Row ${rowNumber}: ${importError.message || 'Failed to import application'}`);
+          failures.push(`Row ${rowNumber}: ${importError.message || t('lit.failedToImportApplication')}`);
         }
       }
 
@@ -834,7 +836,7 @@ export default function ApplicationsPage() {
         showToast({ type: 'success', message: `Imported ${successCount} applications successfully` });
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to import applications CSV';
+      const message = err.message || t('lit.failedToImportApplicationsCsv');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -871,7 +873,7 @@ export default function ApplicationsPage() {
       <div className="w-full mx-auto px-4 py-4 sm:py-6 space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">Applications</h1>
+            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('pages.applications.title')}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {applications.length} application{applications.length !== 1 ? 's' : ''} across your organisations
             </p>
@@ -881,7 +883,7 @@ export default function ApplicationsPage() {
               <button
                 onClick={() => setViewMode('grid')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="Grid view"
+                title={t('lit.gridView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -890,7 +892,7 @@ export default function ApplicationsPage() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'list' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="List view"
+                title={t('lit.listView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -903,14 +905,14 @@ export default function ApplicationsPage() {
                 disabled={isImportingCsv}
                 className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
               >
-                {isImportingCsv ? 'Importing...' : 'Import CSV'}
+                {isImportingCsv ? t('lit.importing') : t('lit.importCsv')}
               </button>
             )}
             <button
               onClick={handleExportApplicationsCsv}
               className="h-10 px-4 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Export CSV
+              {t('lit.exportCsv')}
             </button>
             {permissions?.canCreateApplications && (
               <button
@@ -918,7 +920,7 @@ export default function ApplicationsPage() {
                 className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center gap-2"
               >
                 <span className="text-base leading-none">+</span>
-                New Application
+                {t('lit.newApplication')}
               </button>
             )}
           </div>
@@ -928,7 +930,7 @@ export default function ApplicationsPage() {
         {applications.length > 0 && (
           <CollapsibleFilterPanel
             className="mb-2"
-            title="Application filters"
+            title={t('lit.applicationFilters')}
             activeCount={[
               searchQuery.trim() ? 1 : 0,
               filterOrg ? 1 : 0,
@@ -952,7 +954,7 @@ export default function ApplicationsPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search applications..."
+                  placeholder={t('lit.searchApplications')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -964,7 +966,7 @@ export default function ApplicationsPage() {
                 onChange={e => setFilterOrg(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">All Organisations</option>
+                <option value="">{t('lit.allOrganisations')}</option>
                 {orgNames.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
               {/* Versions */}
@@ -973,9 +975,9 @@ export default function ApplicationsPage() {
                 onChange={e => setFilterVersions(e.target.value as 'all' | 'with' | 'without')}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="all">All Applications</option>
-                <option value="with">With Versions</option>
-                <option value="without">Without Versions</option>
+                <option value="all">{t('lit.allApplications')}</option>
+                <option value="with">{t('lit.withVersions')}</option>
+                <option value="without">{t('lit.withoutVersions')}</option>
               </select>
               {/* Sort */}
               <select
@@ -987,16 +989,16 @@ export default function ApplicationsPage() {
                 }}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="name-asc">Name A→Z</option>
-                <option value="name-desc">Name Z→A</option>
-                <option value="organization-asc">Organisation A→Z</option>
-                <option value="organization-desc">Organisation Z→A</option>
-                <option value="projects-desc">Projects (most)</option>
-                <option value="projects-asc">Projects (least)</option>
-                <option value="versions-desc">Versions (most)</option>
-                <option value="versions-asc">Versions (least)</option>
-                <option value="customers-desc">Customers (most)</option>
-                <option value="customers-asc">Customers (least)</option>
+                <option value="name-asc">{t('lit.nameAZ')}</option>
+                <option value="name-desc">{t('lit.nameZA')}</option>
+                <option value="organization-asc">{t('lit.organisationAZ')}</option>
+                <option value="organization-desc">{t('lit.organisationZA')}</option>
+                <option value="projects-desc">{t('lit.projectsMost')}</option>
+                <option value="projects-asc">{t('lit.projectsLeast')}</option>
+                <option value="versions-desc">{t('lit.versionsMost')}</option>
+                <option value="versions-asc">{t('lit.versionsLeast')}</option>
+                <option value="customers-desc">{t('lit.customersMost')}</option>
+                <option value="customers-asc">{t('lit.customersLeast')}</option>
               </select>
             </div>
           </CollapsibleFilterPanel>
@@ -1009,7 +1011,7 @@ export default function ApplicationsPage() {
               onClick={loadData}
               className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-sm font-medium"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -1018,12 +1020,12 @@ export default function ApplicationsPage() {
         {filteredAndSortedApplications.length === 0 && applications.length === 0 ? (
           <EmptyState
             icon={<NavModuleIcon href="/applications" size={40} className="text-[var(--pm-muted)] opacity-70" />}
-            title="No applications yet"
-            message="Get started by creating your first application"
+            title={t('lit.noApplicationsYet')}
+            message={t('lit.getStartedByCreatingYourFirstApplication')}
             primaryAction={
               permissions?.canCreateApplications
                 ? {
-                    label: 'Create Application',
+                    label: t('lit.createApplication'),
                     onClick: openCreateModal,
                   }
                 : undefined
@@ -1032,13 +1034,13 @@ export default function ApplicationsPage() {
         ) : filteredAndSortedApplications.length === 0 ? (
           <EmptyState
             icon={<Search size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-            title="No applications match the selected filters"
-            message="Try adjusting search, organization, or versions filter."
+            title={t('lit.noApplicationsMatchTheSelectedFilters')}
+            message={t('lit.tryAdjustingSearchOrganizationOrVersionsFilter')}
             primaryAction={{
-              label: 'Clear filters',
+              label: t('lit.clearFilters'),
               onClick: () => resetListFilters(),
             }}
-            secondaryAction={{ label: 'Reload', onClick: loadData }}
+            secondaryAction={{ label: t('lit.reload'), onClick: loadData }}
           />
         ) : effectiveViewMode === 'list' ? (
           /* List View */
@@ -1047,19 +1049,19 @@ export default function ApplicationsPage() {
               <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
                 <tr>
                   <th aria-sort={getAriaSort('name')} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none" onClick={() => handleSort('name')}>
-                    <div className="flex items-center">Application</div>
+                    <div className="flex items-center">{t('lit.application')}</div>
                   </th>
                   <th aria-sort={getAriaSort('organization')} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none" onClick={() => handleSort('organization')}>
-                    <div className="flex items-center">Organization</div>
+                    <div className="flex items-center">{t('common.organization')}</div>
                   </th>
                   <th aria-sort={getAriaSort('projects')} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none" onClick={() => handleSort('projects')}>
-                    <div className="flex items-center justify-center">Projects</div>
+                    <div className="flex items-center justify-center">{t('common.projects')}</div>
                   </th>
                   <th aria-sort={getAriaSort('versions')} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none" onClick={() => handleSort('versions')}>
-                    <div className="flex items-center justify-center">Versions</div>
+                    <div className="flex items-center justify-center">{t('lit.versions')}</div>
                   </th>
                   <th aria-sort={getAriaSort('customers')} scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none" onClick={() => handleSort('customers')}>
-                    <div className="flex items-center justify-center">Customers</div>
+                    <div className="flex items-center justify-center">{t('common.customers')}</div>
                   </th>
                   {additionalApplicationColumnKeys.map((columnKey) => (
                     <th
@@ -1072,7 +1074,7 @@ export default function ApplicationsPage() {
                     </th>
                   ))}
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -1100,7 +1102,7 @@ export default function ApplicationsPage() {
                                 size={14}
                                 strokeWidth={2}
                                 className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                                aria-label="Pinned"
+                                aria-label={t('nav.pinned')}
                               />
                             )}
                             <span className="truncate">{app.Name}</span>
@@ -1121,7 +1123,7 @@ export default function ApplicationsPage() {
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                               </svg>
-                              Repository
+                              {t('lit.repository')}
                             </a>
                           )}
                         </div>
@@ -1169,8 +1171,8 @@ export default function ApplicationsPage() {
                             e.stopPropagation();
                             togglePinned(app.Id);
                           }}
-                          title={isPinned(app.Id) ? 'Unpin application' : 'Pin application to top'}
-                          aria-label={isPinned(app.Id) ? 'Unpin application' : 'Pin application to top'}
+                          title={isPinned(app.Id) ? t('lit.unpinApplication') : t('lit.pinApplicationToTop')}
+                          aria-label={isPinned(app.Id) ? t('lit.unpinApplication') : t('lit.pinApplicationToTop')}
                           className={`rounded p-1.5 transition-colors ${
                             isPinned(app.Id)
                               ? 'text-[var(--pm-accent)] hover:text-[var(--pm-accent-soft)]'
@@ -1189,7 +1191,7 @@ export default function ApplicationsPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); openEditModal(app); }}
                               className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                              title="Edit"
+                              title={t('common.edit')}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1200,7 +1202,7 @@ export default function ApplicationsPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(app); }}
                               className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                              title="Delete"
+                              title={t('common.delete')}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1242,7 +1244,7 @@ export default function ApplicationsPage() {
                             size={14}
                             strokeWidth={2}
                             className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                            aria-label="Pinned"
+                            aria-label={t('nav.pinned')}
                           />
                         )}
                         <span className="truncate">{app.Name}</span>
@@ -1255,8 +1257,8 @@ export default function ApplicationsPage() {
                           e.stopPropagation();
                           togglePinned(app.Id);
                         }}
-                        title={isPinned(app.Id) ? 'Unpin application' : 'Pin application to top'}
-                        aria-label={isPinned(app.Id) ? 'Unpin application' : 'Pin application to top'}
+                        title={isPinned(app.Id) ? t('lit.unpinApplication') : t('lit.pinApplicationToTop')}
+                        aria-label={isPinned(app.Id) ? t('lit.unpinApplication') : t('lit.pinApplicationToTop')}
                         className={`rounded p-1.5 transition-colors ${
                           isPinned(app.Id)
                             ? 'text-[var(--pm-accent)] hover:text-[var(--pm-accent-soft)]'
@@ -1275,7 +1277,7 @@ export default function ApplicationsPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); openEditModal(app); }}
                             className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                            title="Edit"
+                            title={t('common.edit')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1286,7 +1288,7 @@ export default function ApplicationsPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(app); }}
                             className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                            title="Delete"
+                            title={t('common.delete')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1315,7 +1317,7 @@ export default function ApplicationsPage() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
-                      Repository
+                      {t('lit.repository')}
                     </a>
                   )}
 
@@ -1355,7 +1357,7 @@ export default function ApplicationsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-xl w-full mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Import Applications from CSV</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.importApplicationsFromCsv')}</h2>
                 <button
                   onClick={() => setShowImportModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1369,14 +1371,14 @@ export default function ApplicationsPage() {
               <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">📄 CSV Format</h3>
                 <code className="text-xs bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded block overflow-x-auto">
-                  Name,Description,RepositoryUrl,OrganizationName,IsCustomerSpecific,CustomerNames
+                  {t('lit.nameDescriptionRepositoryurlOrganizationnameIscustomerspecificCustomernames')}
                 </code>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                  <a href="/templates/applications_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                  <a href="/templates/applications_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                 </p>
               </div>
 
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -1389,7 +1391,7 @@ export default function ApplicationsPage() {
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>
@@ -1404,7 +1406,7 @@ export default function ApplicationsPage() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingApp ? 'Edit Application' : 'New Application'}
+                  {editingApp ? t('lit.editApplication') : t('lit.newApplication')}
                 </h2>
                 <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1422,7 +1424,7 @@ export default function ApplicationsPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Name <span className="text-red-500">*</span>
+                    {t('common.name')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1435,7 +1437,7 @@ export default function ApplicationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
+                    {t('common.description')}
                   </label>
                   <textarea
                     value={formData.Description}
@@ -1447,7 +1449,7 @@ export default function ApplicationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Repository URL
+                    {t('lit.repositoryUrl')}
                   </label>
                   <input
                     type="url"
@@ -1473,7 +1475,7 @@ export default function ApplicationsPage() {
                       }
                       setFormData({ ...formData, RepositoryUrl, ...cleared });
                     }}
-                    placeholder="https://github.com/org/repo"
+                    placeholder='https://github.com/org/repo'
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1518,10 +1520,10 @@ export default function ApplicationsPage() {
                     provider === 'github'
                       ? 'GitHub'
                       : provider === 'gitea'
-                        ? 'Gitea'
+                        ? t('lit.gitea')
                         : provider === 'bitbucket'
-                          ? 'Bitbucket'
-                          : 'VCS';
+                          ? t('lit.bitbucket')
+                          : t('lit.vcs');
 
                   return (
                     <div>
@@ -1544,7 +1546,7 @@ export default function ApplicationsPage() {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       >
-                        <option value="">None</option>
+                        <option value="">{t('common.none')}</option>
                         {options.map((opt) => (
                           <option key={opt.value} value={opt.value}>
                             {opt.label}
@@ -1563,17 +1565,17 @@ export default function ApplicationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Application image
+                    {t('lit.applicationImage')}
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    Upload only (PNG, JPEG, WebP, or SVG). External image URLs are not supported.
+                    {t('lit.uploadOnlyPngJpegWebpOrSvgExternalImageUrlsAreNotSupported')}
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
                     {imagePreview ? (
                        
                       <img
                         src={imagePreview}
-                        alt="Application preview"
+                        alt={t('lit.applicationPreview')}
                         className="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-gray-600 bg-white"
                       />
                     ) : (
@@ -1602,7 +1604,7 @@ export default function ApplicationsPage() {
                       onClick={() => imageInputRef.current?.click()}
                       className="h-9 px-3 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-500"
                     >
-                      {imagePreview ? 'Change image' : 'Upload image'}
+                      {imagePreview ? t('lit.changeImage') : t('lit.uploadImage')}
                     </button>
                     {imagePreview && (
                       <button
@@ -1615,7 +1617,7 @@ export default function ApplicationsPage() {
                         }}
                         className="h-9 px-3 text-sm rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
-                        Remove
+                        {t('common.remove')}
                       </button>
                     )}
                   </div>
@@ -1629,14 +1631,14 @@ export default function ApplicationsPage() {
                       onChange={(e) => setFormData({ ...formData, IsCustomerSpecific: e.target.checked })}
                       className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                     />
-                    <span>Customer-specific product version</span>
+                    <span>{t('lit.customerSpecificProductVersion')}</span>
                   </label>
                 </div>
 
                 {!editingApp && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Organization <span className="text-red-500">*</span>
+                      {t('common.organization')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.OrganizationId}
@@ -1644,7 +1646,7 @@ export default function ApplicationsPage() {
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       required
                     >
-                      <option value={0}>Select organization...</option>
+                      <option value={0}>{t('lit.selectOrganization3')}</option>
                       {organizations.map((org) => (
                         <option key={org.Id} value={org.Id}>{org.Name}</option>
                       ))}
@@ -1654,7 +1656,7 @@ export default function ApplicationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Associated Customers
+                    {t('lit.associatedCustomers')}
                   </label>
                   <SearchableMultiSelect
                     values={formData.CustomerIds}
@@ -1666,7 +1668,7 @@ export default function ApplicationsPage() {
                       value: c.Id,
                       label: c.Name
                     }))}
-                    placeholder="Select customers..."
+                    placeholder={t('lit.selectCustomers')}
                   />
                 </div>
 
@@ -1676,14 +1678,14 @@ export default function ApplicationsPage() {
                     onClick={closeModal}
                     className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                   >
-                    {isSaving ? 'Saving...' : editingApp ? 'Update' : 'Create'}
+                    {isSaving ? t('lit.saving') : editingApp ? t('lit.update') : t('lit.create')}
                   </button>
                 </div>
               </form>
@@ -1704,13 +1706,13 @@ export default function ApplicationsPage() {
                   onClick={() => setConfirmModal(null)}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={confirmModal.onConfirm}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>

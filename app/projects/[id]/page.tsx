@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
 import { parseCsv } from '@/lib/csv';
@@ -76,6 +78,7 @@ export default function ProjectDetailPage(props: { params: Promise<{ id: string 
 }
 
 function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useI18n();
   const resolvedParams = use(params);
   const { pillStyle } = useColorVision();
   const projectId = resolvedParams.id;
@@ -547,7 +550,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load project');
+      setError(err.message || t('lit.failedToLoadProject'));
     } finally {
       setIsLoading(false);
     }
@@ -601,7 +604,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
     const trimmedTaskName = (taskData.taskName || '').trim();
     if (!trimmedTaskName) {
-      setError('Task name is required');
+      setError(t('lit.taskNameIsRequired'));
       return;
     }
 
@@ -610,7 +613,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       setError('');
       await loadTasks();
     } catch (err: any) {
-      setError(err.message || 'Failed to save task');
+      setError(err.message || t('lit.failedToSaveTask'));
       throw err;
     }
   };
@@ -619,14 +622,14 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
     if (!token) return;
     
     showConfirm(
-      'Delete Task',
+      t('lit.deleteTask2'),
       'Are you sure you want to delete this task?',
       async () => {
         try {
           await tasksApi.delete(id, token);
           await loadTasks();
         } catch (err: any) {
-          setError(err.message || 'Failed to delete task');
+          setError(err.message || t('lit.failedToDeleteTask'));
         }
       }
     );
@@ -798,10 +801,10 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         // Reload tasks
         await loadTasks();
       } else {
-        setImportProgress(`Error: ${result.message || 'Import failed'}`);
+        setImportProgress(`Error: ${result.message || t('lit.importFailed')}`);
       }
     } catch (err: any) {
-      setImportProgress(`Error: ${err.message || 'Import failed'}`);
+      setImportProgress(`Error: ${err.message || t('lit.importFailed')}`);
       console.error(err);
     }
   };
@@ -843,13 +846,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError('File type not allowed. Allowed: images, PDF, Word, Excel, ZIP, TXT');
+      setError(t('lit.fileTypeNotAllowedAllowedImagesPdfWordExcelZipTxt'));
       e.target.value = '';
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError('File size exceeds 10MB limit');
+      setError(t('lit.fileSizeExceeds10mbLimit'));
       e.target.value = '';
       return;
     }
@@ -883,11 +886,11 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
             loadProjectAttachments();
           } else {
             const error = await response.json();
-            setError(error.message || 'Failed to upload file');
+            setError(error.message || t('lit.failedToUploadFile'));
           }
         } catch (err) {
           console.error('Failed to upload file:', err);
-          setError('Failed to upload file');
+          setError(t('lit.failedToUploadFile'));
         } finally {
           setUploadingProjectFile(false);
           e.target.value = '';
@@ -895,7 +898,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       };
 
       reader.onerror = () => {
-        setError('Failed to read file');
+        setError(t('lit.failedToReadFile'));
         setUploadingProjectFile(false);
         e.target.value = '';
       };
@@ -903,7 +906,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('Failed to upload file:', err);
-      setError('Failed to upload file');
+      setError(t('lit.failedToUploadFile'));
       setUploadingProjectFile(false);
       e.target.value = '';
     }
@@ -943,7 +946,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       );
 
       if (!response.ok) {
-        throw new Error('Failed to download attachment');
+        throw new Error(t('lit.failedToDownloadAttachment'));
       }
 
       const result = await response.json();
@@ -968,7 +971,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      showAlert('Download Failed', err.message || 'Failed to download attachment');
+      showAlert(t('lit.downloadFailed2'), err.message || t('lit.failedToDownloadAttachment'));
     }
   };
 
@@ -986,7 +989,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       );
 
       if (!response.ok) {
-        throw new Error('Failed to preview attachment');
+        throw new Error(t('lit.failedToPreviewAttachment'));
       }
 
       const result = await response.json();
@@ -1008,7 +1011,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       // Clean up URL after a delay
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err: any) {
-      showAlert('Preview Failed', err.message || 'Failed to preview attachment');
+      showAlert(t('lit.previewFailed'), err.message || t('lit.failedToPreviewAttachment'));
     }
   };
 
@@ -1075,7 +1078,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch Jira issues');
+        throw new Error(error.message || t('lit.failedToFetchJiraIssues'));
       }
 
       const data = await response.json();
@@ -1166,7 +1169,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         setTaskTypeMapping(mapping);
       }
     } catch (err: any) {
-      setJiraError(err.message || 'Failed to load Jira issues');
+      setJiraError(err.message || t('lit.failedToLoadJiraIssues'));
     } finally {
       setJiraLoading(false);
     }
@@ -1236,7 +1239,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch Jira tickets');
+        throw new Error(error.message || t('lit.failedToFetchJiraTickets'));
       }
 
       const data = await response.json();
@@ -1307,7 +1310,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         });
       }
     } catch (err: any) {
-      setJiraTicketsError(err.message || 'Failed to load Jira tickets');
+      setJiraTicketsError(err.message || t('lit.failedToLoadJiraTickets'));
     } finally {
       setJiraTicketsLoading(false);
     }
@@ -1426,7 +1429,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to import Jira tickets');
+        throw new Error(error.message || t('lit.failedToImportJiraTickets'));
       }
 
       const result = await response.json();
@@ -1442,7 +1445,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message += ` ${skipped} issue(s) were already integrated without status changes.`;
       }
 
-      showAlert('Import Successful', message);
+      showAlert(t('lit.importSuccessful'), message);
       await loadProject();
       setShowJiraTicketsModal(false);
       setSelectedJiraTickets(new Set());
@@ -1453,7 +1456,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       await loadTasks();
       await loadExistingJiraIssues();
     } catch (err: any) {
-      setJiraTicketsError(err.message || 'Failed to import Jira tickets');
+      setJiraTicketsError(err.message || t('lit.failedToImportJiraTickets'));
     } finally {
       setJiraTicketsImporting(false);
     }
@@ -1511,13 +1514,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       );
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Failed to load ticket statuses');
+        throw new Error(err.message || t('lit.failedToLoadTicketStatuses'));
       }
       const data = await res.json();
       const tickets = data.tickets || [];
       setJiraCheckStatusTickets(tickets);
     } catch (err: any) {
-      setJiraCheckStatusError(err.message || 'Failed to load ticket statuses');
+      setJiraCheckStatusError(err.message || t('lit.failedToLoadTicketStatuses'));
     } finally {
       setJiraCheckStatusLoading(false);
     }
@@ -1541,13 +1544,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       );
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Failed to load board statuses');
+        throw new Error(err.message || t('lit.failedToLoadBoardStatuses'));
       }
       const data = await res.json();
       const tickets = data.tickets || [];
       setJiraCheckStatusTickets(tickets);
     } catch (err: any) {
-      setJiraCheckStatusError(err.message || 'Failed to load board statuses');
+      setJiraCheckStatusError(err.message || t('lit.failedToLoadBoardStatuses'));
     } finally {
       setJiraCheckStatusLoading(false);
     }
@@ -1583,12 +1586,12 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Failed to update statuses');
+        throw new Error(err.message || t('lit.failedToUpdateStatuses'));
       }
       const result = await res.json();
       const updated = result.data?.updatedStatuses || 0;
       showAlert(
-        jiraCheckStatusMode === 'board' ? 'Board Status Update' : 'Ticket Status Update',
+        jiraCheckStatusMode === 'board' ? t('lit.boardStatusUpdate') : t('lit.ticketStatusUpdate'),
         `Updated status on ${updated} task(s).`
       );
       setShowJiraCheckStatusModal(false);
@@ -1596,7 +1599,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       setJiraCheckStatusTickets([]);
       await loadTasks();
     } catch (err: any) {
-      setJiraCheckStatusError(err.message || 'Failed to update statuses');
+      setJiraCheckStatusError(err.message || t('lit.failedToUpdateStatuses'));
     } finally {
       setIsApplyingCheckStatus(false);
     }
@@ -1645,7 +1648,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to import tasks');
+        throw new Error(error.message || t('lit.failedToImportTasks'));
       }
 
       const result = await response.json();
@@ -1661,7 +1664,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message += ` ${hierarchyLinked} parent-child relationship(s) created.`;
       }
       
-      showAlert('Import Successful', message);
+      showAlert(t('lit.importSuccessful'), message);
       
       setShowJiraImportModal(false);
       setSelectedIssues(new Set());
@@ -1673,7 +1676,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       await loadTasks();
       await loadExistingJiraIssues(); // Reload the imported issues list
     } catch (err: any) {
-      setJiraError(err.message || 'Failed to import tasks');
+      setJiraError(err.message || t('lit.failedToImportTasks'));
     } finally {
       setJiraLoading(false);
     }
@@ -1900,7 +1903,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to load GitHub issues');
+        throw new Error(errorData.message || t('lit.failedToLoadGithubIssues'));
       }
 
       const data = await response.json();
@@ -1910,7 +1913,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       setSelectedGitHubIssues(new Set());
       setGitHubStatusMapping({});
     } catch (err: any) {
-      setGitHubError(err.message || 'Failed to load GitHub issues');
+      setGitHubError(err.message || t('lit.failedToLoadGithubIssues'));
     } finally {
       setGitHubLoading(false);
     }
@@ -1943,7 +1946,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to import tasks');
+        throw new Error(error.message || t('lit.failedToImportTasks'));
       }
 
       const result = await response.json();
@@ -1955,7 +1958,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message += ` ${skipped} issue(s) were already imported.`;
       }
       
-      showAlert('Import Successful', message);
+      showAlert(t('lit.importSuccessful'), message);
       
       setShowGitHubImportModal(false);
       setSelectedGitHubIssues(new Set());
@@ -1963,7 +1966,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       await loadTasks();
       await loadExistingGitHubIssues(); // Reload the imported issues list
     } catch (err: any) {
-      setGitHubError(err.message || 'Failed to import from GitHub');
+      setGitHubError(err.message || t('lit.failedToImportFromGithub'));
     } finally {
       setGitHubLoading(false);
     }
@@ -2114,7 +2117,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to load Gitea issues');
+        throw new Error(errorData.message || t('lit.failedToLoadGiteaIssues'));
       }
 
       const data = await response.json();
@@ -2146,7 +2149,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       // Clear selections
       setSelectedGiteaIssues(new Set());
     } catch (err: any) {
-      setGiteaError(err.message || 'Failed to load Gitea issues');
+      setGiteaError(err.message || t('lit.failedToLoadGiteaIssues'));
     } finally {
       setGiteaLoading(false);
     }
@@ -2179,7 +2182,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to import tasks');
+        throw new Error(error.message || t('lit.failedToImportTasks'));
       }
 
       const result = await response.json();
@@ -2191,7 +2194,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message += ` ${skipped} issue(s) were already imported.`;
       }
       
-      showAlert('Import Successful', message);
+      showAlert(t('lit.importSuccessful'), message);
       
       setShowGiteaImportModal(false);
       setSelectedGiteaIssues(new Set());
@@ -2199,7 +2202,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       await loadTasks();
       await loadExistingGiteaIssues(); // Reload the imported issues list
     } catch (err: any) {
-      setGiteaError(err.message || 'Failed to import from Gitea');
+      setGiteaError(err.message || t('lit.failedToImportFromGitea'));
     } finally {
       setGiteaLoading(false);
     }
@@ -2389,7 +2392,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to load Outlook queue');
+        throw new Error(error.message || t('lit.failedToLoadOutlookQueue'));
       }
 
       const data = await response.json();
@@ -2399,7 +2402,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
       setSelectedOutlookQueueIds(new Set());
       setOutlookQueueMappings({});
     } catch (err: any) {
-      setOutlookQueueError(err.message || 'Failed to load Outlook queue');
+      setOutlookQueueError(err.message || t('lit.failedToLoadOutlookQueue'));
       setOutlookQueueItems([]);
       setHasOutlookQueueItems(false);
     } finally {
@@ -2426,7 +2429,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to dismiss queue item');
+        throw new Error(error.message || t('lit.failedToDismissQueueItem'));
       }
 
       setOutlookQueueItems((prev) => {
@@ -2440,7 +2443,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         return next;
       });
     } catch (err: any) {
-      setOutlookQueueError(err.message || 'Failed to dismiss queue item');
+      setOutlookQueueError(err.message || t('lit.failedToDismissQueueItem'));
     }
   };
 
@@ -2479,7 +2482,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to import from Outlook queue');
+        throw new Error(error.message || t('lit.failedToImportFromOutlookQueue'));
       }
 
       const result = await response.json();
@@ -2491,14 +2494,14 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message += ` ${skipped} item(s) were skipped.`;
       }
 
-      showAlert('Import Successful', message);
+      showAlert(t('lit.importSuccessful'), message);
       setShowOutlookQueueModal(false);
       setSelectedOutlookQueueIds(new Set());
       setOutlookQueueMappings({});
       await loadTasks();
       await refreshOutlookQueueAvailability();
     } catch (err: any) {
-      setOutlookQueueError(err.message || 'Failed to import from Outlook queue');
+      setOutlookQueueError(err.message || t('lit.failedToImportFromOutlookQueue'));
     } finally {
       setOutlookQueueImporting(false);
     }
@@ -2586,22 +2589,22 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
   if (!user || !project) return null;
 
   const projectTabs = [
-    { id: 'overview' as const, label: 'Overview' },
-    { id: 'tasks' as const, label: 'Tasks' },
-    { id: 'kanban' as const, label: 'Kanban Board' },
-    { id: 'gantt' as const, label: 'Gantt Chart' },
-    ...(permissions?.canViewReports ? [{ id: 'reporting' as const, label: 'Reporting' }] : []),
-    { id: 'burndown' as const, label: 'Burndown' },
-    { id: 'sprints' as const, label: 'Sprints' },
-    { id: 'milestones' as const, label: 'Milestones' },
-    { id: 'attachments' as const, label: 'Attachments' },
-    { id: 'dependencies' as const, label: 'Dependencies' },
-    { id: 'utilities' as const, label: 'Utilities' },
-    ...(permissions?.canManageProjects ? [{ id: 'settings' as const, label: 'Settings' }] : []),
+    { id: 'overview' as const, label: t('lit.overview') },
+    { id: 'tasks' as const, label: t('pages.projects.tasksTab') },
+    { id: 'kanban' as const, label: t('lit.kanbanBoard') },
+    { id: 'gantt' as const, label: t('lit.ganttChart') },
+    ...(permissions?.canViewReports ? [{ id: 'reporting' as const, label: t('pages.projects.reportingTab') }] : []),
+    { id: 'burndown' as const, label: t('lit.burndown') },
+    { id: 'sprints' as const, label: t('lit.sprints') },
+    { id: 'milestones' as const, label: t('lit.milestones') },
+    { id: 'attachments' as const, label: t('lit.attachments') },
+    { id: 'dependencies' as const, label: t('pages.projects.dependenciesTab') },
+    { id: 'utilities' as const, label: t('lit.utilities') },
+    ...(permissions?.canManageProjects ? [{ id: 'settings' as const, label: t('pages.projects.settingsTab') }] : []),
     ...(permissions?.canManageProjects && jiraIntegration?.IsEnabled && jiraIntegration?.JiraProjectsUrl
-      ? [{ id: 'mappings' as const, label: 'Mappings' }]
+      ? [{ id: 'mappings' as const, label: t('lit.mappings') }]
       : []),
-    { id: 'history' as const, label: 'History' },
+    { id: 'history' as const, label: t('lit.history') },
   ];
 
   return (
@@ -2642,7 +2645,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
             href="/projects"
             className="shrink-0 text-sm text-[var(--pm-muted)] hover:text-[var(--pm-text)]"
           >
-            ← Back to Projects
+            ← {t('lit.backToProjects')}
           </Link>
         </div>
 
@@ -2670,8 +2673,8 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 type="button"
                 onClick={() => setError('')}
                 className="text-lg leading-none text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100"
-                aria-label="Close error message"
-                title="Close"
+                aria-label={t('lit.closeErrorMessage')}
+                title={t('common.close')}
               >
                 ×
               </button>
@@ -2835,7 +2838,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               disabled={settingsSaving}
               className={pageActionButtonClass.primary}
             >
-              {settingsSaving ? 'Saving…' : 'Save Changes'}
+              {settingsSaving ? t('lit.saving2') : t('lit.saveChanges')}
             </button>
           )}
           {activeTab === 'mappings' && (
@@ -2845,7 +2848,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               disabled={mappingsSaving}
               className={pageActionButtonClass.primary}
             >
-              {mappingsSaving ? 'Saving…' : 'Save mappings'}
+              {mappingsSaving ? t('lit.saving2') : t('lit.saveMappings')}
             </button>
           )}
         </PageStickyActions>
@@ -2895,7 +2898,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
                   </svg>
-                  Import Tasks from Jira
+                  {t('lit.importTasksFromJira')}
                 </h2>
                 <button
                   onClick={() => setShowJiraImportModal(false)}
@@ -2920,7 +2923,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading Jira issues...</p>
+                    <p className="text-gray-600 dark:text-gray-400">{t('lit.loadingJiraIssues')}</p>
                   </div>
                 </div>
               ) : jiraIssues.length === 0 ? (
@@ -2928,9 +2931,9 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Jira issues found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{t('lit.noJiraIssuesFound')}</h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Make sure your Jira integration is configured and the board/project has issues.
+                    {t('lit.makeSureYourJiraIntegrationIsConfiguredAndTheBoardProjectHasIssues')}
                   </p>
                 </div>
               ) : (
@@ -2948,7 +2951,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       {isJiraStatusMappingOpen && (
                         <>
                           <p className="text-sm text-blue-800 dark:text-blue-400 mt-3 mb-3">
-                            Map Jira statuses to your project's task statuses:
+                            {t('lit.mapJiraStatusesToYourProjectsTaskStatuses')}
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from(new Set(jiraIssues.map(i => i.status).filter(Boolean))).map(jiraStatus => (
@@ -2991,7 +2994,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       {isJiraTaskTypeMappingOpen && (
                         <>
                           <p className="text-sm text-indigo-800 dark:text-indigo-400 mt-3 mb-3">
-                            Map Jira issue types to your project's task types:
+                            {t('lit.mapJiraIssueTypesToYourProjectsTaskTypes')}
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from(new Set(jiraIssues.map(i => i.issueType).filter(Boolean))).map(jiraIssueType => (
@@ -3034,7 +3037,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       {isJiraPriorityMappingOpen && (
                         <>
                           <p className="text-sm text-amber-800 dark:text-amber-400 mt-3 mb-3">
-                            Map Jira priorities to your project's task priorities:
+                            {t('lit.mapJiraPrioritiesToYourProjectsTaskPriorities')}
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from(new Set(jiraIssues.map(i => i.priority).filter(Boolean))).map(jiraPriority => (
@@ -3077,7 +3080,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       {isJiraAssigneeMappingOpen && (
                         <>
                           <p className="text-sm text-emerald-800 dark:text-emerald-400 mt-3 mb-3">
-                            Map Jira assignees to users in this organization:
+                            {t('lit.mapJiraAssigneesToUsersInThisOrganization')}
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from(new Set(jiraIssues.map(i => String(i.assignee || '').trim()).filter(Boolean))).map(jiraAssignee => (
@@ -3096,7 +3099,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                   }}
                                   className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                  <option value="">Unassigned</option>
+                                  <option value="">{t('lit.unassigned')}</option>
                                   {jiraImportUsers.map((userOption) => {
                                     const label = userOption.FirstName && userOption.LastName
                                       ? `${userOption.FirstName} ${userOption.LastName} (${userOption.Username})`
@@ -3120,7 +3123,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       <div className="lg:col-span-3">
                         <input
                           type="text"
-                          placeholder="Search by key, summary, or description..."
+                          placeholder={t('lit.searchByKeySummaryOrDescription')}
                           value={jiraFilters.search}
                           onChange={(e) => setJiraFilters({ ...jiraFilters, search: e.target.value })}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -3129,13 +3132,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       
                       {/* Status filter */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.status')}</label>
                         <select
                           value={jiraFilters.status}
                           onChange={(e) => setJiraFilters({ ...jiraFilters, status: e.target.value })}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                          <option value="">All Statuses</option>
+                          <option value="">{t('lit.allStatuses2')}</option>
                           {Array.from(new Set(jiraIssues.map(i => i.status).filter(Boolean))).map(status => (
                             <option key={status} value={status}>{status}</option>
                           ))}
@@ -3144,13 +3147,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       
                       {/* Issue Type filter */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Issue Type</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.issueType')}</label>
                         <select
                           value={jiraFilters.issueType}
                           onChange={(e) => setJiraFilters({ ...jiraFilters, issueType: e.target.value })}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                          <option value="">All Types</option>
+                          <option value="">{t('lit.allTypes2')}</option>
                           {Array.from(new Set(jiraIssues.map(i => i.issueType).filter(Boolean))).map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
@@ -3159,13 +3162,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       
                       {/* Priority filter */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.priority')}</label>
                         <select
                           value={jiraFilters.priority}
                           onChange={(e) => setJiraFilters({ ...jiraFilters, priority: e.target.value })}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                          <option value="">All Priorities</option>
+                          <option value="">{t('lit.allPriorities2')}</option>
                           {Array.from(new Set(jiraIssues.map(i => i.priority).filter(Boolean))).map(priority => (
                             <option key={priority} value={priority}>{priority}</option>
                           ))}
@@ -3174,13 +3177,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
                       {/* Assignee filter */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('pages.tickets.assignee')}</label>
                         <select
                           value={jiraFilters.assignee}
                           onChange={(e) => setJiraFilters({ ...jiraFilters, assignee: e.target.value })}
                           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                          <option value="">All Assignees</option>
+                          <option value="">{t('lit.allAssignees2')}</option>
                           {Array.from(new Set(jiraIssues.map(i => String(i.assignee || '').trim()).filter(Boolean))).map(assignee => (
                             <option key={assignee} value={assignee}>{assignee}</option>
                           ))}
@@ -3200,7 +3203,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             })}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Show parents only</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.showParentsOnly')}</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -3213,7 +3216,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             })}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Show subtasks only</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.showSubtasksOnly')}</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -3222,7 +3225,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             onChange={(e) => setShowAlreadyImported(e.target.checked)}
                             className="rounded"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Show already imported</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.showAlreadyImported')}</span>
                         </label>
                         {(jiraFilters.search || jiraFilters.status || jiraFilters.issueType || jiraFilters.priority || jiraFilters.assignee || jiraFilters.showParentsOnly || jiraFilters.showSubtasksOnly || showAlreadyImported) && (
                           <button
@@ -3240,7 +3243,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             }}
                             className="ml-auto text-sm text-blue-600 dark:text-blue-400 hover:underline"
                           >
-                            Clear all filters
+                            {t('lit.clearAllFilters')}
                           </button>
                         )}
                       </div>
@@ -3280,14 +3283,14 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        {getSortedFilteredJiraIssues().filter(issue => !existingIssueIds.has(issue.key)).every(issue => selectedIssues.has(issue.key)) ? 'Deselect All New' : 'Select All New'}
+                        {getSortedFilteredJiraIssues().filter(issue => !existingIssueIds.has(issue.key)).every(issue => selectedIssues.has(issue.key)) ? t('lit.deselectAllNew') : t('lit.selectAllNew')}
                       </button>
                     </div>
 
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {getSortedFilteredJiraIssues().length === 0 ? (
                         <div className="text-center py-8">
-                          <p className="text-gray-500 dark:text-gray-400">No issues match the current filters</p>
+                          <p className="text-gray-500 dark:text-gray-400">{t('lit.noIssuesMatchTheCurrentFilters')}</p>
                           <button
                             onClick={() => {
                               setJiraFilters({
@@ -3303,7 +3306,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             }}
                             className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                           >
-                            Clear filters and show all
+                            {t('lit.clearFiltersAndShowAll')}
                           </button>
                         </div>
                       ) : getSortedFilteredJiraIssues().filter(issue => !existingIssueIds.has(issue.key)).length === 0 && !showAlreadyImported ? (
@@ -3312,15 +3315,15 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             <svg className="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">All new issues already imported</h3>
+                            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{t('lit.allNewIssuesAlreadyImported')}</h3>
                             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                              All new issues matching your filters have already been imported as tasks.
+                              {t('lit.allNewIssuesMatchingYourFiltersHaveAlreadyBeenImportedAsTasks')}
                             </p>
                             <button
                               onClick={() => setShowAlreadyImported(true)}
                               className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                             >
-                              Show already imported issues
+                              {t('lit.showAlreadyImportedIssues')}
                             </button>
                           </div>
                         </div>
@@ -3417,7 +3420,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     onClick={() => setShowJiraImportModal(false)}
                     className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleJiraImport}
@@ -3444,7 +3447,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                   </svg>
-                  Import Tasks from GitHub
+                  {t('lit.importTasksFromGithub')}
                 </h2>
                 <button
                   onClick={() => setShowGitHubImportModal(false)}
@@ -3469,7 +3472,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 return (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Application
+                      {t('lit.application')}
                     </label>
                     <select
                       value={gitHubImportApplicationId || ''}
@@ -3480,7 +3483,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       }}
                       className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="">Select application...</option>
+                      <option value="">{t('lit.selectApplication')}</option>
                       {githubApps.map((app: { Id: number; Name: string; RepositoryUrl?: string | null }) => (
                         <option key={app.Id} value={app.Id}>
                           {app.Name}
@@ -3502,7 +3505,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading GitHub issues...</p>
+                    <p className="text-gray-600 dark:text-gray-400">{t('lit.loadingGithubIssues')}</p>
                   </div>
                 </div>
               ) : gitHubIssues.length === 0 ? (
@@ -3510,9 +3513,9 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No GitHub issues found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{t('lit.noGithubIssuesFound')}</h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Make sure your GitHub integration is configured and the repository has issues.
+                    {t('lit.makeSureYourGithubIntegrationIsConfiguredAndTheRepositoryHasIssues')}
                   </p>
                 </div>
               ) : (
@@ -3522,7 +3525,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📍 Status Mapping</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Map GitHub issue states to your project's task statuses:
+                        {t('lit.mapGithubIssueStatesToYourProjectsTaskStatuses')}
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {['open', 'closed'].map((state) => (
@@ -3538,7 +3541,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                               }))}
                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
-                              <option value="">Select status...</option>
+                              <option value="">{t('lit.selectStatus3')}</option>
                               {taskStatuses.map((status) => (
                                 <option key={status.Id} value={status.Id}>
                                   {status.StatusName}
@@ -3555,29 +3558,29 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Search
+                        {t('common.search')}
                       </label>
                       <input
                         type="text"
                         value={gitHubFilters.search}
                         onChange={(e) => setGitHubFilters(prev => ({ ...prev, search: e.target.value }))}
-                        placeholder="Title, body, or number..."
+                        placeholder={t('lit.titleBodyOrNumber')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        State
+                        {t('lit.state')}
                       </label>
                       <select
                         value={gitHubFilters.state}
                         onChange={(e) => setGitHubFilters(prev => ({ ...prev, state: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="">All States</option>
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
+                        <option value="">{t('lit.allStates')}</option>
+                        <option value="open">{t('common.open')}</option>
+                        <option value="closed">{t('lit.closed')}</option>
                       </select>
                     </div>
 
@@ -3591,7 +3594,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
-                          Refresh
+                          {t('common.refresh')}
                         </button>
                       </div>
                     </div>
@@ -3604,7 +3607,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                           onChange={(e) => setShowAlreadyImportedGitHub(e.target.checked)}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        Show already imported
+                        {t('lit.showAlreadyImported')}
                       </label>
                     </div>
                   </div>
@@ -3621,7 +3624,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             disabled={getFilteredGitHubIssues().filter(issue => !existingGitHubIssueIds.has(issue.number?.toString())).length === 0}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          Select All Available
+                          {t('lit.selectAllAvailable')}
                         </label>
                       </div>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -3662,7 +3665,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                   </h4>
                                   {isAlreadyImported && (
                                     <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 rounded-full">
-                                      Already Imported
+                                      {t('lit.alreadyImported')}
                                     </span>
                                   )}
                                   <span className={`px-2 py-1 text-xs rounded-full ${
@@ -3708,7 +3711,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                                   >
-                                    View on GitHub ↗
+                                    {t('lit.viewOnGithub')}
                                   </a>
                                 </div>
                               </div>
@@ -3740,7 +3743,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     onClick={() => setShowGitHubImportModal(false)}
                     className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleGitHubImport}
@@ -3765,7 +3768,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span className="text-3xl">🍵</span>
-                  Import Tasks from Gitea
+                  {t('lit.importTasksFromGitea')}
                 </h2>
                 <button
                   onClick={() => setShowGiteaImportModal(false)}
@@ -3790,7 +3793,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 return (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Application
+                      {t('lit.application')}
                     </label>
                     <select
                       value={giteaImportApplicationId || ''}
@@ -3801,7 +3804,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       }}
                       className="w-full max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="">Select application...</option>
+                      <option value="">{t('lit.selectApplication')}</option>
                       {giteaApps.map((app: { Id: number; Name: string; RepositoryUrl?: string | null }) => (
                         <option key={app.Id} value={app.Id}>
                           {app.Name}
@@ -3823,7 +3826,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading Gitea issues...</p>
+                    <p className="text-gray-600 dark:text-gray-400">{t('lit.loadingGiteaIssues')}</p>
                   </div>
                 </div>
               ) : giteaIssues.length === 0 ? (
@@ -3831,9 +3834,9 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Gitea issues found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{t('lit.noGiteaIssuesFound')}</h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Make sure your Gitea integration is configured and the repository has issues.
+                    {t('lit.makeSureYourGiteaIntegrationIsConfiguredAndTheRepositoryHasIssues')}
                   </p>
                 </div>
               ) : (
@@ -3843,7 +3846,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📍 Status Mapping</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Map Gitea issue states to your project's task statuses. Auto-mapped by default.
+                        {t('lit.mapGiteaIssueStatesToYourProjectsTaskStatusesAutoMappedByDefault')}
                       </p>
                       <div className="grid grid-cols-1 gap-3">
                         {giteaIssues.length > 0 && Array.from(new Set(giteaIssues.map(issue => issue.state))).map((state) => (
@@ -3859,7 +3862,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                               }))}
                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
-                              <option value="">Select status...</option>
+                              <option value="">{t('lit.selectStatus3')}</option>
                               {taskStatuses.map((status) => (
                                 <option key={status.Id} value={status.StatusName}>
                                   {status.StatusName}
@@ -3876,44 +3879,44 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Search
+                        {t('common.search')}
                       </label>
                       <input
                         type="text"
                         value={giteaFilters.search}
                         onChange={(e) => setGiteaFilters(prev => ({ ...prev, search: e.target.value }))}
-                        placeholder="Title, body, or number..."
+                        placeholder={t('lit.titleBodyOrNumber')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        State
+                        {t('lit.state')}
                       </label>
                       <select
                         value={giteaFilters.state}
                         onChange={(e) => setGiteaFilters(prev => ({ ...prev, state: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="">All States</option>
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
+                        <option value="">{t('lit.allStates')}</option>
+                        <option value="open">{t('common.open')}</option>
+                        <option value="closed">{t('lit.closed')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Type
+                        {t('common.type')}
                       </label>
                       <select
                         value={giteaFilters.type}
                         onChange={(e) => setGiteaFilters(prev => ({ ...prev, type: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="">Issues & PRs</option>
-                        <option value="issues">Issues Only</option>
-                        <option value="pulls">Pull Requests Only</option>
+                        <option value="">{t('lit.issuesPrs')}</option>
+                        <option value="issues">{t('lit.issuesOnly')}</option>
+                        <option value="pulls">{t('lit.pullRequestsOnly')}</option>
                       </select>
                     </div>
 
@@ -3926,7 +3929,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Refresh
+                        {t('common.refresh')}
                       </button>
                     </div>
                   </div>
@@ -3941,7 +3944,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
                     <label htmlFor="showAlreadyImportedGitea" className="text-sm text-gray-600 dark:text-gray-400">
-                      Show already imported issues
+                      {t('lit.showAlreadyImportedIssues')}
                     </label>
                   </div>
 
@@ -3957,7 +3960,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             disabled={getFilteredGiteaIssues().filter(issue => !existingGiteaIssueIds.has(issue.number?.toString())).length === 0}
                             className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                           />
-                          Select All Available
+                          {t('lit.selectAllAvailable')}
                         </label>
                       </div>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -3999,12 +4002,12 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                   </h4>
                                   {isAlreadyImported && (
                                     <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 rounded-full">
-                                      Already Imported
+                                      {t('lit.alreadyImported')}
                                     </span>
                                   )}
                                   {isPullRequest && (
                                     <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
-                                      Pull Request
+                                      {t('lit.pullRequest')}
                                     </span>
                                   )}
                                   <span className={`px-2 py-1 text-xs rounded-full ${
@@ -4052,7 +4055,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                       className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
                                       onClick={(e) => e.stopPropagation()}
                                     >
-                                      View on Gitea ↗
+                                      {t('lit.viewOnGitea')}
                                     </a>
                                   )}
                                 </div>
@@ -4085,7 +4088,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     onClick={() => setShowGiteaImportModal(false)}
                     className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleGiteaImport}
@@ -4108,7 +4111,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         message={modalMessage?.message || ''}
         onClose={closeConfirmModal}
         onConfirm={handleModalConfirm}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         alertLabel="OK"
         confirmVariant="danger"
       />
@@ -4118,29 +4121,29 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Import Tasks from CSV</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{t('lit.importTasksFromCsv')}</h2>
               
               <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">📄 CSV Format</h3>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mb-2">
-                  Your CSV should have the following columns (header required):
+                  {t('lit.yourCsvShouldHaveTheFollowingColumnsHeaderRequired')}
                 </p>
                 <code className="text-xs bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded block overflow-x-auto">
                   TaskName,Description,Status,Priority,AssignedToUsername,DueDate,EstimatedHours,ParentTaskName,PlannedStartDate,PlannedEndDate,DependsOnTaskName
                 </code>
                 <p className="text-xs text-blue-800 dark:text-blue-400 mt-2">
-                  ProjectId is added automatically from the current project.
+                  {t('lit.projectidIsAddedAutomaticallyFromTheCurrentProject')}
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                  <a href="/templates/tasks_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                  <a href="/templates/tasks_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                   {' | '}
-                  <a href="/templates/README_TASKS_IMPORT.md" target="_blank" className="underline hover:text-blue-600 dark:hover:text-blue-200">Read documentation</a>
+                  <a href="/templates/README_TASKS_IMPORT.md" target="_blank" className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.readDocumentation')}</a>
                 </p>
               </div>
 
               {/* File Upload */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
                 <input
                   type="file"
                   accept=".csv"
@@ -4165,17 +4168,17 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               {/* Preview */}
               {importPreview.length > 0 && (
                 <div className="mb-5">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Preview (first 5 rows)</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('lit.previewFirst5Rows')}</h3>
                   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Task Name</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Assigned To</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Type (CSV)</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Status (CSV)</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Priority (CSV)</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Estimated</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.taskName')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.assignedTo')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.typeCsv')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.statusCsv')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.priorityCsv')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.estimated')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -4200,7 +4203,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="mb-5 p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🔀 Status Mapping</h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Map each status value from your CSV to an existing project status. Unmapped values will be left blank.
+                    {t('lit.mapEachStatusValueFromYourCsvToAnExistingProjectStatusUnmappedValuesWill')}
                   </p>
                   <div className="space-y-2">
                     {csvUniqueStatuses.map(csvVal => (
@@ -4276,7 +4279,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   {csvUniqueTaskTypes.length > 0 ? (
                     <>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        Map each task type from your CSV to an existing type. Unmapped values will use the default below.
+                        {t('lit.mapEachTaskTypeFromYourCsvToAnExistingTypeUnmappedValuesWillUseTheDefaultBelow')}
                       </p>
                       <div className="space-y-2 mb-3">
                         {csvUniqueTaskTypes.map(csvVal => (
@@ -4308,7 +4311,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     </>
                   ) : (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      No <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">TaskType</code> column found in CSV. You can set a default type to apply to all imported tasks.
+                      {t('common.no')} <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">{t('lit.tasktype')}</code> {t('lit.columnFoundInCsvYouCanSetADefaultTypeToApplyToAllImportedTasks')}
                     </p>
                   )}
                   <div className="flex items-center gap-3">
@@ -4362,7 +4365,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  {importResult ? 'Close' : 'Cancel'}
+                  {importResult ? t('common.close') : t('common.cancel')}
                 </button>
                 {!importResult && importFile && (
                   <button
@@ -4370,7 +4373,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     disabled={importProgress.startsWith('Importing')}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                   >
-                    {importProgress.startsWith('Importing') ? 'Importing...' : 'Import Tasks'}
+                    {importProgress.startsWith('Importing') ? 'Importing...' : t('lit.importTasks')}
                   </button>
                 )}
               </div>
@@ -4387,7 +4390,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span className="text-2xl">🎫</span>
-                  Import from Jira Ticket
+                  {t('lit.importFromJiraTicket')}
                 </h2>
                 <button
                   onClick={() => {
@@ -4408,7 +4411,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
               <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
                 <p className="text-sm text-purple-800 dark:text-purple-400">
-                  Select one or more Jira tickets and import directly as tasks.
+                  {t('lit.selectOneOrMoreJiraTicketsAndImportDirectlyAsTasks')}
                 </p>
               </div>
 
@@ -4436,7 +4439,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     <div className="mt-4 space-y-4">
                       {jiraTicketIssueTypes.length > 0 && (
                         <div>
-                          <p className="text-xs text-indigo-800 dark:text-indigo-400 mb-2">Issue Type → Task Type</p>
+                          <p className="text-xs text-indigo-800 dark:text-indigo-400 mb-2">{t('lit.issueTypeTaskType')}</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {jiraTicketIssueTypes.map((issueType) => (
                               <div key={issueType} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
@@ -4446,7 +4449,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                   onChange={(e) => setJiraTicketTypeMapping(prev => ({ ...prev, [issueType]: e.target.value }))}
                                   className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                  <option value="">Auto map</option>
+                                  <option value="">{t('lit.autoMap')}</option>
                                   {taskTypes.map(type => (
                                     <option key={type.Id} value={type.TypeName || type.StatusName || ''}>
                                       {type.TypeName || type.StatusName}
@@ -4461,7 +4464,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
                       {jiraTicketPriorities.length > 0 && (
                         <div>
-                          <p className="text-xs text-indigo-800 dark:text-indigo-400 mb-2">Jira Priority → Task Priority</p>
+                          <p className="text-xs text-indigo-800 dark:text-indigo-400 mb-2">{t('lit.jiraPriorityTaskPriority')}</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {jiraTicketPriorities.map((priority) => (
                               <div key={priority} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
@@ -4471,7 +4474,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                   onChange={(e) => setJiraTicketPriorityMapping(prev => ({ ...prev, [priority]: e.target.value }))}
                                   className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                  <option value="">Auto map</option>
+                                  <option value="">{t('lit.autoMap')}</option>
                                   {taskPriorities.map(taskPriority => (
                                     <option key={taskPriority.Id} value={taskPriority.PriorityName || taskPriority.StatusName || ''}>
                                       {taskPriority.PriorityName || taskPriority.StatusName}
@@ -4494,7 +4497,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Search Jira tickets..."
+                    placeholder={t('lit.searchJiraTickets')}
                     value={jiraSearchQuery}
                     onChange={(e) => setJiraSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -4516,7 +4519,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                     disabled={jiraTicketsLoading}
                     className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition-colors font-medium"
                   >
-                    {jiraTicketsLoading ? 'Searching...' : 'Search'}
+                    {jiraTicketsLoading ? 'Searching...' : t('common.search')}
                   </button>
                 </div>
                 <div className="mt-3 flex items-center gap-4">
@@ -4530,7 +4533,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       }}
                       className="rounded"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Hide already integrated tickets</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.hideAlreadyIntegratedTickets')}</span>
                   </label>
                   {!jiraTicketsLoading && visibleJiraTickets.length > 0 && (
                     <button
@@ -4555,8 +4558,8 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       {visibleJiraTickets
                         .filter((ticket) => !existingIssueIds.has(ticket.key) || getExistingJiraStatusUpdate(ticket.key, ticket.status).hasStatusChange)
                         .every((ticket) => selectedJiraTickets.has(ticket.key))
-                          ? 'Deselect All Actionable'
-                          : 'Select All Actionable'}
+                          ? t('lit.deselectAllActionable')
+                          : t('lit.selectAllActionable')}
                     </button>
                   )}
                   {existingIssueIds.size > 0 && (
@@ -4623,7 +4626,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             </span>
                             {isExisting && (
                               <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-                                Already integrated
+                                {t('lit.alreadyIntegrated')}
                               </span>
                             )}
                             {ticket.status && (
@@ -4642,20 +4645,20 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                           </div>
                           {ticket.description && (
                             <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                              {typeof ticket.description === 'string' ? ticket.description : 'Description available in Jira'}
+                              {typeof ticket.description === 'string' ? ticket.description : t('lit.descriptionAvailableInJira')}
                             </div>
                           )}
 
                           {isExisting && canUpdateStatus && (
                             <div className="mt-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
-                              Jira status: <span className="font-semibold">{ticket.status || '—'}</span> · Current task status: <span className="font-semibold">{existingJiraIssueStatusByKey[ticket.key]?.statusName || '—'}</span> · Will update to: <span className="font-semibold">{existingStatus.mappedStatusName || ticket.status || '—'}</span>
+                              {t('lit.jiraStatus')} <span className="font-semibold">{ticket.status || '—'}</span> · Current task status: <span className="font-semibold">{existingJiraIssueStatusByKey[ticket.key]?.statusName || '—'}</span> · Will update to: <span className="font-semibold">{existingStatus.mappedStatusName || ticket.status || '—'}</span>
                             </div>
                           )}
 
                           {!isExisting && (
                             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                               <div>
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Customer</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('common.customer')}</label>
                                 <div className="mb-1 text-[11px] text-gray-500 dark:text-gray-400">
                                   Jira Organizations: {Array.isArray(ticket.organizations) && ticket.organizations.length > 0 ? ticket.organizations.join(', ') : '—'}
                                 </div>
@@ -4682,16 +4685,16 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                       label: customer.ExternalName?.trim() || customer.Name,
                                     })),
                                   ]}
-                                  placeholder="Select customer..."
-                                  emptyMessage="No customers available"
+                                  placeholder={t('lit.selectCustomer2')}
+                                  emptyMessage={t('lit.noCustomersAvailable')}
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Assignee</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('pages.tickets.assignee')}</label>
                                 <div className="mb-1 text-[11px] text-gray-500 dark:text-gray-400">
                                   {ticket.developer || ticket.developerEmail
                                     ? `Jira Developer: ${ticket.developer || ticket.developerEmail}${ticket.developer && ticket.developerEmail ? ` (${ticket.developerEmail})` : ''}`
-                                    : `Jira Assignee: ${ticket.assignee || ticket.assigneeEmail || 'Unassigned'}${ticket.assignee && ticket.assigneeEmail ? ` (${ticket.assigneeEmail})` : ''}`}
+                                    : `Jira Assignee: ${ticket.assignee || ticket.assigneeEmail || t('lit.unassigned')}${ticket.assignee && ticket.assigneeEmail ? ` (${ticket.assigneeEmail})` : ''}`}
                                 </div>
                                 <SearchableSelect
                                   value={jiraTicketMappings[ticket.key]?.assigneeId}
@@ -4708,8 +4711,8 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                     id: u.Id,
                                     label: `${u.Username}${u.FirstName && u.LastName ? ` (${u.FirstName} ${u.LastName})` : ''}`,
                                   }))}
-                                  placeholder="Select assignee..."
-                                  emptyMessage="No users available"
+                                  placeholder={t('lit.selectAssignee2')}
+                                  emptyMessage={t('lit.noUsersAvailable')}
                                 />
                               </div>
                             </div>
@@ -4726,7 +4729,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               {/* Empty State */}
               {!jiraTicketsLoading && !jiraTicketsError && visibleJiraTickets.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No Jira tickets found. Try adjusting your search or filters.
+                  {t('lit.noJiraTicketsFoundTryAdjustingYourSearchOrFilters')}
                 </div>
               )}
 
@@ -4743,7 +4746,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   }}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleImportJiraTickets}
@@ -4778,7 +4781,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span className="text-2xl">📧</span>
-                  Import from Outlook Queue
+                  {t('lit.importFromOutlookQueue')}
                 </h2>
                 <button
                   onClick={() => {
@@ -4808,7 +4811,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               )}
 
               {outlookQueueLoading && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading queue...</div>
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.loadingQueue')}</div>
               )}
 
               {!outlookQueueLoading && outlookQueueItems.length > 0 && (
@@ -4848,7 +4851,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <h3 className="font-semibold text-gray-900 dark:text-white">
-                                  {item.Subject?.trim() || 'Email task'}
+                                  {item.Subject?.trim() || t('lit.emailTask')}
                                 </h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                   {item.FromEmail} · {new Date(item.ReceivedAt).toLocaleString()}
@@ -4859,7 +4862,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                 onClick={() => handleDismissOutlookQueueItem(item.Id)}
                                 className="text-xs text-red-600 dark:text-red-400 hover:underline whitespace-nowrap"
                               >
-                                Dismiss
+                                {t('lit.dismiss')}
                               </button>
                             </div>
                             {preview && (
@@ -4867,7 +4870,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                             )}
                             {isSelected && (
                               <div className="mt-3">
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Assignee</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('pages.tickets.assignee')}</label>
                                 <SearchableSelect
                                   value={outlookQueueMappings[item.Id]?.assigneeId ?? user?.id}
                                   onChange={(value) => {
@@ -4883,8 +4886,8 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                                     id: u.Id,
                                     label: `${u.Username}${u.FirstName && u.LastName ? ` (${u.FirstName} ${u.LastName})` : ''}`,
                                   }))}
-                                  placeholder="Select assignee..."
-                                  emptyMessage="No users available"
+                                  placeholder={t('lit.selectAssignee2')}
+                                  emptyMessage={t('lit.noUsersAvailable')}
                                 />
                               </div>
                             )}
@@ -4898,7 +4901,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
 
               {!outlookQueueLoading && !outlookQueueError && outlookQueueItems.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No queued emails found. Send an email from your Outlook address to the configured queue address.
+                  {t('lit.noQueuedEmailsFoundSendAnEmailFromYourOutlookAddressToTheConfiguredQueueAddress')}
                 </div>
               )}
 
@@ -4912,7 +4915,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                   }}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleImportOutlookQueue}
@@ -4937,7 +4940,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <span className="text-2xl">🔍</span>
-                  {jiraCheckStatusMode === 'board' ? 'Check Jira Board Status' : 'Check Jira Ticket Status'}
+                  {jiraCheckStatusMode === 'board' ? t('lit.checkJiraBoardStatus') : t('lit.checkJiraTicketStatus')}
                 </h2>
                 <button
                   onClick={() => {
@@ -4997,7 +5000,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         onChange={(e) => setCheckStatusOnlyChanged(e.target.checked)}
                         className="w-4 h-4 text-amber-600 focus:ring-amber-500"
                       />
-                      Show only tickets with status changes
+                      {t('lit.showOnlyTicketsWithStatusChanges')}
                     </label>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {jiraCheckStatusTickets.filter(t => hasCheckStatusChange(t, jiraCheckStatusMapping, jiraCheckStatusOverrides)).length} ticket(s) with changes
@@ -5011,13 +5014,13 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         if (!checkStatusOnlyChanged) return true;
                         return hasCheckStatusChange(t, jiraCheckStatusMapping, jiraCheckStatusOverrides);
                       })
-                      .map(t => {
-                        const mapped = resolveCheckStatusTarget(t.issueKey, t.jiraStatus, jiraCheckStatusMapping, jiraCheckStatusOverrides);
-                        const hasChange = hasCheckStatusChange(t, jiraCheckStatusMapping, jiraCheckStatusOverrides);
-                        const isSelected = selectedCheckStatusKeys.has(t.issueKey);
+                      .map(ticket => {
+                        const mapped = resolveCheckStatusTarget(ticket.issueKey, ticket.jiraStatus, jiraCheckStatusMapping, jiraCheckStatusOverrides);
+                        const hasChange = hasCheckStatusChange(ticket, jiraCheckStatusMapping, jiraCheckStatusOverrides);
+                        const isSelected = selectedCheckStatusKeys.has(ticket.issueKey);
                         return (
                           <div
-                            key={t.issueKey}
+                            key={ticket.issueKey}
                             className={`flex items-start gap-3 p-3 rounded-lg border ${
                               hasChange
                                 ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'
@@ -5030,25 +5033,25 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                               disabled={!hasChange}
                               onChange={() => {
                                 const updated = new Set(selectedCheckStatusKeys);
-                                if (updated.has(t.issueKey)) updated.delete(t.issueKey);
-                                else updated.add(t.issueKey);
+                                if (updated.has(ticket.issueKey)) updated.delete(ticket.issueKey);
+                                else updated.add(ticket.issueKey);
                                 setSelectedCheckStatusKeys(updated);
                               }}
                               className="mt-1 w-4 h-4 text-amber-600 focus:ring-amber-500 disabled:opacity-40"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium text-purple-600 dark:text-purple-400 text-sm">{t.issueKey}</span>
-                                <span className="text-sm text-gray-900 dark:text-white truncate">{t.taskName}</span>
+                                <span className="font-medium text-purple-600 dark:text-purple-400 text-sm">{ticket.issueKey}</span>
+                                <span className="text-sm text-gray-900 dark:text-white truncate">{ticket.taskName}</span>
                               </div>
-                              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate">{t.jiraSummary}</div>
+                              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate">{ticket.jiraSummary}</div>
                               <div className="mt-1.5 flex items-center gap-1.5 text-xs flex-wrap">
                                 <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                                  Jira: {t.jiraStatus || '—'}
+                                  Jira: {ticket.jiraStatus || '—'}
                                 </span>
                                 <span className="text-gray-400">→</span>
                                 <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                  Task: {t.taskStatusName || '—'}
+                                  Task: {ticket.taskStatusName || '—'}
                                 </span>
                                 {hasChange && mapped && (
                                   <>
@@ -5064,19 +5067,19 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                               </div>
 
                               <div className="mt-2 max-w-xs">
-                                <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">Target status (override)</label>
+                                <label className="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">{t('lit.targetStatusOverride')}</label>
                                 <select
-                                  value={jiraCheckStatusOverrides[t.issueKey] || ''}
+                                  value={jiraCheckStatusOverrides[ticket.issueKey] || ''}
                                   onChange={(e) => {
                                     const value = e.target.value;
                                     setJiraCheckStatusOverrides((prev) => ({
                                       ...prev,
-                                      [t.issueKey]: value,
+                                      [ticket.issueKey]: value,
                                     }));
                                   }}
                                   className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
-                                  <option value="">Use mapping/default</option>
+                                  <option value="">{t('lit.useMappingDefault')}</option>
                                   {taskStatuses.map((statusValue) => (
                                     <option key={statusValue.Id} value={statusValue.StatusName || ''}>
                                       {statusValue.StatusName}
@@ -5103,7 +5106,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        Select all
+                        {t('lit.selectAll')}
                       </button>
                       <span className="text-gray-400">|</span>
                       <button
@@ -5111,7 +5114,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         onClick={() => setSelectedCheckStatusKeys(new Set())}
                         className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
                       >
-                        Deselect all
+                        {t('lit.deselectAll')}
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
@@ -5124,7 +5127,7 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         }}
                         className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                       >
-                        Close
+                        {t('common.close')}
                       </button>
                       <button
                         onClick={handleApplyCheckJiraStatus}

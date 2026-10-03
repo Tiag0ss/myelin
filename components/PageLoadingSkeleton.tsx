@@ -1,17 +1,21 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 /** In-page loading placeholder — keeps AppShell chrome visible (no full-screen blank). */
 export default function PageLoadingSkeleton({
   className = '',
 }: {
   className?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <div
       className={`w-full animate-pulse space-y-3 ${className}`.trim()}
       aria-busy="true"
       aria-live="polite"
-      aria-label="Loading"
+      aria-label={t('lit.loading')}
     >
       <div className="h-9 w-48 max-w-[40%] rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)]" />
       <div className="h-11 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)]" />

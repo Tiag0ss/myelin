@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -31,12 +33,15 @@ function fileToBase64(file: File): Promise<string> {
 export default function RichTextEditor({
   content,
   onChange,
-  placeholder = 'Start typing...',
+  placeholder,
   className = '',
   editable = true,
   contentScrollOnly = false,
   contentMaxHeightClass = 'max-h-56',
 }: RichTextEditorProps) {
+  const { t } = useI18n();
+  const placeholderResolved = placeholder ?? t('lit.startTyping');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [alertModal, setAlertModal] = useState<{ title: string; message: string } | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -50,7 +55,7 @@ export default function RichTextEditor({
         },
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: placeholderResolved,
       }),
       Image.configure({
         inline: true,
@@ -90,12 +95,12 @@ export default function RichTextEditor({
     if (!file || !editor) return;
 
     if (!file.type.startsWith('image/')) {
-      setAlertModal({ title: 'Invalid file', message: 'Please select an image file' });
+      setAlertModal({ title: t('lit.invalidFile'), message: t('lit.pleaseSelectAnImageFile') });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setAlertModal({ title: 'File too large', message: 'Image size must be less than 5MB' });
+      setAlertModal({ title: t('lit.fileTooLarge'), message: t('lit.imageSizeMustBeLessThan5mb') });
       return;
     }
 
@@ -125,8 +130,8 @@ export default function RichTextEditor({
         // Fall through to base64 only if upload endpoint is unavailable
         if (response.status !== 404) {
           setAlertModal({
-            title: 'Upload failed',
-            message: data?.message || 'Could not upload image. Try again.',
+            title: t('lit.uploadFailed'),
+            message: data?.message || t('lit.couldNotUploadImageTryAgain'),
           });
           return;
         }
@@ -134,7 +139,7 @@ export default function RichTextEditor({
 
       editor.chain().focus().setImage({ src: fileData }).run();
     } catch {
-      setAlertModal({ title: 'Upload failed', message: 'Could not upload image. Try again.' });
+      setAlertModal({ title: t('lit.uploadFailed'), message: t('lit.couldNotUploadImageTryAgain') });
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) {
@@ -160,7 +165,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Bold (Ctrl+B)"
+            title={t('lit.boldCtrlB')}
           >
             B
           </button>
@@ -172,7 +177,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Italic (Ctrl+I)"
+            title={t('lit.italicCtrlI')}
           >
             I
           </button>
@@ -184,7 +189,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Strikethrough"
+            title={t('lit.strikethrough')}
           >
             S
           </button>
@@ -199,9 +204,9 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Heading 1"
+            title={t('lit.heading1')}
           >
-            H1
+            {t('lit.h1')}
           </button>
           <button
             type="button"
@@ -211,9 +216,9 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Heading 2"
+            title={t('lit.heading2')}
           >
-            H2
+            {t('lit.h2')}
           </button>
           <button
             type="button"
@@ -223,9 +228,9 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Heading 3"
+            title={t('lit.heading3')}
           >
-            H3
+            {t('lit.h3')}
           </button>
           
           <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
@@ -238,7 +243,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Bullet List"
+            title={t('lit.bulletList')}
           >
             • List
           </button>
@@ -250,7 +255,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Numbered List"
+            title={t('lit.numberedList')}
           >
             1. List
           </button>
@@ -265,7 +270,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Quote"
+            title={t('lit.quote')}
           >
             " "
           </button>
@@ -277,7 +282,7 @@ export default function RichTextEditor({
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
-            title="Code Block"
+            title={t('lit.codeBlock')}
           >
             {'</>'}
           </button>
@@ -288,7 +293,7 @@ export default function RichTextEditor({
             type="button"
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
             className="px-2 py-1 rounded text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            title="Horizontal Line"
+            title={t('lit.horizontalLine')}
           >
             ─
           </button>
@@ -300,8 +305,8 @@ export default function RichTextEditor({
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploadingImage}
             className="px-2 py-1 rounded text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-60"
-            title="Insert Image"
-            aria-label="Insert image"
+            title={t('lit.insertImage2')}
+            aria-label={t('lit.insertImage')}
           >
             {isUploadingImage ? 'Uploading…' : '🖼️ Image'}
           </button>
@@ -317,7 +322,7 @@ export default function RichTextEditor({
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
             className="px-2 py-1 rounded text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Undo (Ctrl+Z)"
+            title={t('lit.undoCtrlZ')}
           >
             ↶
           </button>
@@ -326,7 +331,7 @@ export default function RichTextEditor({
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
             className="px-2 py-1 rounded text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Redo (Ctrl+Y)"
+            title={t('lit.redoCtrlY')}
           >
             ↷
           </button>

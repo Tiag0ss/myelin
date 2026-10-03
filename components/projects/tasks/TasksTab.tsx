@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { tasksApi, Task, CreateTaskData, UpdateTaskData } from '@/lib/api/tasks';
@@ -84,6 +85,8 @@ export function TasksTab({
   canDelete: boolean;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const { user } = useAuth();
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [showImportDropdown, setShowImportDropdown] = useState(false);
@@ -318,7 +321,7 @@ export function TasksTab({
     }
 
     if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'boolean') return value ? t('lit.yes') : t('lit.no');
     if (typeof value !== 'string') return String(value);
 
     const trimmed = value.trim();
@@ -337,12 +340,12 @@ export function TasksTab({
 
   const taskColumnOptions = React.useMemo(
     () => [
-      { id: 'task-type', label: 'Task Type' },
-      { id: 'task', label: 'Task' },
-      { id: 'assigned-to', label: 'Assigned To' },
-      { id: 'status', label: 'Status' },
-      { id: 'priority', label: 'Priority' },
-      { id: 'due-date', label: 'Due Date' },
+      { id: 'task-type', label: t('lit.taskType') },
+      { id: 'task', label: t('lit.task') },
+      { id: 'assigned-to', label: t('lit.assignedTo') },
+      { id: 'status', label: t('lit.status') },
+      { id: 'priority', label: t('lit.priority') },
+      { id: 'due-date', label: t('lit.dueDate') },
       ...additionalTaskColumnKeys.map((columnKey) => ({ id: `extra-${columnKey}`, label: formatAdditionalTaskColumnLabel(columnKey) })),
     ],
     [additionalTaskColumnKeys]
@@ -1022,7 +1025,7 @@ export function TasksTab({
       setShowBulkEditModal(false);
       resetBulkEditState();
     } catch (error) {
-      setBulkEditError(error instanceof Error ? error.message : 'Failed to apply bulk edit.');
+      setBulkEditError(error instanceof Error ? error.message : t('lit.failedToApplyBulkEdit'));
     } finally {
       setIsApplyingBulkEdit(false);
     }
@@ -1826,17 +1829,17 @@ export function TasksTab({
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <div className="text-6xl mb-4">📝</div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No tasks yet
+            {t('lit.noTasksYet')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Get started by creating your first task
+            {t('lit.getStartedByCreatingYourFirstTask')}
           </p>
           {canCreate && (
             <button
               onClick={onCreateTask}
               className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Create Task
+              {t('lit.createTask')}
             </button>
           )}
         </div>

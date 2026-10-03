@@ -1,6 +1,17 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
@@ -153,6 +164,7 @@ function renderExtractCell(row: Record<string, unknown>, key: string) {
 }
 
 function ReportingHubInner() {
+  const { t } = useI18n();
   const { token, user, isCustomerUser } = useAuth();
   const { permissions, isLoading: permissionsLoading } = usePermissions();
   const formatHours = useFormatHours();
@@ -279,7 +291,7 @@ function ReportingHubInner() {
       const projectTasks = Array.isArray(tasksRes?.tasks) ? tasksRes.tasks : [];
       const activeTask = projectTasks.find((entry) => Number(entry.Id) === Number(taskId)) || null;
       if (!project || !activeTask) {
-        throw new Error('Task no longer exists in this project');
+        throw new Error(t('lit.taskNoLongerExistsInThisProject'));
       }
       setTaskModalState({
         show: true,
@@ -296,7 +308,7 @@ function ReportingHubInner() {
         project: null,
         task: null,
         tasks: [],
-        error: err?.message || 'Failed to open task detail',
+        error: err?.message || t('lit.failedToOpenTaskDetail'),
       });
     }
   };
@@ -361,7 +373,7 @@ function ReportingHubInner() {
           setAccessError('You do not have permission to view reports.');
         }
       } catch (err: any) {
-        if (!cancelled) setAccessError(err?.message || 'Failed to load access');
+        if (!cancelled) setAccessError(err?.message || t('lit.failedToLoadAccess'));
       }
     })();
     return () => {
@@ -395,7 +407,7 @@ function ReportingHubInner() {
           setOrganizationId(organizations[0].Id);
         }
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Failed to load filters');
+        if (!cancelled) setError(err?.message || t('lit.failedToLoadFilters'));
       }
     })();
     return () => {
@@ -455,7 +467,7 @@ function ReportingHubInner() {
         setExpenseReport(res.data ?? null);
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to load report');
+      setError(err?.message || t('lit.failedToLoadReport'));
     } finally {
       setLoading(false);
     }
@@ -517,7 +529,7 @@ function ReportingHubInner() {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to load dataset');
+      if (!response.ok) throw new Error(data.message || t('lit.failedToLoadDataset'));
       let records = data.records || [];
       setExtractLoadedCount(records.length);
       const filterConfig =
@@ -555,7 +567,7 @@ function ReportingHubInner() {
       }
       setExtractRecords(records);
     } catch (err: any) {
-      setError(err?.message || 'Extract failed');
+      setError(err?.message || t('lit.extractFailed'));
       setExtractRecords([]);
       setExtractLoadedCount(null);
     } finally {
@@ -609,7 +621,7 @@ function ReportingHubInner() {
       const dig = await reportingApi.getDigests(token, Number(organizationId));
       setDigests(dig.data || []);
     } catch (err: any) {
-      setError(err?.message || 'Failed to create digest');
+      setError(err?.message || t('lit.failedToCreateDigest'));
     }
   };
 
@@ -619,7 +631,7 @@ function ReportingHubInner() {
         <div className="w-full">
           <main className="w-full p-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center text-gray-700 dark:text-gray-200">
-              Reporting is not available for customer portal users.
+              {t('lit.reportingIsNotAvailableForCustomerPortalUsers')}
             </div>
           </main>
         </div>
@@ -631,7 +643,7 @@ function ReportingHubInner() {
     return (
       <CustomerUserGuard>
         <div className="w-full">
-          <main className="w-full p-6 text-gray-600 dark:text-gray-300">Loading reporting…</main>
+          <main className="w-full p-6 text-gray-600 dark:text-gray-300">{t('common.loading')}</main>
         </div>
       </CustomerUserGuard>
     );
@@ -643,9 +655,9 @@ function ReportingHubInner() {
         <div className="w-full">
           <main className="w-full p-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Access denied</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('lit.accessDenied')}</h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {accessError || 'You need the CanViewReports permission.'}
+                {accessError || t('lit.youNeedTheCanviewreportsPermission')}
               </p>
             </div>
           </main>
@@ -655,14 +667,14 @@ function ReportingHubInner() {
   }
 
   const tabs: { id: ReportingTab; label: string; show: boolean }[] = [
-    { id: 'organization', label: 'Organization', show: canManager },
-    { id: 'portfolio', label: 'Portfolio', show: canManager },
-    { id: 'delivery', label: 'Delivery', show: canManager },
-    { id: 'capacity', label: 'Capacity', show: canCapacity },
-    { id: 'data-quality', label: 'Data Quality', show: canManager },
-    { id: 'expenses', label: 'Expenses', show: canManager && expensesEnabled },
-    { id: 'extract', label: 'Extract', show: true },
-    { id: 'explore', label: 'Explore (advanced)', show: canExplore },
+    { id: 'organization', label: t('lit.organization2'), show: canManager },
+    { id: 'portfolio', label: t('lit.portfolio'), show: canManager },
+    { id: 'delivery', label: t('lit.delivery'), show: canManager },
+    { id: 'capacity', label: t('lit.capacity'), show: canCapacity },
+    { id: 'data-quality', label: t('lit.dataQuality'), show: canManager },
+    { id: 'expenses', label: t('lit.expenses'), show: canManager && expensesEnabled },
+    { id: 'extract', label: t('lit.extract'), show: true },
+    { id: 'explore', label: t('lit.exploreAdvanced'), show: canExplore },
   ];
 
   return (
@@ -672,7 +684,7 @@ function ReportingHubInner() {
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reporting</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('pages.reporting.title')}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Guided packs for analysis and export. Previous period: {prev.from} → {prev.to}
                 </p>
@@ -683,7 +695,7 @@ function ReportingHubInner() {
               {(canManager || canCapacity) && activeTab !== 'explore' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Organization
+                    {t('common.organization')}
                   </label>
                   <select
                     value={organizationId}
@@ -713,14 +725,14 @@ function ReportingHubInner() {
                 activeTab === 'extract') && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Project
+                    {t('common.project')}
                   </label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
                     className="h-10 min-w-[200px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
-                    <option value="">All projects</option>
+                    <option value="">{t('lit.allProjects')}</option>
                     {filteredProjects.map((p) => (
                       <option key={p.Id} value={p.Id}>
                         {p.ProjectName}
@@ -732,7 +744,7 @@ function ReportingHubInner() {
               {activeTab !== 'explore' && activeTab !== 'data-quality' && activeTab !== 'portfolio' && activeTab !== 'expenses' && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">From</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('common.from')}</label>
                     <input
                       type="date"
                       value={dateFrom}
@@ -741,7 +753,7 @@ function ReportingHubInner() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">To</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('common.to')}</label>
                     <input
                       type="date"
                       value={dateTo}
@@ -753,29 +765,29 @@ function ReportingHubInner() {
               )}
               {activeTab === 'portfolio' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">RAG</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.rag')}</label>
                   <select
                     value={portfolioRagFilter}
                     onChange={(e) => setPortfolioRagFilter(e.target.value as typeof portfolioRagFilter)}
                     className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
-                    <option value="all">All</option>
-                    <option value="red">Red</option>
-                    <option value="amber">Amber</option>
-                    <option value="green">Green</option>
+                    <option value="all">{t('common.all')}</option>
+                    <option value="red">{t('lit.red')}</option>
+                    <option value="amber">{t('lit.amber')}</option>
+                    <option value="green">{t('lit.green')}</option>
                   </select>
                 </div>
               )}
               {activeTab === 'capacity' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Person
+                    {t('lit.person')}
                   </label>
                   <input
                     type="search"
                     value={capacitySearch}
                     onChange={(e) => setCapacitySearch(e.target.value)}
-                    placeholder="Filter by name…"
+                    placeholder={t('lit.filterByName')}
                     className="h-10 min-w-[180px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   />
                 </div>
@@ -783,7 +795,7 @@ function ReportingHubInner() {
               {activeTab === 'expenses' && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Expense from</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.expenseFrom')}</label>
                     <input
                       type="date"
                       value={expenseDateFrom}
@@ -792,7 +804,7 @@ function ReportingHubInner() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Expense to</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.expenseTo')}</label>
                     <input
                       type="date"
                       value={expenseDateTo}
@@ -801,7 +813,7 @@ function ReportingHubInner() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Group</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.group')}</label>
                     <select
                       value={expenseGroupId}
                       onChange={(e) => {
@@ -810,20 +822,20 @@ function ReportingHubInner() {
                       }}
                       className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">All groups</option>
+                      <option value="">{t('lit.allGroups')}</option>
                       {(expenseReport?.filterOptions?.groups || []).map((g: any) => (
                         <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Category</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('pages.expenses.category')}</label>
                     <select
                       value={expenseCategoryId}
                       onChange={(e) => setExpenseCategoryId(e.target.value ? Number(e.target.value) : '')}
                       className="h-10 min-w-[180px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">All categories</option>
+                      <option value="">{t('lit.allCategories')}</option>
                       {(expenseReport?.filterOptions?.categories || [])
                         .filter((c: any) => !expenseGroupId || c.groupId === expenseGroupId)
                         .map((c: any) => (
@@ -832,13 +844,13 @@ function ReportingHubInner() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Submitted by</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.submittedBy')}</label>
                     <select
                       value={expenseUserId}
                       onChange={(e) => setExpenseUserId(e.target.value ? Number(e.target.value) : '')}
                       className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">All users</option>
+                      <option value="">{t('lit.allUsers')}</option>
                       {(expenseReport?.submitters || []).map((u: any) => (
                         <option key={u.id} value={u.id}>
                           {u.firstName || u.username || `User #${u.id}`}
@@ -847,17 +859,17 @@ function ReportingHubInner() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Reimbursement</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.reimbursement')}</label>
                     <select
                       value={expenseReimbFilter}
                       onChange={(e) => setExpenseReimbFilter(e.target.value)}
                       className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">All</option>
-                      <option value="needs_reimbursement">Needs reimbursement</option>
-                      <option value="reimbursed">Fully reimbursed</option>
-                      <option value="partial">Partial</option>
-                      <option value="pending">Pending</option>
+                      <option value="">{t('common.all')}</option>
+                      <option value="needs_reimbursement">{t('lit.needsReimbursement')}</option>
+                      <option value="reimbursed">{t('lit.fullyReimbursed')}</option>
+                      <option value="partial">{t('lit.partial')}</option>
+                      <option value="pending">{t('lit.pending')}</option>
                     </select>
                   </div>
                   <label className="inline-flex items-center gap-2 h-10 text-sm text-gray-700 dark:text-gray-300">
@@ -867,18 +879,18 @@ function ReportingHubInner() {
                       onChange={(e) => setExpenseInternalOnly(e.target.checked)}
                       className="rounded border-gray-300"
                     />
-                    Internal only
+                    {t('lit.internalOnly')}
                   </label>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">View</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('common.view')}</label>
                     <select
                       value={expenseBreakdown}
                       onChange={(e) => setExpenseBreakdown(e.target.value as typeof expenseBreakdown)}
                       className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="rows">Expense lines</option>
-                      <option value="category">By category</option>
-                      <option value="group">By group</option>
+                      <option value="rows">{t('lit.expenseLines')}</option>
+                      <option value="category">{t('lit.byCategory')}</option>
+                      <option value="group">{t('lit.byGroup')}</option>
                     </select>
                   </div>
                 </>
@@ -886,15 +898,15 @@ function ReportingHubInner() {
               {activeTab === 'delivery' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    Focus
+                    {t('lit.focus')}
                   </label>
                   <select
                     value={deliverySection}
                     onChange={(e) => setDeliverySection(e.target.value as typeof deliverySection)}
                     className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
-                    <option value="sprints">Active sprints</option>
-                    <option value="closed">Recently closed</option>
+                    <option value="sprints">{t('lit.activeSprints')}</option>
+                    <option value="closed">{t('lit.recentlyClosed')}</option>
                   </select>
                 </div>
               )}
@@ -904,26 +916,26 @@ function ReportingHubInner() {
                   onClick={() => void loadTabData()}
                   className="h-10 px-4 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Refresh
+                  {t('common.refresh')}
                 </button>
               )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 -mb-px">
               {tabs
-                .filter((t) => t.show)
-                .map((t) => (
+                .filter((tab) => tab.show)
+                .map((tab) => (
                   <button
-                    key={t.id}
+                    key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(t.id)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === t.id
+                      activeTab === tab.id
                         ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                     }`}
                   >
-                    {t.label}
+                    {tab.label}
                   </button>
                 ))}
             </div>
@@ -936,7 +948,7 @@ function ReportingHubInner() {
               </div>
             )}
             {loading && (
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">Loading…</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('common.loading')}</div>
             )}
 
             {activeTab === 'organization' && overview && (
@@ -946,25 +958,25 @@ function ReportingHubInner() {
                   (Portfolio, Delivery, or Data Quality) with the same organization context.
                 </p>
                 <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Health</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.health')}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <MetricCard
-                      label="Projects"
+                      label={t('lit.projects')}
                       value={String(overview.health?.projectCount || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'all' })}
                     />
                     <MetricCard
-                      label="Green"
+                      label={t('lit.green')}
                       value={String(overview.health?.counts?.green || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'green' })}
                     />
                     <MetricCard
-                      label="Amber"
+                      label={t('lit.amber')}
                       value={String(overview.health?.counts?.amber || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'amber' })}
                     />
                     <MetricCard
-                      label="Red"
+                      label={t('lit.red')}
                       value={String(overview.health?.counts?.red || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'red' })}
                     />
@@ -972,107 +984,107 @@ function ReportingHubInner() {
                 </section>
                 {overview.expenses && (
                   <section>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Expenses (approved)</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.expensesApproved')}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-3">
                       <MetricCard
-                        label="Project expenses"
+                        label={t('lit.projectExpenses')}
                         value={formatMoney(overview.expenses.totals?.ProjectTotal)}
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
-                        label="Internal expenses"
+                        label={t('lit.internalExpenses')}
                         value={formatMoney(overview.expenses.totals?.InternalTotal)}
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
-                        label="Reimbursable cap"
+                        label={t('lit.reimbursableCap')}
                         value={formatMoney(overview.expenses.totals?.ReimbursableCapTotal)}
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
-                        label="Reimbursed"
+                        label={t('lit.reimbursed')}
                         value={formatMoney(overview.expenses.totals?.ReimbursedTotal)}
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
-                        label="Remaining to reimburse"
+                        label={t('lit.remainingToReimburse')}
                         value={formatMoney(overview.expenses.totals?.RemainingTotal)}
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
-                        label="Fully reimbursed"
+                        label={t('lit.fullyReimbursed')}
                         value={String(overview.expenses.totals?.FullyReimbursedCount || 0)}
                         onClick={() => drillTo('expenses')}
                       />
                     </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Open the Expenses tab for breakdown by group, category, submitter, and line detail.
+                      {t('lit.openTheExpensesTabForBreakdownByGroupCategorySubmitterAndLineDetail')}
                     </p>
                   </section>
                 )}
                 <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Effort</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.effort')}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <MetricCard
-                      label="Estimated (leaf)"
+                      label={t('lit.estimatedLeaf')}
                       value={formatHours(overview.effort?.estimatedLeafHours || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'all' })}
                     />
                     <MetricCard
-                      label="Planned (period)"
+                      label={t('lit.plannedPeriod')}
                       value={formatHours(overview.effort?.plannedHours?.current || 0)}
                       delta={formatDeltaMetric(overview.effort?.plannedHours, true)}
                       onClick={() => drillTo('capacity')}
                     />
                     <MetricCard
-                      label="Logged (period)"
+                      label={t('lit.loggedPeriod')}
                       value={formatHours(overview.effort?.loggedHours?.current || 0)}
                       delta={formatDeltaMetric(overview.effort?.loggedHours, true)}
                       onClick={() => drillTo('capacity')}
                     />
                     <MetricCard
-                      label="Open tasks"
+                      label={t('lit.openTasks')}
                       value={String(overview.tasks?.open || 0)}
                       onClick={() => drillTo('portfolio', { rag: 'all' })}
                     />
                     <MetricCard
-                      label="Leaf with hours"
+                      label={t('lit.leafWithHours')}
                       value={String(overview.tasks?.leafWithHours || 0)}
                       onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
                     />
                     <MetricCard
-                      label="Unscheduled leaf"
+                      label={t('lit.unscheduledLeaf')}
                       value={String(overview.tasks?.unscheduledLeaf || 0)}
                       onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
                     />
                   </div>
                 </section>
                 <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Delivery & risk</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.deliveryRisk')}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <MetricCard
-                      label="Throughput (closed)"
+                      label={t('lit.throughputClosed')}
                       value={String(overview.delivery?.throughput?.current || 0)}
                       delta={formatDeltaMetric(overview.delivery?.throughput)}
                       onClick={() => drillTo('delivery', { delivery: 'closed' })}
                     />
                     <MetricCard
-                      label="Active sprints"
+                      label={t('lit.activeSprints')}
                       value={String(overview.delivery?.activeSprints || 0)}
                       onClick={() => drillTo('delivery', { delivery: 'sprints' })}
                     />
                     <MetricCard
-                      label="Overdue tasks"
+                      label={t('lit.overdueTasks2')}
                       value={String(overview.tasks?.overdue || 0)}
                       onClick={() => drillTo('data-quality', { dq: 'staleOverdue' })}
                     />
                     <MetricCard
-                      label="Unestimated leaf"
+                      label={t('lit.unestimatedLeaf')}
                       value={String(overview.risk?.unestimatedLeaf || 0)}
                       onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
                     />
                     <MetricCard
-                      label="Unassigned"
+                      label={t('lit.unassigned')}
                       value={String(overview.risk?.unassigned || 0)}
                       onClick={() => drillTo('data-quality', { dq: 'unassigned' })}
                     />
@@ -1090,17 +1102,17 @@ function ReportingHubInner() {
 
                 <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Email digest
+                    {t('lit.emailDigest')}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                    Schedule a weekly or monthly organization overview email (structured metrics only).
+                    {t('lit.scheduleAWeeklyOrMonthlyOrganizationOverviewEmailStructuredMetricsOnly')}
                   </p>
                   <div className="flex flex-wrap gap-2 items-end">
                     <input
                       type="text"
                       value={digestRecipients}
                       onChange={(e) => setDigestRecipients(e.target.value)}
-                      placeholder="email1@example.com, email2@…"
+                      placeholder={t('lit.email1ExampleComEmail2')}
                       className="h-10 flex-1 min-w-[220px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
                     <select
@@ -1108,15 +1120,15 @@ function ReportingHubInner() {
                       onChange={(e) => setDigestFrequency(e.target.value as 'weekly' | 'monthly')}
                       className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
                     >
-                      <option value="weekly">Weekly (Mon)</option>
-                      <option value="monthly">Monthly (day 1)</option>
+                      <option value="weekly">{t('lit.weeklyMon')}</option>
+                      <option value="monthly">{t('lit.monthlyDay1')}</option>
                     </select>
                     <button
                       type="button"
                       onClick={() => void createDigest()}
                       className="h-10 px-4 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
                     >
-                      Add schedule
+                      {t('lit.addSchedule')}
                     </button>
                   </div>
                   {digests.length > 0 && (
@@ -1137,7 +1149,7 @@ function ReportingHubInner() {
                               setDigests(dig.data || []);
                             }}
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </li>
                       ))}
@@ -1177,14 +1189,14 @@ function ReportingHubInner() {
                       onClick={expandAll}
                       className="h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      Expand all
+                      {t('lit.expandAll')}
                     </button>
                     <button
                       type="button"
                       onClick={collapseAll}
                       className="h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      Collapse all
+                      {t('lit.collapseAll')}
                     </button>
                   </div>
                 </div>
@@ -1192,20 +1204,20 @@ function ReportingHubInner() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
                     <tr>
-                      <th className="text-left px-3 py-2 w-10" aria-label="Expand" />
-                      <th className="text-left px-3 py-2">Project / Task</th>
-                      <th className="text-left px-3 py-2">Health / Status</th>
-                      <th className="text-right px-3 py-2">Progress</th>
-                      <th className="text-right px-3 py-2">Open</th>
-                      <th className="text-right px-3 py-2">Overdue</th>
-                      <th className="text-right px-3 py-2">Est. hours</th>
-                      <th className="text-right px-3 py-2">Planned</th>
-                      <th className="text-right px-3 py-2">Logged</th>
-                      <th className="text-right px-3 py-2">Variance</th>
-                      <th className="text-right px-3 py-2">Budget spent</th>
-                      <th className="text-right px-3 py-2">Remaining</th>
-                      <th className="text-right px-3 py-2">Burn</th>
-                      <th className="text-left px-3 py-2">End / Due</th>
+                      <th className="text-left px-3 py-2 w-10" aria-label={t('common.expand')} />
+                      <th className="text-left px-3 py-2">{t('lit.projectTask')}</th>
+                      <th className="text-left px-3 py-2">{t('lit.healthStatus')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.progress')}</th>
+                      <th className="text-right px-3 py-2">{t('common.open')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.overdue2')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.estHours')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.planned')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.logged')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.variance')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.budgetSpent')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.remaining')}</th>
+                      <th className="text-right px-3 py-2">{t('lit.burn')}</th>
+                      <th className="text-left px-3 py-2">{t('lit.endDue')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1221,8 +1233,8 @@ function ReportingHubInner() {
                                 type="button"
                                 onClick={() => toggleProject(Number(p.id))}
                                 className="h-8 w-8 inline-flex items-center justify-center rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                title={expanded ? 'Collapse tasks' : 'Expand tasks'}
-                                aria-label={expanded ? 'Collapse tasks' : 'Expand tasks'}
+                                title={expanded ? t('lit.collapseTasks') : t('lit.expandTasks')}
+                                aria-label={expanded ? t('lit.collapseTasks') : t('lit.expandTasks')}
                                 aria-expanded={expanded}
                               >
                                 {expanded ? '▾' : '▸'}
@@ -1297,66 +1309,66 @@ function ReportingHubInner() {
                             <tr className="bg-gray-50/80 dark:bg-gray-900/30">
                               <td />
                               <td colSpan={13} className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                                No leaf tasks in this project.
+                                {t('lit.noLeafTasksInThisProject')}
                               </td>
                             </tr>
                           )}
                           {expanded &&
-                            tasks.map((t: any) => (
+                            tasks.map((task: any) => (
                               <tr
-                                key={`${p.id}-${t.id}`}
+                                key={`${p.id}-${task.id}`}
                                 className="border-t border-gray-100 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/30"
                               >
                                 <td />
                                 <td className="px-3 py-2 pl-8">
                                   <button
                                     type="button"
-                                    onClick={() => void openTaskDetails(Number(p.id), Number(t.id))}
+                                    onClick={() => void openTaskDetails(Number(p.id), Number(task.id))}
                                     className="text-blue-600 dark:text-blue-400 hover:underline text-left"
                                   >
-                                    {t.name}
+                                    {task.name}
                                   </button>
-                                  {t.isOverdue ? (
-                                    <span className="ml-2 text-xs text-red-600 dark:text-red-400">overdue</span>
+                                  {task.isOverdue ? (
+                                    <span className="ml-2 text-xs text-red-600 dark:text-red-400">{t('lit.overdue')}</span>
                                   ) : null}
                                 </td>
                                 <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
-                                  {t.statusName || '—'}
-                                  {t.assigneeName ? (
+                                  {task.statusName || '—'}
+                                  {task.assigneeName ? (
                                     <span className="block text-xs text-gray-500 dark:text-gray-400">
-                                      {t.assigneeName}
+                                      {task.assigneeName}
                                     </span>
                                   ) : (
                                     <span className="block text-xs text-amber-600 dark:text-amber-400">
-                                      Unassigned
+                                      {t('lit.unassigned')}
                                     </span>
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-right text-gray-400">—</td>
                                 <td className="px-3 py-2 text-right text-gray-400">—</td>
                                 <td className="px-3 py-2 text-right">
-                                  {t.isOverdue ? 'Yes' : '—'}
+                                  {task.isOverdue ? t('lit.yes') : '—'}
                                 </td>
-                                <td className="px-3 py-2 text-right">{formatHours(t.estimatedHours || 0)}</td>
-                                <td className="px-3 py-2 text-right">{formatHours(t.plannedHours || 0)}</td>
-                                <td className="px-3 py-2 text-right">{formatHours(t.loggedHours || 0)}</td>
+                                <td className="px-3 py-2 text-right">{formatHours(task.estimatedHours || 0)}</td>
+                                <td className="px-3 py-2 text-right">{formatHours(task.plannedHours || 0)}</td>
+                                <td className="px-3 py-2 text-right">{formatHours(task.loggedHours || 0)}</td>
                                 <td
                                   className={`px-3 py-2 text-right ${
-                                    Number(t.varianceHours || 0) > 0
+                                    Number(task.varianceHours || 0) > 0
                                       ? 'text-red-600 dark:text-red-400'
-                                      : Number(t.varianceHours || 0) < 0
+                                      : Number(task.varianceHours || 0) < 0
                                         ? 'text-emerald-600 dark:text-emerald-400'
                                         : 'text-gray-700 dark:text-gray-300'
                                   }`}
                                 >
-                                  {formatHours(t.varianceHours || 0)}
+                                  {formatHours(task.varianceHours || 0)}
                                 </td>
                                 <td className="px-3 py-2 text-right">
                                   {String(p.budgetType || '') === 'monetary'
                                     ? (
-                                      <span title={Number(t.hoursWithoutRate || 0) > 0 ? 'Some hours lack an effective rate' : undefined}>
-                                        {formatPortfolioBudget(Number(t.costSpent || 0), 'monetary')}
-                                        {Number(t.hoursWithoutRate || 0) > 0 ? (
+                                      <span title={Number(task.hoursWithoutRate || 0) > 0 ? t('lit.someHoursLackAnEffectiveRate') : undefined}>
+                                        {formatPortfolioBudget(Number(task.costSpent || 0), 'monetary')}
+                                        {Number(task.hoursWithoutRate || 0) > 0 ? (
                                           <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">!</span>
                                         ) : null}
                                       </span>
@@ -1365,7 +1377,7 @@ function ReportingHubInner() {
                                 </td>
                                 <td className="px-3 py-2 text-right text-gray-400">—</td>
                                 <td className="px-3 py-2 text-right text-gray-400">—</td>
-                                <td className="px-3 py-2">{t.dueDate || '—'}</td>
+                                <td className="px-3 py-2">{task.dueDate || '—'}</td>
                               </tr>
                             ))}
                         </Fragment>
@@ -1382,20 +1394,20 @@ function ReportingHubInner() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <MetricCard
-                    label="Tasks closed in period"
+                    label={t('lit.tasksClosedInPeriod')}
                     value={String(delivery.throughput?.current || 0)}
                     delta={formatDeltaMetric(delivery.throughput)}
                   />
-                  <MetricCard label="Tasks created in period" value={String(delivery.tasksCreated || 0)} />
+                  <MetricCard label={t('lit.tasksCreatedInPeriod')} value={String(delivery.tasksCreated || 0)} />
                   <MetricCard
-                    label="Active sprints"
+                    label={t('lit.activeSprints')}
                     value={String((delivery.activeSprints || []).length)}
                   />
                 </div>
 
                 {deliverySection === 'sprints' && (
                 <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Active sprints</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('lit.activeSprints')}</h2>
                   {(delivery.activeSprints || []).length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       No active sprints in this organization for the current filters. Throughput still counts
@@ -1406,10 +1418,10 @@ function ReportingHubInner() {
                       <table className="min-w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
                           <tr>
-                            <th className="text-left px-3 py-2">Sprint</th>
-                            <th className="text-left px-3 py-2">Project</th>
-                            <th className="text-left px-3 py-2">Window</th>
-                            <th className="text-right px-3 py-2">Closed / total</th>
+                            <th className="text-left px-3 py-2">{t('lit.sprint')}</th>
+                            <th className="text-left px-3 py-2">{t('common.project')}</th>
+                            <th className="text-left px-3 py-2">{t('lit.window')}</th>
+                            <th className="text-right px-3 py-2">{t('lit.closedTotal')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1443,39 +1455,39 @@ function ReportingHubInner() {
                   </h2>
                   {(delivery.recentlyClosed || []).length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      No tasks were closed in this period. Try widening the date range.
+                      {t('lit.noTasksWereClosedInThisPeriodTryWideningTheDateRange')}
                     </p>
                   ) : (
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
                       <table className="min-w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
                           <tr>
-                            <th className="text-left px-3 py-2">Task</th>
-                            <th className="text-left px-3 py-2">Project</th>
-                            <th className="text-left px-3 py-2">Closed</th>
+                            <th className="text-left px-3 py-2">{t('common.task')}</th>
+                            <th className="text-left px-3 py-2">{t('common.project')}</th>
+                            <th className="text-left px-3 py-2">{t('lit.closed')}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {delivery.recentlyClosed.map((t: any) => (
-                            <tr key={t.id} className="border-t border-gray-100 dark:border-gray-700">
+                          {delivery.recentlyClosed.map((task: any) => (
+                            <tr key={task.id} className="border-t border-gray-100 dark:border-gray-700">
                               <td className="px-3 py-2">
                                 <button
                                   type="button"
-                                  onClick={() => void openTaskDetails(Number(t.projectId), Number(t.id))}
+                                  onClick={() => void openTaskDetails(Number(task.projectId), Number(task.id))}
                                   className="text-blue-600 dark:text-blue-400 hover:underline text-left"
                                 >
-                                  {t.name}
+                                  {task.name}
                                 </button>
                               </td>
                               <td className="px-3 py-2">
                                 <Link
-                                  href={projectHref(t.projectId)}
+                                  href={projectHref(task.projectId)}
                                   className="text-blue-600 dark:text-blue-400 hover:underline"
                                 >
-                                  {t.projectName}
+                                  {task.projectName}
                                 </Link>
                               </td>
-                              <td className="px-3 py-2">{t.closedAt || '—'}</td>
+                              <td className="px-3 py-2">{task.closedAt || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1490,19 +1502,19 @@ function ReportingHubInner() {
             {activeTab === 'capacity' && capacity && (
               <div className="space-y-4">
                 <MetricCard
-                  label="Pending time approvals"
+                  label={t('lit.pendingTimeApprovals')}
                   value={String(capacity.pendingApprovals || 0)}
                 />
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
                       <tr>
-                        <th className="text-left px-3 py-2">User</th>
-                        <th className="text-right px-3 py-2">Capacity</th>
-                        <th className="text-right px-3 py-2">Planned</th>
-                        <th className="text-right px-3 py-2">Logged</th>
-                        <th className="text-right px-3 py-2">Util. %</th>
-                        <th className="text-right px-3 py-2">Plan vs capacity</th>
+                        <th className="text-left px-3 py-2">{t('common.user')}</th>
+                        <th className="text-right px-3 py-2">{t('lit.capacity')}</th>
+                        <th className="text-right px-3 py-2">{t('lit.planned')}</th>
+                        <th className="text-right px-3 py-2">{t('lit.logged')}</th>
+                        <th className="text-right px-3 py-2">{t('lit.util')}</th>
+                        <th className="text-right px-3 py-2">{t('lit.planVsCapacity')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1547,13 +1559,13 @@ function ReportingHubInner() {
 
             {activeTab === 'data-quality' && dataQuality && (() => {
               const dqTabs = [
-                { id: 'unestimated' as const, label: 'Unestimated', rows: dataQuality.unestimated || [] },
-                { id: 'unassigned' as const, label: 'Unassigned', rows: dataQuality.unassigned || [] },
-                { id: 'noSprint' as const, label: 'No sprint', rows: dataQuality.noSprint || [] },
-                { id: 'staleOverdue' as const, label: 'Stale overdue', rows: dataQuality.staleOverdue || [] },
+                { id: 'unestimated' as const, label: t('lit.unestimated'), rows: dataQuality.unestimated || [] },
+                { id: 'unassigned' as const, label: t('lit.unassigned'), rows: dataQuality.unassigned || [] },
+                { id: 'noSprint' as const, label: t('lit.noSprint'), rows: dataQuality.noSprint || [] },
+                { id: 'staleOverdue' as const, label: t('lit.staleOverdue'), rows: dataQuality.staleOverdue || [] },
                 {
                   id: 'pendingApprovals' as const,
-                  label: 'Pending approvals',
+                  label: t('lit.pendingApprovals'),
                   rows: dataQuality.pendingApprovals || [],
                 },
               ];
@@ -1561,18 +1573,18 @@ function ReportingHubInner() {
               return (
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700">
-                    {dqTabs.map((t) => (
+                    {dqTabs.map((tab) => (
                       <button
-                        key={t.id}
+                        key={tab.id}
                         type="button"
-                        onClick={() => setDqSubTab(t.id)}
+                        onClick={() => setDqSubTab(tab.id)}
                         className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
-                          dqSubTab === t.id
+                          dqSubTab === tab.id
                             ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                             : 'border-transparent text-gray-500 dark:text-gray-400'
                         }`}
                       >
-                        {t.label} ({t.rows.length})
+                        {tab.label} ({tab.rows.length})
                       </button>
                     ))}
                   </div>
@@ -1583,22 +1595,22 @@ function ReportingHubInner() {
                       className="h-10 px-4 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600"
                       disabled={!activeDq.rows.length}
                     >
-                      Export CSV
+                      {t('lit.exportCsv')}
                     </button>
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-h-[60vh] overflow-auto">
                     <table className="min-w-full text-sm">
                       <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900/40">
                         <tr>
-                          <th className="text-left px-3 py-2">Project</th>
-                          <th className="text-left px-3 py-2">Detail</th>
+                          <th className="text-left px-3 py-2">{t('common.project')}</th>
+                          <th className="text-left px-3 py-2">{t('lit.detail')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {activeDq.rows.length === 0 ? (
                           <tr>
                             <td colSpan={2} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
-                              No issues in this category.
+                              {t('lit.noIssuesInThisCategory')}
                             </td>
                           </tr>
                         ) : (
@@ -1650,47 +1662,47 @@ function ReportingHubInner() {
                   . Use Expense from/to above to narrow by invoice date.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                  <MetricCard label="Expenses" value={String(expenseReport.totals?.ExpenseCount || 0)} />
-                  <MetricCard label="Total amount" value={formatMoney(expenseReport.totals?.GrandTotal)} />
-                  <MetricCard label="Reimbursable cap" value={formatMoney(expenseReport.totals?.ReimbursableCapTotal)} />
-                  <MetricCard label="Reimbursed" value={formatMoney(expenseReport.totals?.ReimbursedTotal)} />
-                  <MetricCard label="Remaining" value={formatMoney(expenseReport.totals?.RemainingTotal)} />
-                  <MetricCard label="Fully reimbursed" value={String(expenseReport.totals?.FullyReimbursedCount || 0)} />
+                  <MetricCard label={t('lit.expenses')} value={String(expenseReport.totals?.ExpenseCount || 0)} />
+                  <MetricCard label={t('lit.totalAmount')} value={formatMoney(expenseReport.totals?.GrandTotal)} />
+                  <MetricCard label={t('lit.reimbursableCap')} value={formatMoney(expenseReport.totals?.ReimbursableCapTotal)} />
+                  <MetricCard label={t('lit.reimbursed')} value={formatMoney(expenseReport.totals?.ReimbursedTotal)} />
+                  <MetricCard label={t('lit.remaining')} value={formatMoney(expenseReport.totals?.RemainingTotal)} />
+                  <MetricCard label={t('lit.fullyReimbursed')} value={String(expenseReport.totals?.FullyReimbursedCount || 0)} />
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-h-[65vh] overflow-auto">
                   <table className="min-w-full text-sm">
                     <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300">
                       {expenseBreakdown === 'rows' ? (
                         <tr>
-                          <th className="text-left px-3 py-2">Date</th>
-                          <th className="text-left px-3 py-2">Title</th>
-                          <th className="text-left px-3 py-2">Submitted by</th>
-                          <th className="text-left px-3 py-2">Group</th>
-                          <th className="text-left px-3 py-2">Category</th>
-                          <th className="text-left px-3 py-2">Project</th>
-                          <th className="text-right px-3 py-2">Amount</th>
-                          <th className="text-right px-3 py-2">Reimb. cap</th>
-                          <th className="text-right px-3 py-2">Reimbursed</th>
-                          <th className="text-right px-3 py-2">Remaining</th>
-                          <th className="text-left px-3 py-2">Reimb. status</th>
+                          <th className="text-left px-3 py-2">{t('common.date')}</th>
+                          <th className="text-left px-3 py-2">{t('lit.title')}</th>
+                          <th className="text-left px-3 py-2">{t('lit.submittedBy')}</th>
+                          <th className="text-left px-3 py-2">{t('lit.group')}</th>
+                          <th className="text-left px-3 py-2">{t('pages.expenses.category')}</th>
+                          <th className="text-left px-3 py-2">{t('common.project')}</th>
+                          <th className="text-right px-3 py-2">{t('pages.expenses.amount')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbCap')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbursed')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.remaining')}</th>
+                          <th className="text-left px-3 py-2">{t('lit.reimbStatus')}</th>
                         </tr>
                       ) : expenseBreakdown === 'category' ? (
                         <tr>
-                          <th className="text-left px-3 py-2">Group</th>
-                          <th className="text-left px-3 py-2">Category</th>
-                          <th className="text-right px-3 py-2">Count</th>
-                          <th className="text-right px-3 py-2">Total</th>
-                          <th className="text-right px-3 py-2">Reimb. cap</th>
-                          <th className="text-right px-3 py-2">Reimbursed</th>
-                          <th className="text-right px-3 py-2">Remaining</th>
+                          <th className="text-left px-3 py-2">{t('lit.group')}</th>
+                          <th className="text-left px-3 py-2">{t('pages.expenses.category')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.count')}</th>
+                          <th className="text-right px-3 py-2">{t('common.total')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbCap')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbursed')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.remaining')}</th>
                         </tr>
                       ) : (
                         <tr>
-                          <th className="text-left px-3 py-2">Group</th>
-                          <th className="text-right px-3 py-2">Total</th>
-                          <th className="text-right px-3 py-2">Reimb. cap</th>
-                          <th className="text-right px-3 py-2">Reimbursed</th>
-                          <th className="text-right px-3 py-2">Remaining</th>
+                          <th className="text-left px-3 py-2">{t('lit.group')}</th>
+                          <th className="text-right px-3 py-2">{t('common.total')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbCap')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.reimbursed')}</th>
+                          <th className="text-right px-3 py-2">{t('lit.remaining')}</th>
                         </tr>
                       )}
                     </thead>
@@ -1699,7 +1711,7 @@ function ReportingHubInner() {
                         ((expenseReport.rows || []).length === 0 ? (
                           <tr>
                             <td colSpan={11} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
-                              No approved expenses in this period for the selected filters.
+                              {t('lit.noApprovedExpensesInThisPeriodForTheSelectedFilters')}
                             </td>
                           </tr>
                         ) : (
@@ -1710,9 +1722,9 @@ function ReportingHubInner() {
                               `User #${row.submittedByUserId}`;
                             const reimbLabel =
                               row.reimbursementStatus === 'not_applicable'
-                                ? 'Not applicable'
+                                ? t('lit.notApplicable')
                                 : row.reimbursementStatus === 'reimbursed'
-                                  ? 'Fully reimbursed'
+                                  ? t('lit.fullyReimbursed')
                                   : row.reimbursementStatus || '—';
                             return (
                               <tr key={row.id} className="border-t border-gray-100 dark:border-gray-700">
@@ -1731,7 +1743,7 @@ function ReportingHubInner() {
                                       {row.projectName || `Project #${row.projectId}`}
                                     </Link>
                                   ) : (
-                                    <span className="text-gray-500 dark:text-gray-400">Internal</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{t('lit.internal')}</span>
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-right text-gray-900 dark:text-white">{formatMoney(row.amount)}</td>
@@ -1747,7 +1759,7 @@ function ReportingHubInner() {
                         ((expenseReport.byCategory || []).length === 0 ? (
                           <tr>
                             <td colSpan={7} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
-                              No data for the selected filters.
+                              {t('lit.noDataForTheSelectedFilters')}
                             </td>
                           </tr>
                         ) : (
@@ -1767,7 +1779,7 @@ function ReportingHubInner() {
                         ((expenseReport.byGroup || []).length === 0 ? (
                           <tr>
                             <td colSpan={5} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
-                              No data for the selected filters.
+                              {t('lit.noDataForTheSelectedFilters')}
                             </td>
                           </tr>
                         ) : (
@@ -1797,7 +1809,7 @@ function ReportingHubInner() {
 
             {activeTab === 'expenses' && !expenseReport && loading && (
               <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
-                Loading expense report…
+                {t('lit.loadingExpenseReport')}
               </div>
             )}
 
@@ -1811,7 +1823,7 @@ function ReportingHubInner() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                   <div className="w-full sm:w-auto sm:min-w-[240px] sm:max-w-sm">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Dataset
+                      {t('lit.dataset')}
                     </label>
                     <select
                       value={extractDataset}
@@ -1831,7 +1843,7 @@ function ReportingHubInner() {
                       onClick={() => void loadExtract()}
                       className="h-10 px-4 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
                     >
-                      {extractLoading ? 'Loading…' : 'Load data'}
+                      {extractLoading ? 'Loading…' : t('lit.loadData')}
                     </button>
                     <button
                       type="button"
@@ -1839,7 +1851,7 @@ function ReportingHubInner() {
                       disabled={!extractRecords.length}
                       className="h-10 px-4 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-gray-900 dark:text-white"
                     >
-                      Export CSV
+                      {t('lit.exportCsv')}
                     </button>
                   </div>
                 </div>
@@ -1901,7 +1913,7 @@ function ReportingHubInner() {
           {taskModalState.isLoading && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[120]">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 text-sm text-gray-700 dark:text-gray-200">
-                Loading task…
+                {t('lit.loadingTask')}
               </div>
             </div>
           )}
@@ -1915,7 +1927,7 @@ function ReportingHubInner() {
                     onClick={closeTaskDetails}
                     className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -1954,15 +1966,18 @@ function ReportingHubInner() {
   );
 }
 
+function ReportingPageFallback() {
+  const { t } = useI18n();
+  return (
+    <div className="w-full text-gray-600 dark:text-gray-300 p-6">
+      {t('common.loading')}
+    </div>
+  );
+}
+
 export default function ReportingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full text-gray-600 dark:text-gray-300 p-6">
-          Loading reporting…
-        </div>
-      }
-    >
+    <Suspense fallback={<ReportingPageFallback />}>
       <ReportingHubInner />
     </Suspense>
   );

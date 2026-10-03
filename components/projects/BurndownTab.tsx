@@ -1,10 +1,14 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import { useFormatHours } from '@/lib/useFormatHours';
 
-export function BurndownTab({ projectId, token }: { projectId: number; token: string }) {
+export function BurndownTab({
+ projectId, token }: { projectId: number; token: string }) {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const [data, setData] = useState<{
     startDate: string;
@@ -25,11 +29,11 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
         const res = await fetch(`${getApiUrl()}/api/projects/${projectId}/burndown`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error('Failed to load');
+        if (!res.ok) throw new Error(t('lit.failedToLoad'));
         const json = await res.json();
         setData(json.data);
       } catch {
-        setError('Failed to load burndown data');
+        setError(t('lit.failedToLoadBurndownData'));
       } finally {
         setLoading(false);
       }
@@ -37,7 +41,7 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
     load();
   }, [projectId, token]);
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">Loading chart…</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">{t('lit.loadingChart')}</div>;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!data) return null;
 
@@ -51,8 +55,8 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-10 text-center">
         <p className="text-4xl mb-3">📉</p>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">No data yet</h3>
-        <p className="text-gray-500 dark:text-gray-400">Log time entries to see the burndown chart.</p>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('lit.noDataYet')}</h3>
+        <p className="text-gray-500 dark:text-gray-400">{t('lit.logTimeEntriesToSeeTheBurndownChart')}</p>
       </div>
     );
   }
@@ -121,10 +125,10 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Estimated', value: decimalHoursToHMS(totalEstimatedHours), color: 'text-gray-700 dark:text-gray-200' },
-            { label: 'Worked', value: decimalHoursToHMS(workedTotal), color: 'text-blue-600 dark:text-blue-400' },
-            { label: 'Remaining', value: decimalHoursToHMS(remainingTotal), color: remainingTotal > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400' },
-            { label: 'Complete', value: `${completionPct}%`, color: completionPct >= 100 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400' },
+            { label: t('lit.estimated'), value: decimalHoursToHMS(totalEstimatedHours), color: 'text-gray-700 dark:text-gray-200' },
+            { label: t('lit.worked'), value: decimalHoursToHMS(workedTotal), color: 'text-blue-600 dark:text-blue-400' },
+            { label: t('lit.remaining'), value: decimalHoursToHMS(remainingTotal), color: remainingTotal > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400' },
+            { label: t('lit.complete'), value: `${completionPct}%`, color: completionPct >= 100 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400' },
           ].map(st => (
             <div key={st.label} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 text-center">
               <div className={`text-2xl font-bold ${st.color}`}>{st.value}</div>
@@ -157,7 +161,7 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
                 return (
                   <g>
                     <line x1={tx} y1={0} x2={tx} y2={chartH} stroke="#3b82f6" strokeDasharray="4,3" strokeWidth={1.5} />
-                    <text x={tx + 4} y={12} fontSize={10} fill="#3b82f6">Today</text>
+                    <text x={tx + 4} y={12} fontSize={10} fill="#3b82f6">{t('lit.today')}</text>
                   </g>
                 );
               })()}
@@ -217,30 +221,30 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
         <div className="flex flex-wrap gap-4 mt-4 text-sm">
           <div className="flex items-center gap-2">
             <svg width="24" height="3"><line x1="0" y1="1.5" x2="24" y2="1.5" stroke="#d1d5db" strokeWidth="2" strokeDasharray="5,3"/></svg>
-            <span className="text-gray-500 dark:text-gray-400">Ideal</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('lit.ideal')}</span>
           </div>
           <div className="flex items-center gap-2">
             <svg width="24" height="3"><line x1="0" y1="1.5" x2="24" y2="1.5" stroke={chartMode === 'burndown' ? '#ef4444' : '#22c55e'} strokeWidth="2.5"/></svg>
-            <span className="text-gray-500 dark:text-gray-400">{chartMode === 'burndown' ? 'Remaining hours' : 'Worked hours'}</span>
+            <span className="text-gray-500 dark:text-gray-400">{chartMode === 'burndown' ? t('lit.remainingHours') : t('lit.workedHours2')}</span>
           </div>
           <div className="flex items-center gap-2">
             <svg width="24" height="3"><line x1="0" y1="1.5" x2="24" y2="1.5" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4,3"/></svg>
-            <span className="text-gray-500 dark:text-gray-400">Today</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('lit.today')}</span>
           </div>
         </div>
       </div>
 
       {/* Daily log table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Breakdown</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.dailyBreakdown')}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
-                <th className="pb-2 pr-4">Date</th>
-                <th className="pb-2 pr-4 text-right">Hours logged</th>
-                <th className="pb-2 pr-4 text-right">Cumulative</th>
-                <th className="pb-2 text-right">Remaining</th>
+                <th className="pb-2 pr-4">{t('common.date')}</th>
+                <th className="pb-2 pr-4 text-right">{t('lit.hoursLogged')}</th>
+                <th className="pb-2 pr-4 text-right">{t('lit.cumulative')}</th>
+                <th className="pb-2 text-right">{t('lit.remaining')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -257,7 +261,7 @@ export function BurndownTab({ projectId, token }: { projectId: number; token: st
             </tbody>
           </table>
           {visibleSeries.filter(s => s.worked > 0).length === 0 && (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4">No time entries logged yet.</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('lit.noTimeEntriesLoggedYet')}</p>
           )}
         </div>
       </div>

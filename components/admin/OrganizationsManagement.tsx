@@ -1,6 +1,8 @@
 'use client';
 
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -25,6 +27,8 @@ type OrgProjectFilter = 'all' | 'with-projects' | 'without-projects';
 type OrgTicketFilter = 'all' | 'with-open' | 'without-open';
 
 export default function OrganizationsManagement() {
+  const { t } = useI18n();
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,7 +164,7 @@ export default function OrganizationsManagement() {
       setOrganizations(response.organizations);
       setError('');
     } catch (err: any) {
-      const message = err.message || 'Failed to load organizations';
+      const message = err.message || t('lit.failedToLoadOrganizations');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -178,9 +182,9 @@ export default function OrganizationsManagement() {
         try {
           await organizationsApi.delete(id, token);
           await loadOrganizations();
-          showToast({ type: 'success', message: 'Organization deleted successfully' });
+          showToast({ type: 'success', message: t('lit.organizationDeletedSuccessfully') });
         } catch (err: any) {
-          const message = err.message || 'Failed to delete organization';
+          const message = err.message || t('lit.failedToDeleteOrganization');
           setError(message);
           showToast({ type: 'error', message });
         }
@@ -214,7 +218,7 @@ export default function OrganizationsManagement() {
       const rows = parseCsv(text);
 
       if (!rows.length) {
-        throw new Error('CSV is empty or has no data rows');
+        throw new Error(t('lit.csvIsEmptyOrHasNoDataRows'));
       }
 
       let successCount = 0;
@@ -227,7 +231,7 @@ export default function OrganizationsManagement() {
         try {
           const name = (row.Name || '').trim();
           if (!name) {
-            throw new Error('Name is required');
+            throw new Error(t('lit.nameIsRequired'));
           }
 
           const createData: CreateOrganizationData = {
@@ -239,7 +243,7 @@ export default function OrganizationsManagement() {
           await organizationsApi.create(createData, token);
           successCount += 1;
         } catch (importError: any) {
-          failures.push(`Row ${rowNumber}: ${importError.message || 'Failed to import organization'}`);
+          failures.push(`Row ${rowNumber}: ${importError.message || t('lit.failedToImportOrganization')}`);
         }
       }
 
@@ -254,7 +258,7 @@ export default function OrganizationsManagement() {
         showToast({ type: 'success', message: `Imported ${successCount} organizations successfully` });
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to import organizations CSV';
+      const message = err.message || t('lit.failedToImportOrganizationsCsv');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -482,7 +486,7 @@ export default function OrganizationsManagement() {
       }
     }
 
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'boolean') return value ? t('lit.yes') : t('lit.no');
     if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
     const text = String(value).trim();
     if (!text) return '-';
@@ -517,7 +521,7 @@ export default function OrganizationsManagement() {
   const organizationFiltersPanel = (
     <CollapsibleFilterPanel
       className="mb-2"
-      title="Organization filters"
+      title={t('lit.organizationFilters')}
       activeCount={orgFilterActiveCount}
       onClear={() => {
         setFilterText('');
@@ -530,15 +534,15 @@ export default function OrganizationsManagement() {
         organizations.length > 0 ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className="tabular-nums text-gray-600 dark:text-gray-300">
-              <span className="font-semibold text-blue-600 dark:text-blue-400">{organizationIndicators.total}</span> total
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{organizationIndicators.total}</span> {t('lit.total')}
             </span>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <span className="tabular-nums text-gray-600 dark:text-gray-300">
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">{organizationIndicators.inView}</span> in view
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">{organizationIndicators.inView}</span> {t('lit.inView')}
             </span>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <span className="tabular-nums text-gray-600 dark:text-gray-300">
-              <span className="font-semibold text-green-600 dark:text-green-400">{organizationIndicators.withProjects}</span> with projects
+              <span className="font-semibold text-green-600 dark:text-green-400">{organizationIndicators.withProjects}</span> {t('lit.withProjects')}
             </span>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <span className="tabular-nums text-gray-600 dark:text-gray-300">
@@ -560,14 +564,14 @@ export default function OrganizationsManagement() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Search</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.search')}</label>
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
-              placeholder="Filter organizations..."
+              placeholder={t('lit.filterOrganizations')}
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -575,41 +579,41 @@ export default function OrganizationsManagement() {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Role</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.role')}</label>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All roles</option>
+            <option value="all">{t('lit.allRoles')}</option>
             {availableRoles.map((role) => (
               <option key={role} value={role}>{role}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Projects</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.projects')}</label>
           <select
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value as OrgProjectFilter)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All</option>
-            <option value="with-projects">With projects</option>
-            <option value="without-projects">Without projects</option>
+            <option value="all">{t('common.all')}</option>
+            <option value="with-projects">{t('lit.withProjects2')}</option>
+            <option value="without-projects">{t('lit.withoutProjects')}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Open Tickets</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.openTickets')}</label>
           <select
             value={ticketFilter}
             onChange={(e) => setTicketFilter(e.target.value as OrgTicketFilter)}
             disabled={!internalTicketsEnabled}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All</option>
-            <option value="with-open">With open tickets</option>
-            <option value="without-open">Without open tickets</option>
+            <option value="all">{t('common.all')}</option>
+            <option value="with-open">{t('lit.withOpenTickets')}</option>
+            <option value="without-open">{t('lit.withoutOpenTickets')}</option>
           </select>
         </div>
       </div>
@@ -627,7 +631,7 @@ export default function OrganizationsManagement() {
             }}
             className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
           >
-            Clear filters
+            {t('lit.clearFilters')}
           </button>
         </div>
       )}
@@ -658,7 +662,7 @@ export default function OrganizationsManagement() {
               <button
                 onClick={() => setViewMode('grid')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="Grid view"
+                title={t('lit.gridView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -667,7 +671,7 @@ export default function OrganizationsManagement() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'list' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="List view"
+                title={t('lit.listView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -680,14 +684,14 @@ export default function OrganizationsManagement() {
                 disabled={isImportingCsv}
                 className="h-10 px-3 sm:px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
               >
-                {isImportingCsv ? 'Importing...' : 'Import CSV'}
+                {isImportingCsv ? 'Importing...' : t('lit.importCsv')}
               </button>
             )}
             <button
               onClick={handleExportOrganizationsCsv}
               className="h-10 px-3 sm:px-4 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Export CSV
+              {t('lit.exportCsv')}
             </button>
             {(user?.isAdmin || permissions?.canManageOrganizations) && (
               <button
@@ -695,7 +699,7 @@ export default function OrganizationsManagement() {
                 className="h-10 px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center gap-2"
               >
                 <span className="text-base leading-none">+</span>
-                New Organization
+                {t('lit.newOrganization')}
               </button>
             )}
           </div>
@@ -708,7 +712,7 @@ export default function OrganizationsManagement() {
               onClick={loadOrganizations}
               className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-sm font-medium"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -716,12 +720,12 @@ export default function OrganizationsManagement() {
         {organizations.length === 0 ? (
           <EmptyState
             icon={<Building2 size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-            title="No organizations yet"
-            message="Create your first organization to get started"
+            title={t('lit.noOrganizationsYet')}
+            message={t('lit.createYourFirstOrganizationToGetStarted')}
             primaryAction={
               (user?.isAdmin || permissions?.canManageOrganizations)
                 ? {
-                    label: 'Create Organization',
+                    label: t('lit.createOrganization'),
                     onClick: () => setShowCreateModal(true),
                   }
                 : undefined
@@ -730,10 +734,10 @@ export default function OrganizationsManagement() {
         ) : filteredAndSortedOrgs.length === 0 ? (
           <EmptyState
             icon={<Search size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-            title="No organizations match the current filter"
-            message="Try a different search term or clear the filter input."
+            title={t('lit.noOrganizationsMatchTheCurrentFilter')}
+            message={t('lit.tryADifferentSearchTermOrClearTheFilterInput')}
             primaryAction={{
-              label: 'Clear filters',
+              label: t('lit.clearFilters'),
               onClick: () => {
                 setFilterText('');
                 setRoleFilter('all');
@@ -741,7 +745,7 @@ export default function OrganizationsManagement() {
                 setTicketFilter('all');
               }
             }}
-            secondaryAction={{ label: 'Reload', onClick: loadOrganizations }}
+            secondaryAction={{ label: t('lit.reload'), onClick: loadOrganizations }}
           />
         ) : effectiveViewMode === 'grid' ? (
           <>
@@ -769,28 +773,28 @@ export default function OrganizationsManagement() {
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center">Organization</div>
+                      <div className="flex items-center">{t('common.organization')}</div>
                     </th>
                     <th 
                       aria-sort={getAriaSort('role')}
                       className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('role')}
                     >
-                      <div className="flex items-center justify-center">Role</div>
+                      <div className="flex items-center justify-center">{t('lit.role')}</div>
                     </th>
                     <th 
                       aria-sort={getAriaSort('members')}
                       className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('members')}
                     >
-                      <div className="flex items-center justify-center">Members</div>
+                      <div className="flex items-center justify-center">{t('lit.members')}</div>
                     </th>
                     <th 
                       aria-sort={getAriaSort('projects')}
                       className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('projects')}
                     >
-                      <div className="flex items-center justify-center">Projects</div>
+                      <div className="flex items-center justify-center">{t('common.projects')}</div>
                     </th>
                     {internalTicketsEnabled && (
                       <th 
@@ -798,7 +802,7 @@ export default function OrganizationsManagement() {
                         className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                         onClick={() => handleSort('tickets')}
                       >
-                        <div className="flex items-center justify-center">Open Tickets</div>
+                        <div className="flex items-center justify-center">{t('lit.openTickets')}</div>
                       </th>
                     )}
                     <th 
@@ -806,7 +810,7 @@ export default function OrganizationsManagement() {
                       className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('tasks')}
                     >
-                      <div className="flex items-center justify-center">Tasks</div>
+                      <div className="flex items-center justify-center">{t('common.tasks')}</div>
                     </th>
                     {additionalOrganizationColumnKeys.map((columnKey) => (
                       <th
@@ -819,7 +823,7 @@ export default function OrganizationsManagement() {
                       </th>
                     ))}
                     <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -891,8 +895,8 @@ export default function OrganizationsManagement() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={(e) => { e.stopPropagation(); router.push(`/organizations/${org.Id}`); }}
-                            title="Manage organization"
-                            aria-label="Manage organization"
+                            title={t('lit.manageOrganization')}
+                            aria-label={t('lit.manageOrganization')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -903,8 +907,8 @@ export default function OrganizationsManagement() {
                           {canEditOrganization && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEdit(org); }}
-                              title="Edit organization"
-                              aria-label="Edit organization"
+                              title={t('lit.editOrganization')}
+                              aria-label={t('lit.editOrganization')}
                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -915,8 +919,8 @@ export default function OrganizationsManagement() {
                           {canDeleteOrganization && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(org.Id); }}
-                              title="Delete organization"
-                              aria-label="Delete organization"
+                              title={t('lit.deleteOrganization')}
+                              aria-label={t('lit.deleteOrganization')}
                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -941,7 +945,7 @@ export default function OrganizationsManagement() {
           onCreated={() => {
             setShowCreateModal(false);
             loadOrganizations();
-            showToast({ type: 'success', message: 'Organization created successfully' });
+            showToast({ type: 'success', message: t('lit.organizationCreatedSuccessfully') });
           }}
           token={token!}
         />
@@ -954,7 +958,7 @@ export default function OrganizationsManagement() {
           onUpdated={() => {
             setEditingOrganization(null);
             loadOrganizations();
-            showToast({ type: 'success', message: 'Organization updated successfully' });
+            showToast({ type: 'success', message: t('lit.organizationUpdatedSuccessfully') });
           }}
           token={token!}
         />
@@ -965,7 +969,7 @@ export default function OrganizationsManagement() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-xl w-full mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Import Organizations from CSV</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.importOrganizationsFromCsv')}</h2>
                 <button
                   onClick={() => setShowImportModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -979,14 +983,14 @@ export default function OrganizationsManagement() {
               <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">📄 CSV Format</h3>
                 <code className="text-xs bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded block overflow-x-auto">
-                  Name,Abbreviation,Description
+                  {t('lit.nameAbbreviationDescription')}
                 </code>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                  <a href="/templates/organizations_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                  <a href="/templates/organizations_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                 </p>
               </div>
 
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -999,7 +1003,7 @@ export default function OrganizationsManagement() {
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>
@@ -1014,7 +1018,7 @@ export default function OrganizationsManagement() {
         message={modalMessage?.message || ''}
         onClose={closeConfirmModal}
         onConfirm={handleModalConfirm}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
 
@@ -1032,6 +1036,7 @@ function OrganizationCard({
   onDelete: (id: number) => void;
   onView: (id: number) => void;
 }) {
+  const { t } = useI18n();
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'Owner': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
@@ -1102,7 +1107,7 @@ function OrganizationCard({
               </svg>
             </div>
             <div className="text-lg font-bold text-gray-900 dark:text-white">{memberCount}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Members</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.members')}</div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
             <div className="flex items-center justify-center mb-1">
@@ -1111,7 +1116,7 @@ function OrganizationCard({
               </svg>
             </div>
             <div className="text-lg font-bold text-gray-900 dark:text-white">{projectCount}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Projects</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.projects')}</div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
             <div className="flex items-center justify-center mb-1">
@@ -1120,7 +1125,7 @@ function OrganizationCard({
               </svg>
             </div>
             <div className="text-lg font-bold text-gray-900 dark:text-white">{activeProjects}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Active</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.active')}</div>
           </div>
         </div>
 
@@ -1128,7 +1133,7 @@ function OrganizationCard({
         {totalTasks > 0 && (
           <div className="mb-4">
             <div className="flex justify-between items-center text-xs mb-1">
-              <span className="text-gray-600 dark:text-gray-400">Tasks Completed</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lit.tasksCompleted2')}</span>
               <span className="font-medium text-gray-900 dark:text-white">
                 {completedTasks}/{totalTasks} ({taskProgress}%)
               </span>
@@ -1155,7 +1160,7 @@ function OrganizationCard({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Manage
+            {t('lit.manage')}
           </button>
           {organization.Role === 'Owner' && (
             <button
@@ -1187,6 +1192,8 @@ function EditOrganizationModal({
   onUpdated: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const [formData, setFormData] = useState({
     name: organization.Name,
     abbreviation: organization.Abbreviation || '',
@@ -1205,7 +1212,7 @@ function EditOrganizationModal({
       await organizationsApi.update(organization.Id, { ...formData, customFields }, token);
       onUpdated();
     } catch (err: any) {
-      setError(err.message || 'Failed to update organization');
+      setError(err.message || t('lit.failedToUpdateOrganization'));
     } finally {
       setIsLoading(false);
     }
@@ -1216,7 +1223,7 @@ function EditOrganizationModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Organization</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.editOrganization2')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
@@ -1234,7 +1241,7 @@ function EditOrganizationModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Organization Name *
+                {t('lit.organizationName2')}
               </label>
               <input
                 type="text"
@@ -1242,13 +1249,13 @@ function EditOrganizationModal({
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter organization name"
+                placeholder={t('lit.enterOrganizationName')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Abbreviation
+                {t('lit.abbreviation')}
               </label>
               <input
                 type="text"
@@ -1256,20 +1263,20 @@ function EditOrganizationModal({
                 onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
                 maxLength={10}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="e.g., ACME"
+                placeholder={t('lit.eGAcme')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                {t('common.description')}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter organization description"
+                placeholder={t('lit.enterOrganizationDescription')}
               />
             </div>
 
@@ -1286,14 +1293,14 @@ function EditOrganizationModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? t('lit.saving') : t('lit.saveChanges')}
               </button>
             </div>
           </form>
@@ -1312,6 +1319,8 @@ function CreateOrganizationModal({
   onCreated: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const [formData, setFormData] = useState<CreateOrganizationData>({
     name: '',
     abbreviation: '',
@@ -1330,7 +1339,7 @@ function CreateOrganizationModal({
       await organizationsApi.create({ ...formData, customFields }, token);
       onCreated();
     } catch (err: any) {
-      setError(err.message || 'Failed to create organization');
+      setError(err.message || t('lit.failedToCreateOrganization'));
     } finally {
       setIsLoading(false);
     }
@@ -1341,7 +1350,7 @@ function CreateOrganizationModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create Organization</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.createOrganization')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
@@ -1359,7 +1368,7 @@ function CreateOrganizationModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Organization Name *
+                {t('lit.organizationName2')}
               </label>
               <input
                 type="text"
@@ -1367,13 +1376,13 @@ function CreateOrganizationModal({
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter organization name"
+                placeholder={t('lit.enterOrganizationName')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Abbreviation
+                {t('lit.abbreviation')}
               </label>
               <input
                 type="text"
@@ -1381,20 +1390,20 @@ function CreateOrganizationModal({
                 onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
                 maxLength={10}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="e.g., ACME"
+                placeholder={t('lit.eGAcme')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                {t('common.description')}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter organization description"
+                placeholder={t('lit.enterOrganizationDescription')}
               />
             </div>
 
@@ -1411,14 +1420,14 @@ function CreateOrganizationModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Creating...' : 'Create'}
+                {isLoading ? 'Creating...' : t('lit.create')}
               </button>
             </div>
           </form>

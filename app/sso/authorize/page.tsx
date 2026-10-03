@@ -4,11 +4,22 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getApiUrl } from '@/lib/api/config';
 import { readStoredSession } from '@/lib/auth/session';
+import { useI18n } from '@/lib/i18n/provider';
+
+function SsoAuthorizeLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
+      <p className="text-sm text-[var(--pm-muted)]">{t('common.loading')}</p>
+    </div>
+  );
+}
 
 function SsoAuthorizeInner() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState('Preparing single sign-on…');
+  const [message, setMessage] = useState(() => t('lit.preparingSingleSignOn'));
 
   useEffect(() => {
     const run = async () => {
@@ -17,7 +28,7 @@ function SsoAuthorizeInner() {
       const clientId = searchParams.get('client_id') || searchParams.get('clientId') || 'synapse';
 
       if (!redirectUri) {
-        setMessage('Missing redirect_uri');
+        setMessage(t('lit.missingRedirectUri'));
         return;
       }
 
@@ -40,7 +51,7 @@ function SsoAuthorizeInner() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          setMessage(data.message || 'SSO handoff failed');
+          setMessage(data.message || t('lit.ssoHandoffFailed'));
           return;
         }
 
@@ -49,11 +60,12 @@ function SsoAuthorizeInner() {
         if (state) target.searchParams.set('state', state);
         window.location.href = target.toString();
       } catch {
-        setMessage('SSO handoff failed');
+        setMessage(t('lit.ssoHandoffFailed'));
       }
     };
 
     void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handoff runs once per query
   }, [router, searchParams]);
 
   return (
@@ -65,13 +77,7 @@ function SsoAuthorizeInner() {
 
 export default function SsoAuthorizePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
-          <p className="text-sm text-[var(--pm-muted)]">Loading…</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<SsoAuthorizeLoading />}>
       <SsoAuthorizeInner />
     </Suspense>
   );

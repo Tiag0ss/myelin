@@ -1,5 +1,16 @@
 'use client';
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
 
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ConfirmAlertModal from '@/components/ConfirmAlertModal';
@@ -23,7 +34,7 @@ const formatMoney = (value: number | string | null | undefined) => {
 
 const formatReimbursementLabel = (expense: Expense) => {
   if (expense.ApprovalStatus === 'rejected' || expense.ReimbursementStatus === 'not_applicable') {
-    return 'Not applicable';
+    return t('lit.notApplicable');
   }
   return expense.ReimbursementStatus.replace('_', ' ');
 };
@@ -56,6 +67,8 @@ interface Props {
 }
 
 export default function ExpenseApprovalsPanel({ token }: Props) {
+  const { t } = useI18n();
+
   const { user } = useAuth();
   const isAdmin = !!user?.isAdmin;
 
@@ -115,7 +128,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
       setExpenses(rows);
       setSelectedIds(new Set());
     } catch (err: any) {
-      setError(err.message || 'Failed to load expenses');
+      setError(err.message || t('lit.failedToLoadExpenses'));
     } finally {
       setIsLoading(false);
     }
@@ -152,7 +165,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
       }
       await refreshAll();
     } catch (err: any) {
-      setError(err.message || 'Batch approval failed');
+      setError(err.message || t('lit.batchApprovalFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -186,7 +199,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
       setReimburseExpense(null);
       await refreshAll();
     } catch (err: any) {
-      setError(err.message || 'Reimbursement failed');
+      setError(err.message || t('lit.reimbursementFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -221,7 +234,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
       setAdminEdit(null);
       await refreshAll();
     } catch (err: any) {
-      setError(err.message || 'Failed to update expense');
+      setError(err.message || t('lit.failedToUpdateExpense'));
     } finally {
       setIsSaving(false);
     }
@@ -234,7 +247,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">⏳ Pending</div>
             <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{kpis.pendingCount}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">expenses awaiting approval</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.expensesAwaitingApproval')}</div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Approved</div>
@@ -259,7 +272,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
               {formatMoney(kpis.totalAmount)}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              across all expenses in your scope
+              {t('lit.acrossAllExpensesInYourScope')}
             </div>
           </div>
         </div>
@@ -272,10 +285,10 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
             onChange={(e) => setFilterStatus(e.target.value as ApprovalFilter)}
             className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm px-3 py-2"
           >
-            <option value="pending">Pending approval</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="all">All approval</option>
+            <option value="pending">{t('lit.pendingApproval')}</option>
+            <option value="approved">{t('pages.approvals.approved')}</option>
+            <option value="rejected">{t('pages.approvals.rejected')}</option>
+            <option value="all">{t('lit.allApproval')}</option>
           </select>
           <select
             value={filterReimbursement}
@@ -288,12 +301,12 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
             }}
             className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm px-3 py-2"
           >
-            <option value="">All reimbursement</option>
-            <option value="needs_reimbursement">Needs reimbursement</option>
-            <option value="reimbursed">Reimbursed</option>
-            <option value="partial">Partial</option>
-            <option value="pending">Reimbursement pending</option>
-            <option value="not_required">Not required</option>
+            <option value="">{t('lit.allReimbursement')}</option>
+            <option value="needs_reimbursement">{t('lit.needsReimbursement')}</option>
+            <option value="reimbursed">{t('lit.reimbursed')}</option>
+            <option value="partial">{t('lit.partial')}</option>
+            <option value="pending">{t('lit.reimbursementPending')}</option>
+            <option value="not_required">{t('lit.notRequired')}</option>
           </select>
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {expenses.length} shown
@@ -308,7 +321,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
               onClick={() => batchApprove('approved')}
               className="h-10 px-4 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
             >
-              Approve selected ({selectedIds.size})
+              {t('lit.approveSelected')} ({selectedIds.size})
             </button>
             <button
               type="button"
@@ -316,7 +329,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
               onClick={() => batchApprove('rejected')}
               className="h-10 px-4 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
             >
-              Reject selected
+              {t('lit.rejectSelected')}
             </button>
           </div>
         )}
@@ -328,25 +341,25 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
         ) : expenses.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">No expenses in this filter.</div>
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('lit.noExpensesInThisFilter')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    <span className="sr-only">Select</span>
+                    <span className="sr-only">{t('common.select')}</span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scope</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.date')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.user')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('lit.title')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('lit.scope')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('pages.expenses.amount')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('common.status')}</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -375,7 +388,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                         <div className="text-xs text-gray-500">{e.CategoryGroupName} / {e.CategoryName}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {e.ProjectName || <span className="italic text-gray-500">Internal</span>}
+                        {e.ProjectName || <span className="italic text-gray-500">{t('lit.internal')}</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white font-medium">
                         {formatMoney(e.Amount)}
@@ -400,8 +413,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                             <>
                               <button
                                 type="button"
-                                title="Approve"
-                                aria-label="Approve"
+                                title={t('lit.approve')}
+                                aria-label={t('lit.approve')}
                                 onClick={() => approveExpense(token, e.Id, 'approved').then(refreshAll)}
                                 className="p-1.5 text-gray-400 rounded hover:text-green-600"
                               >
@@ -409,8 +422,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                               </button>
                               <button
                                 type="button"
-                                title="Reject"
-                                aria-label="Reject"
+                                title={t('lit.reject')}
+                                aria-label={t('lit.reject')}
                                 onClick={() => approveExpense(token, e.Id, 'rejected').then(refreshAll)}
                                 className="p-1.5 text-gray-400 rounded hover:text-red-600"
                               >
@@ -421,8 +434,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                           {e.ApprovalStatus === 'approved' && e.PaidBy === 'employee' && e.ReimbursementStatus !== 'reimbursed' && e.ReimbursementStatus !== 'not_required' && (
                             <button
                               type="button"
-                              title="Reimburse"
-                              aria-label="Reimburse"
+                              title={t('lit.reimburse')}
+                              aria-label={t('lit.reimburse')}
                               onClick={() => openReimburse(e)}
                               className="p-1.5 text-gray-400 rounded hover:text-blue-600"
                             >
@@ -432,8 +445,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                           {e.ApprovalStatus === 'rejected' && isAdmin && (
                             <button
                               type="button"
-                              title="Revert to pending"
-                              aria-label="Revert to pending"
+                              title={t('lit.revertToPending')}
+                              aria-label={t('lit.revertToPending')}
                               onClick={() => approveExpense(token, e.Id, 'pending').then(refreshAll)}
                               className="p-1.5 text-gray-400 rounded hover:text-amber-600"
                             >
@@ -444,8 +457,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                             <>
                               <button
                                 type="button"
-                                title="Admin edit"
-                                aria-label="Admin edit"
+                                title={t('lit.adminEdit')}
+                                aria-label={t('lit.adminEdit')}
                                 onClick={() => openAdminEdit(e)}
                                 className="p-1.5 text-gray-400 rounded hover:text-blue-600"
                               >
@@ -453,8 +466,8 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                               </button>
                               <button
                                 type="button"
-                                title="Delete"
-                                aria-label="Delete"
+                                title={t('common.delete')}
+                                aria-label={t('common.delete')}
                                 onClick={() => setDeleteTarget(e)}
                                 className="p-1.5 text-gray-400 rounded hover:text-red-600"
                               >
@@ -477,7 +490,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Record reimbursement</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.recordReimbursement')}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{reimburseExpense.Title}</p>
             </div>
             <div className="p-6 space-y-3">
@@ -492,7 +505,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                   )}
               </div>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Amount to reimburse (cap)</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.amountToReimburseCap')}</span>
                 <input
                   type="number"
                   min="0"
@@ -521,11 +534,11 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                   className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
                 />
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Cannot exceed the category cap or expense total. Lower to settle for less than the invoice amount.
+                  {t('lit.cannotExceedTheCategoryCapOrExpenseTotalLowerToSettleForLessThanTheInvoiceAmount')}
                 </span>
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">This payment</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.thisPayment')}</span>
                 <input
                   type="number"
                   min="0.01"
@@ -543,11 +556,11 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                   className="mt-1 rounded border-gray-300"
                 />
                 <span>
-                  Mark as fully settled after this payment (no further reimbursement owed, even if below expense total)
+                  {t('lit.markAsFullySettledAfterThisPaymentNoFurtherReimbursementOwedEvenIfBelowExpenseTo')}
                 </span>
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Notes</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.notes')}</span>
                 <textarea
                   value={reimburseNotes}
                   onChange={(e) => setReimburseNotes(e.target.value)}
@@ -565,7 +578,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
             </div>
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
               <button type="button" onClick={() => setReimburseExpense(null)} className="h-10 px-4 rounded-lg text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -573,7 +586,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 onClick={submitReimburse}
                 className="h-10 px-4 rounded-lg text-sm bg-blue-600 text-white disabled:opacity-50"
               >
-                Record
+                {t('lit.record')}
               </button>
             </div>
           </div>
@@ -584,12 +597,12 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Admin correction</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Correct expense fields if something is wrong.</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.adminCorrection')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.correctExpenseFieldsIfSomethingIsWrong')}</p>
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block text-sm sm:col-span-2">
-                <span className="text-gray-700 dark:text-gray-300">Title</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.title')}</span>
                 <input
                   value={adminForm.title}
                   onChange={(e) => setAdminForm((f) => ({ ...f, title: e.target.value }))}
@@ -597,7 +610,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Expense total</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.expenseTotal')}</span>
                 <input
                   type="number"
                   min="0.01"
@@ -608,7 +621,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Amount to reimburse</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.amountToReimburse')}</span>
                 <input
                   type="number"
                   min="0"
@@ -619,7 +632,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Date</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('common.date')}</span>
                 <input
                   type="date"
                   value={adminForm.expenseDate}
@@ -628,18 +641,18 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Paid by</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.paidBy')}</span>
                 <select
                   value={adminForm.paidBy}
                   onChange={(e) => setAdminForm((f) => ({ ...f, paidBy: e.target.value as 'employee' | 'company' }))}
                   className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
                 >
-                  <option value="employee">Employee</option>
-                  <option value="company">Company</option>
+                  <option value="employee">{t('lit.employee')}</option>
+                  <option value="company">{t('lit.company')}</option>
                 </select>
               </label>
               <label className="block text-sm sm:col-span-2">
-                <span className="text-gray-700 dark:text-gray-300">Vendor</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.vendor')}</span>
                 <input
                   value={adminForm.vendor}
                   onChange={(e) => setAdminForm((f) => ({ ...f, vendor: e.target.value }))}
@@ -647,7 +660,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 />
               </label>
               <label className="block text-sm sm:col-span-2">
-                <span className="text-gray-700 dark:text-gray-300">Description</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('common.description')}</span>
                 <textarea
                   value={adminForm.description}
                   onChange={(e) => setAdminForm((f) => ({ ...f, description: e.target.value }))}
@@ -658,7 +671,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
             </div>
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
               <button type="button" onClick={() => setAdminEdit(null)} className="h-10 px-4 rounded-lg text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -666,7 +679,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
                 onClick={submitAdminEdit}
                 className="h-10 px-4 rounded-lg text-sm bg-blue-600 text-white disabled:opacity-50"
               >
-                Save correction
+                {t('lit.saveCorrection')}
               </button>
             </div>
           </div>
@@ -676,7 +689,7 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
       <ConfirmAlertModal
         isOpen={!!deleteTarget}
         type="confirm"
-        title="Delete expense"
+        title={t('lit.deleteExpense')}
         message={deleteTarget ? `Permanently delete "${deleteTarget.Title}"?` : ''}
         onClose={() => setDeleteTarget(null)}
         onConfirm={async () => {
@@ -686,11 +699,11 @@ export default function ExpenseApprovalsPanel({ token }: Props) {
             setDeleteTarget(null);
             await refreshAll();
           } catch (err: any) {
-            setError(err.message || 'Failed to delete');
+            setError(err.message || t('lit.failedToDelete'));
             setDeleteTarget(null);
           }
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

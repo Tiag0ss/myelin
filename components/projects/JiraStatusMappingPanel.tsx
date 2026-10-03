@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useState } from 'react';
 import { StatusValue } from '@/lib/api/statusValues';
@@ -8,7 +9,7 @@ interface JiraStatusMappingPanelProps {
   taskStatuses: StatusValue[];
   mapping: Record<string, string>;
   onChange: (mapping: Record<string, string>) => void;
-  /** Title shown in the panel header. Defaults to "Jira Status → Task Status" */
+  /** Title shown in the panel header. Defaults to t('lit.jiraStatusTaskStatus') */
   title?: string;
   /** Whether the panel should start expanded. Defaults to false. */
   defaultExpanded?: boolean;
@@ -19,9 +20,11 @@ export default function JiraStatusMappingPanel({
   taskStatuses,
   mapping,
   onChange,
-  title = 'Jira Status → Task Status',
+  title,
   defaultExpanded = false,
 }: JiraStatusMappingPanelProps) {
+  const { t } = useI18n();
+
   const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   if (jiraStatuses.length === 0) return null;
@@ -40,7 +43,7 @@ export default function JiraStatusMappingPanel({
       {isOpen && (
         <div className="mt-4">
           <p className="text-xs text-indigo-800 dark:text-indigo-400 mb-2">
-            Map each Jira status to a local task status. Leave as <em>Auto map</em> to match by name.
+            {t('lit.mapEachJiraStatusToALocalTaskStatusLeaveAs')} <em>{t('lit.autoMap')}</em> {t('lit.toMatchByName')}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {jiraStatuses.map((jiraStatus) => (
@@ -54,7 +57,7 @@ export default function JiraStatusMappingPanel({
                   onChange={(e) => onChange({ ...mapping, [jiraStatus]: e.target.value })}
                   className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">Auto map</option>
+                  <option value="">{t('lit.autoMap')}</option>
                   {taskStatuses.map((s) => (
                     <option key={s.Id} value={s.StatusName || ''}>
                       {s.StatusName}

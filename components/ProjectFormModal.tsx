@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 import { useEffect, useState } from 'react';
 import { projectsApi, Project, CreateProjectData } from '@/lib/api/projects';
@@ -34,6 +36,8 @@ export default function ProjectFormModal({
   token,
   canViewBudgetInfo,
 }: ProjectFormModalProps) {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const { permissions } = usePermissions();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -122,12 +126,12 @@ export default function ProjectFormModal({
           return { ...prev, organizationId: organizationsForSelect[0].Id };
         });
       } else if (!project && organizationsForSelect.length === 0) {
-        setError('No organizations available for project creation. Ask an admin to grant Create Projects on your permission group.');
+        setError(t('lit.noOrganizationsAvailableForProjectCreationAskAnAdminToGrantCreateProject'));
       }
     } catch (err: any) {
       console.error('Failed to load organizations:', err);
       setOrganizations([]);
-      setError(err.message || 'Failed to load organizations');
+      setError(err.message || t('lit.failedToLoadOrganizations'));
     }
   };
 
@@ -202,7 +206,7 @@ export default function ProjectFormModal({
 
     try {
       if (formData.isGlobal && formData.customerId) {
-        throw new Error('Global projects cannot be associated with a customer');
+        throw new Error(t('lit.globalProjectsCannotBeAssociatedWithACustomer'));
       }
 
       const requestData: CreateProjectData = canViewBudgetInfo
@@ -216,9 +220,9 @@ export default function ProjectFormModal({
       }
       onSaved();
     } catch (err: any) {
-      const message = err.message || 'Failed to save project';
+      const message = err.message || t('lit.failedToSaveProject');
       setError(message);
-      showToast({ type: 'error', title: 'Project Error', message });
+      showToast({ type: 'error', title: t('lit.projectError'), message });
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +234,7 @@ export default function ProjectFormModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {project ? 'Edit Project' : 'Create New Project'}
+              {project ? t('pages.projects.editProject') : t('lit.createNewProject')}
             </h2>
             <button
               onClick={onClose}
@@ -249,50 +253,50 @@ export default function ProjectFormModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Organization *
+                {t('lit.organization')}
               </label>
               <SearchableSelect
                 value={formData.organizationId > 0 ? formData.organizationId.toString() : ''}
                 onChange={(value) => setFormData({ ...formData, organizationId: parseInt(value) || 0 })}
                 options={organizations.map(org => ({ value: org.Id, label: org.Name }))}
-                placeholder="Select Organization"
-                emptyText="Select organization"
+                placeholder={t('lit.selectOrganization2')}
+                emptyText={t('lit.selectOrganization')}
                 disabled={!!project}
                 autoSelectSingleOption={!project}
               />
               {!project && organizations.length === 0 && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  No organizations available. Your membership needs Create Projects permission.
+                  {t('lit.noOrganizationsAvailableYourMembershipNeedsCreateProjectsPermission')}
                 </p>
               )}
               {!!project && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Organization cannot be changed after project creation
+                  {t('lit.organizationCannotBeChangedAfterProjectCreation')}
                 </p>
               )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Customer
+                {t('common.customer')}
               </label>
               <SearchableSelect
                 value={formData.customerId?.toString() || ''}
                 onChange={(value) => setFormData({ ...formData, customerId: value ? parseInt(value) : undefined })}
                 options={customers.map(customer => ({ value: customer.Id, label: customer.Name }))}
-                placeholder="Select Customer"
-                emptyText="No customer"
+                placeholder={t('lit.selectCustomer')}
+                emptyText={t('lit.noCustomer')}
                 disabled={!formData.organizationId || formData.organizationId === 0 || !!formData.isGlobal}
                 autoSelectSingleOption={!project}
               />
               {formData.isGlobal && (
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  Global projects cannot have a customer association
+                  {t('lit.globalProjectsCannotHaveACustomerAssociation')}
                 </p>
               )}
               {formData.organizationId > 0 && customers.length === 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  No customers available for this organization
+                  {t('lit.noCustomersAvailableForThisOrganization')}
                 </p>
               )}
             </div>
@@ -300,13 +304,13 @@ export default function ProjectFormModal({
             {availableApplications.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Applications
+                  {t('nav.applications')}
                 </label>
                 <SearchableMultiSelect
                   values={formData.applicationIds || []}
                   onChange={(values) => setFormData({ ...formData, applicationIds: values as number[] })}
                   options={availableApplications.map(app => ({ value: app.Id, label: app.Name }))}
-                  placeholder="Select applications..."
+                  placeholder={t('lit.selectApplications2')}
                 />
               </div>
             )}
@@ -318,7 +322,7 @@ export default function ProjectFormModal({
                     <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
                   </svg>
                   <label className="block text-sm font-medium text-blue-700 dark:text-blue-300">
-                    Jira Board ID
+                    {t('lit.jiraBoardId')}
                   </label>
                 </div>
                 <input
@@ -326,10 +330,10 @@ export default function ProjectFormModal({
                   value={formData.jiraBoardId || ''}
                   onChange={(e) => setFormData({ ...formData, jiraBoardId: e.target.value || undefined })}
                   className="w-full px-4 py-2 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="e.g., 123 (from board URL)"
+                  placeholder={t('lit.eG123FromBoardUrl')}
                 />
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  Associate this project with a Jira board. Find the Board ID in your Jira board URL: /boards/123
+                  {t('lit.associateThisProjectWithAJiraBoardFindTheBoardIdInYourJiraBoardUrlBoards123')}
                 </p>
               </div>
             )}
@@ -337,11 +341,11 @@ export default function ProjectFormModal({
             {availableApplications.length > 0 && (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-300 dark:border-gray-700">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Git / VCS repositories
+                  {t('lit.gitVcsRepositories')}
                 </label>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   Configure repository URL and GitHub / Gitea / Bitbucket credentials on each{' '}
-                  <strong>Application</strong>, then link applications to this project. Issue import uses the
+                  <strong>{t('lit.application')}</strong>, then link applications to this project. Issue import uses the
                   selected application&apos;s repository.
                 </p>
               </div>
@@ -349,7 +353,7 @@ export default function ProjectFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Project Name *
+                {t('lit.projectName2')}
               </label>
               <input
                 type="text"
@@ -357,20 +361,20 @@ export default function ProjectFormModal({
                 onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
                 required
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter project name"
+                placeholder={t('lit.enterProjectName')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                {t('common.description')}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Enter project description"
+                placeholder={t('lit.enterProjectDescription')}
               />
             </div>
 
@@ -378,24 +382,24 @@ export default function ProjectFormModal({
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Budget Type
+                    {t('lit.budgetType')}
                   </label>
                   <SearchableSelect
                     value={formData.budgetType || 'monetary'}
                     onChange={(value) => setFormData({ ...formData, budgetType: value === 'hours' ? 'hours' : 'monetary' })}
                     options={[
-                      { value: 'monetary', label: 'Monetary' },
-                      { value: 'hours', label: 'Total Hours' },
+                      { value: 'monetary', label: t('lit.monetary') },
+                      { value: 'hours', label: t('lit.totalHours2') },
                     ]}
-                    placeholder="Select budget type"
-                    emptyText="No budget type"
+                    placeholder={t('lit.selectBudgetType')}
+                    emptyText={t('lit.noBudgetType')}
                     autoSelectSingleOption
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Budget
+                    {t('lit.budget')}
                   </label>
                   <div className="relative">
                     {formData.budgetType !== 'hours' && (
@@ -413,14 +417,14 @@ export default function ProjectFormModal({
                   </div>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {formData.budgetType === 'hours'
-                      ? 'Optional project budget in total planned hours'
-                      : 'Optional project budget in currency units'}
+                      ? t('lit.optionalProjectBudgetInTotalPlannedHours')
+                      : t('lit.optionalProjectBudgetInCurrencyUnits')}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Hourly rate
+                    {t('lit.hourlyRate')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2 text-gray-500 dark:text-gray-400">$</span>
@@ -431,7 +435,7 @@ export default function ProjectFormModal({
                       value={formData.hourlyRate ?? ''}
                       onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value !== '' ? parseFloat(e.target.value) : undefined })}
                       className="w-full pl-7 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="0.00"
+                      placeholder='0.00'
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -443,7 +447,7 @@ export default function ProjectFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Status
+                {t('common.status')}
               </label>
               <SearchableSelect
                 value={formData.status ?? ''}
@@ -452,13 +456,13 @@ export default function ProjectFormModal({
                   value: status.Id,
                   label: status.StatusName,
                 }))}
-                placeholder="Select Status"
-                emptyText="Select Status"
+                placeholder={t('lit.selectStatus2')}
+                emptyText={t('lit.selectStatus2')}
                 disabled={!formData.organizationId || formData.organizationId === 0}
               />
               {formData.organizationId > 0 && projectStatuses.length === 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  No project statuses available for this organization
+                  {t('lit.noProjectStatusesAvailableForThisOrganization')}
                 </p>
               )}
             </div>
@@ -466,7 +470,7 @@ export default function ProjectFormModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Start Date
+                  {t('lit.startDate')}
                 </label>
                 <input
                   type="date"
@@ -478,7 +482,7 @@ export default function ProjectFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  End Date
+                  {t('lit.endDate')}
                 </label>
                 <input
                   type="date"
@@ -507,7 +511,7 @@ export default function ProjectFormModal({
                     🌐 Global Project
                   </label>
                   <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Global projects are not associated with a specific customer
+                    {t('lit.globalProjectsAreNotAssociatedWithASpecificCustomer')}
                   </p>
                 </div>
               </div>
@@ -525,7 +529,7 @@ export default function ProjectFormModal({
                     🎨 Hobby Project
                   </label>
                   <p className="text-xs text-purple-600 dark:text-purple-400">
-                    Hobby projects are scheduled outside of regular work hours
+                    {t('lit.hobbyProjectsAreScheduledOutsideOfRegularWorkHours')}
                   </p>
                 </div>
               </div>
@@ -544,14 +548,14 @@ export default function ProjectFormModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
+                {isLoading ? t('lit.saving') : project ? t('lit.updateProject') : t('lit.createProject')}
               </button>
             </div>
           </form>

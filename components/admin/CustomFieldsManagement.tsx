@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +64,8 @@ const AVAILABLE_TABLES = [
 ];
 
 export default function CustomFieldsManagement() {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const { showToast } = useToast();
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -75,7 +79,7 @@ export default function CustomFieldsManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    tableName: 'Projects',
+    tableName: t('lit.projects'),
     fieldName: '',
     displayName: '',
     groupName: '',
@@ -120,10 +124,10 @@ export default function CustomFieldsManagement() {
         const data = await response.json();
         setCustomFields(data.customFields || []);
       } else {
-        throw new Error('Failed to load custom fields');
+        throw new Error(t('lit.failedToLoadCustomFields'));
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load custom fields');
+      setError(err.message || t('lit.failedToLoadCustomFields'));
     } finally {
       setIsLoading(false);
     }
@@ -172,12 +176,12 @@ export default function CustomFieldsManagement() {
 
     // Validation
     if (!formData.fieldName.trim()) {
-      setError('Field name is required');
+      setError(t('lit.fieldNameIsRequired'));
       return;
     }
 
     if (!formData.displayName.trim()) {
-      setError('Display name is required');
+      setError(t('lit.displayNameIsRequired'));
       return;
     }
 
@@ -196,7 +200,7 @@ export default function CustomFieldsManagement() {
     try {
       const isEditing = editingFieldId !== null;
       const response = await fetch(`${getApiUrl()}/api/custom-fields${isEditing ? `/${editingFieldId}` : ''}`, {
-        method: isEditing ? 'PUT' : 'POST',
+        method: isEditing ? 'PUT' : t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -216,17 +220,17 @@ export default function CustomFieldsManagement() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || (isEditing ? 'Failed to update custom field' : 'Failed to create custom field'));
+        throw new Error(data.message || (isEditing ? t('lit.failedToUpdateCustomField') : t('lit.failedToCreateCustomField')));
       }
 
-      setSuccess(isEditing ? 'Custom field updated successfully' : 'Custom field created successfully');
-      showToast({ type: 'success', title: 'Custom Field', message: isEditing ? 'Custom field updated successfully' : 'Custom field created successfully' });
+      setSuccess(isEditing ? t('lit.customFieldUpdatedSuccessfully') : t('lit.customFieldCreatedSuccessfully'));
+      showToast({ type: 'success', title: t('lit.customField'), message: isEditing ? t('lit.customFieldUpdatedSuccessfully') : t('lit.customFieldCreatedSuccessfully') });
       await loadCustomFields();
       setShowForm(false);
       resetForm();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to save custom field');
+      setError(err.message || t('lit.failedToSaveCustomField'));
     } finally {
       setIsSubmitting(false);
     }
@@ -250,22 +254,22 @@ export default function CustomFieldsManagement() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete custom field');
+        throw new Error(data.message || t('lit.failedToDeleteCustomField'));
       }
 
-      setSuccess('Custom field deleted successfully');
-      showToast({ type: 'success', title: 'Custom Field', message: 'Custom field deleted successfully' });
+      setSuccess(t('lit.customFieldDeletedSuccessfully'));
+      showToast({ type: 'success', title: t('lit.customField'), message: t('lit.customFieldDeletedSuccessfully') });
       await loadCustomFields();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to delete custom field');
+      setError(err.message || t('lit.failedToDeleteCustomField'));
     }
   };
 
   if (isLoading) {
     return (
       <div className="p-6 flex justify-center items-center">
-        <div className="text-gray-600 dark:text-gray-400">Loading custom fields...</div>
+        <div className="text-gray-600 dark:text-gray-400">{t('common.loading')}</div>
       </div>
     );
   }
@@ -288,7 +292,7 @@ export default function CustomFieldsManagement() {
         {/* Sidebar - Table Selection */}
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 sticky top-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Tables</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('lit.tables')}</h3>
             <div className="space-y-2">
               {AVAILABLE_TABLES.map((table) => {
                 const tableFieldCount = customFields.filter(f => f.TableName === table).length;
@@ -342,7 +346,7 @@ export default function CustomFieldsManagement() {
           {/* Add Field Form */}
           {showForm && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6 mb-6">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{editingFieldId ? 'Edit Custom Field' : 'Add Custom Field'}</h4>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{editingFieldId ? t('lit.editCustomField2') : t('lit.addCustomField')}</h4>
               <form onSubmit={handleSubmitField} className="space-y-4">
                 <datalist id="custom-field-groups">
                   {existingGroupNames.map((groupName) => (
@@ -352,14 +356,14 @@ export default function CustomFieldsManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Field Name *
+                      {t('lit.fieldName')}
                     </label>
                     <input
                       type="text"
                       value={formData.fieldName}
                       onChange={(e) => setFormData({ ...formData, fieldName: e.target.value })}
                       disabled={editingFieldId !== null}
-                      placeholder="e.g., BudgetCode"
+                      placeholder={t('lit.eGBudgetcode')}
                       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${editingFieldId !== null ? 'border-gray-200 dark:border-gray-700 opacity-60 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600'}`}
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -369,35 +373,35 @@ export default function CustomFieldsManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Display Name *
+                      {t('lit.displayName')}
                     </label>
                     <input
                       type="text"
                       value={formData.displayName}
                       onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      placeholder="e.g., Budget Code"
+                      placeholder={t('lit.eGBudgetCode')}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Group
+                      {t('lit.group')}
                     </label>
                     <input
                       type="text"
                       value={formData.groupName}
                       onChange={(e) => setFormData({ ...formData, groupName: e.target.value })}
-                      placeholder="e.g., Release Tracking"
+                      placeholder={t('lit.eGReleaseTracking')}
                       list="custom-field-groups"
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional. Fields in the same group render together in forms.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.optionalFieldsInTheSameGroupRenderTogetherInForms')}</p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Data Type *
+                      {t('lit.dataType2')}
                     </label>
                     <select
                       value={formData.customTableId ? 'int' : formData.dataType}
@@ -410,16 +414,16 @@ export default function CustomFieldsManagement() {
                       ))}
                     </select>
                     {editingFieldId !== null && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Data type cannot be changed after the field is created.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.dataTypeCannotBeChangedAfterTheFieldIsCreated')}</p>
                     )}
                     {formData.customTableId && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Auto-set to int (stores row Id)</p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">{t('lit.autoSetToIntStoresRowId')}</p>
                     )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Required
+                      {t('common.required')}
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -428,19 +432,19 @@ export default function CustomFieldsManagement() {
                         onChange={(e) => setFormData({ ...formData, isRequired: e.target.checked })}
                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
                       />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Make this field required</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{t('lit.makeThisFieldRequired')}</span>
                     </label>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
+                    {t('common.description')}
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Optional description of what this field is used for"
+                    placeholder={t('lit.optionalDescriptionOfWhatThisFieldIsUsedFor')}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
@@ -449,7 +453,7 @@ export default function CustomFieldsManagement() {
                 {customTables.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Link to Custom Table
+                      {t('lit.linkToCustomTable')}
                       <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">(optional — renders a dropdown in forms)</span>
                     </label>
                     <select
@@ -474,14 +478,14 @@ export default function CustomFieldsManagement() {
                     onClick={() => { setShowForm(false); resetForm(); }}
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
                     className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white transition-colors font-medium"
                   >
-                    {isSubmitting ? (editingFieldId ? 'Saving...' : 'Creating...') : (editingFieldId ? 'Save Changes' : 'Create Field')}
+                    {isSubmitting ? (editingFieldId ? t('lit.saving') : t('lit.creating')) : (editingFieldId ? t('lit.saveChanges') : t('lit.createField'))}
                   </button>
                 </div>
               </form>
@@ -502,7 +506,7 @@ export default function CustomFieldsManagement() {
                 }}
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
-                Create the first custom field
+                {t('lit.createTheFirstCustomField')}
               </button>
             </div>
           ) : (
@@ -521,7 +525,7 @@ export default function CustomFieldsManagement() {
                         </span>
                         {field.IsRequired === 1 && (
                           <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-1 rounded">
-                            Required
+                            {t('common.required')}
                           </span>
                         )}
                         {field.GroupName && (
@@ -531,12 +535,12 @@ export default function CustomFieldsManagement() {
                         )}
                         {field.CustomTableId && (
                           <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded">
-                            🗃️ {customTables.find(t => t.Id === field.CustomTableId)?.Name || 'Custom Table'}
+                            🗃️ {customTables.find(t => t.Id === field.CustomTableId)?.Name || t('lit.customTable')}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        <span className="font-medium">Type:</span> {field.DataType}
+                        <span className="font-medium">{t('lit.type')}</span> {field.DataType}
                       </p>
                       {field.Description && (
                         <p className="text-sm text-gray-500 dark:text-gray-500">{field.Description}</p>
@@ -548,8 +552,8 @@ export default function CustomFieldsManagement() {
                     <button
                       onClick={() => handleEditField(field)}
                       className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                      title="Edit custom field"
-                      aria-label="Edit custom field"
+                      title={t('lit.editCustomField')}
+                      aria-label={t('lit.editCustomField')}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -558,8 +562,8 @@ export default function CustomFieldsManagement() {
                     <button
                       onClick={() => handleDeleteField(field.Id, field.DisplayName || field.FieldName)}
                       className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                      title="Delete custom field"
-                      aria-label="Delete custom field"
+                      title={t('lit.deleteCustomField')}
+                      aria-label={t('lit.deleteCustomField')}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8" />
@@ -576,11 +580,11 @@ export default function CustomFieldsManagement() {
       <ConfirmAlertModal
         isOpen={!!deleteTarget}
         type="confirm"
-        title="Delete custom field"
+        title={t('lit.deleteCustomField')}
         message={deleteTarget ? `Are you sure you want to delete the custom field "${deleteTarget.name}"?` : ''}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void confirmDeleteField()}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

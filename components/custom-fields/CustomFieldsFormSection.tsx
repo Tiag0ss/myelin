@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useMemo, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
@@ -23,6 +24,7 @@ export default function CustomFieldsFormSection({
   disabled = false,
   seamless = true,
 }: CustomFieldsFormSectionProps) {
+  const { t } = useI18n();
   const [fields, setFields] = useState<CustomFieldDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [tableRowsCache, setTableRowsCache] = useState<Record<number, { Id: number; Description: string }[]>>({});
@@ -149,7 +151,7 @@ export default function CustomFieldsFormSection({
       {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>}
 
       {isLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading custom fields...</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
       ) : (
         <div className="space-y-6">
           {groupedFields.map((group) => (

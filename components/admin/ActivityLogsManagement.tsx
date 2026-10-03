@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect } from 'react';
@@ -41,6 +43,8 @@ const fieldClass =
   'w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]';
 
 export default function ActivityLogsManagement() {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [stats, setStats] = useState<ActivityStats | null>(null);
@@ -111,10 +115,10 @@ export default function ActivityLogsManagement() {
         setTotal(data.data.pagination.total);
         setTotalPages(data.data.pagination.pages);
       } else {
-        setError('Failed to load activity logs');
+        setError(t('lit.failedToLoadActivityLogs'));
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load activity logs');
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadActivityLogs'));
     } finally {
       setIsLoading(false);
     }
@@ -135,8 +139,8 @@ export default function ActivityLogsManagement() {
   const handleCleanup = () => {
     setModal({
       type: 'confirm',
-      title: 'Delete old logs',
-      message: 'Delete logs older than 90 days? This cannot be undone.',
+      title: t('lit.deleteOldLogs'),
+      message: t('lit.deleteLogsOlderThan90DaysThisCannotBeUndone'),
       onConfirm: () => void runCleanup(),
     });
   };
@@ -154,17 +158,17 @@ export default function ActivityLogsManagement() {
 
       if (res.ok) {
         const data = await res.json();
-        setModal({ type: 'alert', title: 'Cleanup complete', message: data.message || 'Old logs deleted.' });
+        setModal({ type: 'alert', title: t('lit.cleanupComplete'), message: data.message || t('lit.oldLogsDeleted') });
         loadLogs();
         loadStats();
       } else {
-        setModal({ type: 'alert', title: 'Error', message: 'Failed to cleanup logs' });
+        setModal({ type: 'alert', title: t('lit.error'), message: t('lit.failedToCleanupLogs') });
       }
     } catch (err: unknown) {
       setModal({
         type: 'alert',
-        title: 'Error',
-        message: err instanceof Error ? err.message : 'Failed to cleanup logs',
+        title: t('lit.error'),
+        message: err instanceof Error ? err.message : t('lit.failedToCleanupLogs'),
       });
     }
   };
@@ -192,13 +196,13 @@ export default function ActivityLogsManagement() {
   return (
     <div className="space-y-3 p-4 sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-xs text-[var(--pm-muted)]">Monitor system activity and user actions.</p>
+        <p className="text-xs text-[var(--pm-muted)]">{t('lit.monitorSystemActivityAndUserActions')}</p>
         <button
           type="button"
           onClick={handleCleanup}
           className="h-9 shrink-0 rounded-lg border border-red-500/40 bg-red-600/10 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:text-red-400"
         >
-          Cleanup 90+ days
+          {t('lit.cleanup90Days')}
         </button>
       </div>
 
@@ -211,19 +215,19 @@ export default function ActivityLogsManagement() {
       {stats && (
         <div className="grid grid-cols-3 gap-2 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2 sm:gap-4">
           <div>
-            <p className="text-[11px] text-[var(--pm-muted)]">Total</p>
+            <p className="text-[11px] text-[var(--pm-muted)]">{t('common.total')}</p>
             <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">
               {stats.totalLogs.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-[11px] text-[var(--pm-muted)]">Today</p>
+            <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.today')}</p>
             <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">
               {stats.todayLogs.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-[11px] text-[var(--pm-muted)]">Last 7 days</p>
+            <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.last7Days')}</p>
             <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">
               {stats.weekLogs.toLocaleString()}
             </p>
@@ -233,56 +237,56 @@ export default function ActivityLogsManagement() {
 
       <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Filters</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('common.filters')}</h3>
           {hasActiveFilters && (
             <button
               type="button"
               onClick={clearFilters}
               className="h-7 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-2.5 text-xs font-medium text-[var(--pm-muted)] transition-colors hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-text)]"
             >
-              Clear
+              {t('common.clear')}
             </button>
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
-            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Action</label>
+            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.action')}</label>
             <input
               type="text"
               value={filters.action}
               onChange={(e) => updateFilter('action', e.target.value)}
-              placeholder="e.g. CREATE, UPDATE"
+              placeholder={t('lit.eGCreateUpdate')}
               className={fieldClass}
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Entity type</label>
+            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.entityType')}</label>
             <select
               value={filters.entityType}
               onChange={(e) => updateFilter('entityType', e.target.value)}
               className={fieldClass}
             >
-              <option value="">All types</option>
-              <option value="User">User</option>
-              <option value="Project">Project</option>
-              <option value="Task">Task</option>
-              <option value="Ticket">Ticket</option>
-              <option value="Organization">Organization</option>
-              <option value="Customer">Customer</option>
+              <option value="">{t('lit.allTypes')}</option>
+              <option value="User">{t('common.user')}</option>
+              <option value="Project">{t('common.project')}</option>
+              <option value="Task">{t('common.task')}</option>
+              <option value="Ticket">{t('common.ticket')}</option>
+              <option value="Organization">{t('common.organization')}</option>
+              <option value="Customer">{t('common.customer')}</option>
             </select>
           </div>
           <div>
-            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Username</label>
+            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('auth.username')}</label>
             <input
               type="text"
               value={filters.username}
               onChange={(e) => updateFilter('username', e.target.value)}
-              placeholder="Username"
+              placeholder={t('auth.username')}
               className={fieldClass}
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Start date</label>
+            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.startDate')}</label>
             <input
               type="date"
               value={filters.startDate}
@@ -291,7 +295,7 @@ export default function ActivityLogsManagement() {
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">End date</label>
+            <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.endDate')}</label>
             <input
               type="date"
               value={filters.endDate}
@@ -315,9 +319,9 @@ export default function ActivityLogsManagement() {
         </div>
 
         {isLoading ? (
-          <div className="px-3 py-8 text-center text-sm text-[var(--pm-muted)]">Loading logs…</div>
+          <div className="px-3 py-8 text-center text-sm text-[var(--pm-muted)]">{t('common.loading')}</div>
         ) : logs.length === 0 ? (
-          <div className="px-3 py-8 text-center text-sm text-[var(--pm-muted)]">No activity logs found</div>
+          <div className="px-3 py-8 text-center text-sm text-[var(--pm-muted)]">{t('lit.noActivityLogsFound')}</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -325,22 +329,22 @@ export default function ActivityLogsManagement() {
                 <thead className="bg-[var(--pm-panel)]">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Timestamp
+                      {t('lit.timestamp')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      User
+                      {t('common.user')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Action
+                      {t('lit.action')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Entity
+                      {t('lit.entity')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Details
+                      {t('common.details')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      IP
+                      {t('lit.ip')}
                     </th>
                   </tr>
                 </thead>
@@ -351,7 +355,7 @@ export default function ActivityLogsManagement() {
                         {formatDate(log.CreatedAt)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-sm text-[var(--pm-text)]">
-                        {log.Username || <span className="italic text-[var(--pm-muted)]">System</span>}
+                        {log.Username || <span className="italic text-[var(--pm-muted)]">{t('chrome.themeSystem')}</span>}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-sm">
                         <span className={`font-medium ${getActionColor(log.Action)}`}>{log.Action}</span>
@@ -392,7 +396,7 @@ export default function ActivityLogsManagement() {
                     disabled={page === 1}
                     className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   <button
                     type="button"
@@ -400,7 +404,7 @@ export default function ActivityLogsManagement() {
                     disabled={page === totalPages}
                     className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>
@@ -419,7 +423,7 @@ export default function ActivityLogsManagement() {
           modal?.onConfirm?.();
           setModal(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

@@ -1,4 +1,6 @@
 'use client';
+
+import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 
@@ -170,6 +172,8 @@ const getResumePeriodRange = (period: ResumePeriod) => {
 };
 
 export default function WorkSummaryPage() {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { user, token, isLoading } = useAuth();
   const { permissions } = usePermissions();
@@ -287,7 +291,7 @@ export default function WorkSummaryPage() {
   const handleEditCallRecord = (entry: CombinedWorkEntry) => {
     const record = callRecords.find(r => r.Id === entry.id);
     if (!record) {
-      showToast({ type: 'error', message: 'Call record not found' });
+      showToast({ type: 'error', message: t('lit.callRecordNotFound') });
       return;
     }
     setEditingCallRecord(record);
@@ -297,7 +301,7 @@ export default function WorkSummaryPage() {
 
   const handleDeleteTimeEntry = async (entryId: number) => {
     if (!token) return;
-    showConfirm('Delete Entry', 'Are you sure you want to delete this time entry?', async () => {
+    showConfirm(t('lit.deleteEntry2'), t('lit.areYouSureYouWantToDeleteThisTimeEntry'), async () => {
       try {
         const response = await fetch(`${getApiUrl()}/api/time-entries/${entryId}`, {
           method: 'DELETE',
@@ -305,20 +309,20 @@ export default function WorkSummaryPage() {
         });
         if (response.ok) {
           setTimeEntries(prev => prev.filter(e => e.Id !== entryId));
-          showToast({ type: 'success', message: 'Time entry deleted' });
+          showToast({ type: 'success', message: t('lit.timeEntryDeleted') });
           setModalMessage(null);
         } else {
-          showToast({ type: 'error', message: 'Failed to delete entry' });
+          showToast({ type: 'error', message: t('lit.failedToDeleteEntry') });
         }
       } catch (_err) {
-        showToast({ type: 'error', message: 'Error deleting entry' });
+        showToast({ type: 'error', message: t('lit.errorDeletingEntry') });
       }
     });
   };
 
   const handleDeleteCallRecord = async (recordId: number) => {
     if (!token) return;
-    showConfirm('Delete Call Record', 'Are you sure you want to delete this call record?', async () => {
+    showConfirm(t('lit.deleteCallRecord'), t('lit.areYouSureYouWantToDeleteThisCallRecord'), async () => {
       try {
         const response = await fetch(`${getApiUrl()}/api/call-records/${recordId}`, {
           method: 'DELETE',
@@ -326,13 +330,13 @@ export default function WorkSummaryPage() {
         });
         if (response.ok) {
           setCallRecords(prev => prev.filter(r => r.Id !== recordId));
-          showToast({ type: 'success', message: 'Call record deleted' });
+          showToast({ type: 'success', message: t('lit.callRecordDeleted') });
           setModalMessage(null);
         } else {
-          showToast({ type: 'error', message: 'Failed to delete call record' });
+          showToast({ type: 'error', message: t('lit.failedToDeleteCallRecord') });
         }
       } catch (_err) {
-        showToast({ type: 'error', message: 'Error deleting call record' });
+        showToast({ type: 'error', message: t('lit.errorDeletingCallRecord') });
       }
     });
   };
@@ -368,7 +372,7 @@ export default function WorkSummaryPage() {
         setCallRecords(Array.isArray(data.data) ? data.data : []);
       }
     } catch (_err) {
-      setError('Failed to load entries');
+      setError(t('lit.failedToLoadEntries'));
     } finally {
       setIsLoadingData(false);
     }
@@ -434,7 +438,7 @@ export default function WorkSummaryPage() {
       taskName: entry.TaskName || '-',
       jiraIssueKey: entry.JiraIssueKey || undefined,
       organizationName: entry.CustomerName || '-',
-      title: entry.TaskName || 'Time Entry',
+      title: entry.TaskName || t('lit.timeEntry'),
       details: entry.Description || '-',
       status: entry.ApprovalStatus || '-',
       id: entry.Id,
@@ -452,7 +456,7 @@ export default function WorkSummaryPage() {
       taskName: record.TaskName || '-',
       jiraIssueKey: record.JiraIssueKey || undefined,
       organizationName: record.CustomerName || record.OrganizationName || '-',
-      title: record.Subject || record.CallType || 'Call',
+      title: record.Subject || record.CallType || t('lit.call'),
       details: record.Notes || record.Subject || '-',
       status: record.CallType || '-',
       id: record.Id,
@@ -518,9 +522,9 @@ export default function WorkSummaryPage() {
         <main className="w-full mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
           <div className="px-0 sm:px-0 space-y-4">
             <div>
-              <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">Work Summary</h1>
+              <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('pages.workSummary.title')}</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Combined view of time entries and call records.
+                {t('lit.combinedViewOfTimeEntriesAndCallRecords')}
               </p>
             </div>
 
@@ -534,10 +538,10 @@ export default function WorkSummaryPage() {
               <div className="border-b border-gray-200 dark:border-gray-700 px-6">
                 <nav className="flex space-x-8">
                   <button onClick={() => setViewMode('summary')} className={`py-4 px-1 border-b-2 font-medium text-sm ${viewMode === 'summary' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}>
-                    📈 Summary
+                    📈 {t('lit.summary')}
                   </button>
                   <button onClick={() => setViewMode('entries')} className={`py-4 px-1 border-b-2 font-medium text-sm ${viewMode === 'entries' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}>
-                    📋 Entries
+                    📋 {t('lit.entries')}
                   </button>
                 </nav>
               </div>
@@ -545,50 +549,50 @@ export default function WorkSummaryPage() {
               {viewMode === 'summary' && (
                 <div className="p-6 space-y-6">
                   <div className="flex flex-wrap items-center gap-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Period</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.period')}</h3>
                     {(['thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'allTime'] as ResumePeriod[]).map(period => (
                       <button key={period} onClick={() => setResumePeriod(period)} className={`px-3 py-1.5 text-sm rounded-lg ${resumePeriod === period ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                        {period === 'thisWeek' ? 'This Week' : period === 'lastWeek' ? 'Last Week' : period === 'thisMonth' ? 'This Month' : period === 'lastMonth' ? 'Last Month' : 'All Time'}
+                        {period === 'thisWeek' ? t('lit.thisWeek') : period === 'lastWeek' ? t('lit.lastWeek') : period === 'thisMonth' ? t('lit.thisMonth') : period === 'lastMonth' ? t('lit.lastMonth') : t('lit.allTime')}
                       </button>
                     ))}
                   </div>
 
                   {resumeLoading ? (
-                    <div className="text-center py-10 text-gray-500">Carregando resumo...</div>
+                    <div className="text-center py-10 text-gray-500">{t('common.loading')}</div>
                   ) : resumeSummary.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500">No entries found.</div>
+                    <div className="text-center py-10 text-gray-500">{t('pages.workSummary.noSummary')}</div>
                   ) : (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
                         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
-                          <p className="text-sm text-blue-700 dark:text-blue-300">Users</p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">{t('nav.users')}</p>
                           <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{resumeTotals.totalUsers}</p>
                         </div>
                         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-100 dark:border-green-800">
-                          <p className="text-sm text-green-700 dark:text-green-300">Entries</p>
+                          <p className="text-sm text-green-700 dark:text-green-300">{t('lit.entries')}</p>
                           <p className="text-2xl font-bold text-green-900 dark:text-green-100">{resumeTotals.totalEntries}</p>
                         </div>
                         <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
-                          <p className="text-sm text-purple-700 dark:text-purple-300">Total Hours</p>
+                          <p className="text-sm text-purple-700 dark:text-purple-300">{t('lit.totalHours2')}</p>
                           <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{decimalHoursToHMS(resumeTotals.totalHours)}</p>
                         </div>
                         <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-100 dark:border-cyan-800">
-                          <p className="text-sm text-cyan-700 dark:text-cyan-300">Avg / Entry</p>
+                          <p className="text-sm text-cyan-700 dark:text-cyan-300">{t('lit.avgEntry')}</p>
                           <p className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{decimalHoursToHMS(resumeTotals.avgHoursPerEntry)}</p>
                         </div>
                         <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800">
-                          <p className="text-sm text-indigo-700 dark:text-indigo-300">Avg / User</p>
+                          <p className="text-sm text-indigo-700 dark:text-indigo-300">{t('lit.avgUser')}</p>
                           <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{decimalHoursToHMS(resumeTotals.avgHoursPerUser)}</p>
                         </div>
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-100 dark:border-emerald-800">
-                          <p className="text-sm text-emerald-700 dark:text-emerald-300">Approval Rate</p>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300">{t('lit.approvalRate')}</p>
                           <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{resumeTotals.approvalRate.toFixed(1)}%</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Approval Distribution</h4>
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.approvalDistribution')}</h4>
                           <div className="w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-3 flex">
                             <div className="bg-green-500" style={{ width: `${resumeTotals.approvalRate}%` }} />
                             <div className="bg-yellow-500" style={{ width: `${resumeTotals.pendingRate}%` }} />
@@ -602,7 +606,7 @@ export default function WorkSummaryPage() {
                         </div>
 
                         <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Top Contributors</h4>
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.topContributors')}</h4>
                           <div className="space-y-3">
                             {resumeTopUsers.map((row, idx) => {
                               const maxHours = resumeTopUsers[0]?.TotalHours || 1;
@@ -645,12 +649,12 @@ export default function WorkSummaryPage() {
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                           <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
-                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Entries</th>
-                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
-                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Approved</th>
-                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Pending</th>
-                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Rejected</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.user')}</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.entries')}</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.hours')}</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.approved')}</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.pending')}</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.rejected')}</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -678,15 +682,15 @@ export default function WorkSummaryPage() {
                 <div className="p-6 space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">All Entries</h2>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.allEntries')}</h2>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={async () => {
                             const filtered = combinedEntries;
-                            const header = ['Date', 'Type', 'Start', 'End', 'Hours', 'Project', 'Task', 'JIRA Ticket', 'Organization', 'Title', 'Details'];
+                            const header = [t('lit.date2'), t('lit.type2'), 'Start', 'End', t('lit.hours2'), t('lit.project3'), t('lit.task'), 'JIRA Ticket', t('lit.organization2'), 'Title', 'Details'];
                             const rows = filtered.map(e => [
                               new Date(`${e.date}T12:00:00`).toLocaleDateString(),
-                              e.type === 'timeEntry' ? 'Time' : 'Call',
+                              e.type === 'timeEntry' ? t('lit.time') : t('lit.call'),
                               e.startTime,
                               e.endTime,
                               decimalHoursToHMS(e.hours),
@@ -715,7 +719,7 @@ export default function WorkSummaryPage() {
                             const filtered = combinedEntries;
                             const rows = filtered.map(e => [
                               new Date(`${e.date}T12:00:00`).toLocaleDateString(),
-                              e.type === 'timeEntry' ? 'Time' : 'Call',
+                              e.type === 'timeEntry' ? t('lit.time') : t('lit.call'),
                               e.startTime,
                               e.endTime,
                               decimalHoursToHMS(e.hours),
@@ -728,13 +732,13 @@ export default function WorkSummaryPage() {
                             ]);
                             try {
                               await downloadTablePdf({
-                                title: 'Work Summary',
+                                title: t('lit.workSummary'),
                                 filename: `work-summary-${dateFrom}-${dateTo}`,
                                 headers: ['Date', 'Type', 'Start', 'End', 'Hours', 'Project', 'Task', 'JIRA', 'Org', 'Title', 'Details'],
                                 rows,
                               }, token!);
                             } catch (_err) {
-                              setError('Error exporting PDF');
+                              setError(t('lit.errorExportingPdf'));
                             }
                           }}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
@@ -746,33 +750,33 @@ export default function WorkSummaryPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.from')}</label>
                         <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.to')}</label>
                         <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.project')}</label>
                         <select value={projectFilter} onChange={(e) => { setProjectFilter(e.target.value); setTaskFilter(''); }} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                          <option value="">All Projects</option>
+                          <option value="">{t('lit.allProjects2')}</option>
                           {availableProjects.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.task')}</label>
                         <select value={taskFilter} onChange={(e) => setTaskFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                          <option value="">All Tasks</option>
+                          <option value="">{t('lit.allTasks')}</option>
                           {availableTasks.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.type')}</label>
                         <select value={entryTypeFilter} onChange={(e) => setEntryTypeFilter(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                          <option value="all">All</option>
-                          <option value="timeEntry">Time Entry</option>
-                          <option value="callRecord">Call Record</option>
+                          <option value="all">{t('common.all')}</option>
+                          <option value="timeEntry">{t('lit.timeEntry')}</option>
+                          <option value="callRecord">{t('lit.callRecord2')}</option>
                         </select>
                       </div>
                     </div>
@@ -780,13 +784,13 @@ export default function WorkSummaryPage() {
                     <div className="flex items-center gap-4 mb-4">
                       <label className="flex items-center cursor-pointer">
                         <input type="checkbox" checked={groupByDays} onChange={(e) => setGroupByDays(e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                        <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Group by Days</span>
+                        <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('lit.groupByDays')}</span>
                       </label>
                     </div>
 
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-x-auto" data-grid-enhancer-ignore="true">
                       {isLoadingData ? (
-                        <div className="text-center py-8 text-gray-500">Loading...</div>
+                        <div className="text-center py-8 text-gray-500">{t('common.loading')}</div>
                       ) : groupByDays ? (
                         <div className="w-full" data-grid-enhancer-ignore="true">
                           <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
@@ -800,19 +804,19 @@ export default function WorkSummaryPage() {
                             </colgroup>
                             <thead className="bg-gray-50 dark:bg-gray-900">
                               <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Project</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Task</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Hours</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.date')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.customer')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.project')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.task')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.hours')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.description')}</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                               {filteredEntriesByDay.length === 0 ? (
                                 <tr>
                                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                    No entries found for the selected filters.
+                                    {t('lit.noEntriesFoundForTheSelectedFilters')}
                                   </td>
                                 </tr>
                               ) : (
@@ -886,27 +890,27 @@ export default function WorkSummaryPage() {
                           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-900">
                               <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Start</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">End</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Project</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Task</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Details</th>
-                                {permissions?.canManageTimeEntries && <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.date')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.type')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.start')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.end')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.hours')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.project')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.task')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.details')}</th>
+                                {permissions?.canManageTimeEntries && <th scope="col" className="relative px-6 py-3"><span className="sr-only">{t('common.actions')}</span></th>}
                               </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                               {combinedEntries.length === 0 ? (
                                 <tr>
-                                  <td colSpan={permissions?.canManageTimeEntries ? 9 : 8} className="px-6 py-8 text-center text-gray-500">No entries found.</td>
+                                  <td colSpan={permissions?.canManageTimeEntries ? 9 : 8} className="px-6 py-8 text-center text-gray-500">{t('pages.timesheet.noEntries')}</td>
                                 </tr>
                               ) : (
                                 combinedEntries.map((entry) => (
                                   <tr key={entry.key} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{new Date(`${entry.date}T12:00:00`).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{entry.type === 'timeEntry' ? 'Time' : 'Call'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{entry.type === 'timeEntry' ? t('lit.time') : t('lit.call')}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{entry.startTime}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{entry.endTime}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{decimalHoursToHMS(entry.hours)}</td>
@@ -925,7 +929,7 @@ export default function WorkSummaryPage() {
                                             <button
                                               onClick={() => handleEditTimeEntry(timeEntries.find(e => e.Id === entry.id)!)}
                                               className="p-1.5 text-gray-400 rounded hover:text-blue-600 dark:hover:text-blue-400"
-                                              title="Edit"
+                                              title={t('common.edit')}
                                             >
                                               ✏️
                                             </button>
@@ -934,7 +938,7 @@ export default function WorkSummaryPage() {
                                             <button
                                               onClick={() => handleEditCallRecord(entry)}
                                               className="p-1.5 text-gray-400 rounded hover:text-blue-600 dark:hover:text-blue-400"
-                                              title="Edit"
+                                              title={t('common.edit')}
                                             >
                                               ✏️
                                             </button>
@@ -943,7 +947,7 @@ export default function WorkSummaryPage() {
                                             <button
                                               onClick={() => handleDeleteTimeEntry(entry.id!)}
                                               className="p-1.5 text-gray-400 rounded hover:text-red-600 dark:hover:text-red-400"
-                                              title="Delete"
+                                              title={t('common.delete')}
                                             >
                                               🗑️
                                             </button>
@@ -952,7 +956,7 @@ export default function WorkSummaryPage() {
                                             <button
                                               onClick={() => handleDeleteCallRecord(entry.id!)}
                                               className="p-1.5 text-gray-400 rounded hover:text-red-600 dark:hover:text-red-400"
-                                              title="Delete"
+                                              title={t('common.delete')}
                                             >
                                               🗑️
                                             </button>
@@ -976,8 +980,8 @@ export default function WorkSummaryPage() {
             {showEditModal && editingType === 'timeEntry' && editingEntry && (
               <TimeEntryFormModal
                 isOpen={showEditModal}
-                title="Edit Time Entry"
-                submitLabel="Save"
+                title={t('lit.editTimeEntry')}
+                submitLabel={t('common.save')}
                 onClose={closeEditModal}
                 onSubmit={async (values) => {
                   if (!token || !editingEntry.Id) return;
@@ -993,13 +997,13 @@ export default function WorkSummaryPage() {
                     if (response.ok) {
                       await loadData();
                       closeEditModal();
-                      showToast({ type: 'success', message: 'Time entry updated' });
+                      showToast({ type: 'success', message: t('lit.timeEntryUpdated') });
                     } else {
-                      const message = await getApiErrorMessage(response, 'Failed to update time entry');
+                      const message = await getApiErrorMessage(response, t('lit.failedToUpdateTimeEntry'));
                       showToast({ type: 'error', message });
                     }
                   } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : 'Error updating time entry';
+                    const message = err instanceof Error ? err.message : t('lit.errorUpdatingTimeEntry');
                     showToast({ type: 'error', message });
                   }
                 }}
@@ -1022,8 +1026,8 @@ export default function WorkSummaryPage() {
             {showEditModal && editingType === 'callRecord' && editingCallRecord && (
               <CallRecordFormModal
                 isOpen={showEditModal}
-                title="Edit Call Record"
-                submitLabel="Save"
+                title={t('lit.editCallRecord2')}
+                submitLabel={t('common.save')}
                 token={token!}
                 onClose={closeEditModal}
                 onSubmit={async (values) => {
@@ -1040,13 +1044,13 @@ export default function WorkSummaryPage() {
                     if (response.ok) {
                       await loadData();
                       closeEditModal();
-                      showToast({ type: 'success', message: 'Call record updated' });
+                      showToast({ type: 'success', message: t('lit.callRecordUpdated') });
                     } else {
-                      const message = await getApiErrorMessage(response, 'Failed to update call record');
+                      const message = await getApiErrorMessage(response, t('lit.failedToUpdateCallRecord'));
                       showToast({ type: 'error', message });
                     }
                   } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : 'Error updating call record';
+                    const message = err instanceof Error ? err.message : t('lit.errorUpdatingCallRecord');
                     showToast({ type: 'error', message });
                   }
                 }}

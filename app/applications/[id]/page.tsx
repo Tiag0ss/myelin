@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { sanitizeRichTextHtml } from '@/lib/sanitizeHtml';
 
@@ -119,7 +120,8 @@ interface AvailableTask {
   StatusName: string | null;
 }
 
-export default function ApplicationDetailPage(props: { params: Promise<{ id: string }> }) {
+export default function ApplicationDetailPage(props: {
+  params: Promise<{ id: string }> }) {
   return (
     <Suspense
       fallback={
@@ -132,6 +134,7 @@ export default function ApplicationDetailPage(props: { params: Promise<{ id: str
 }
 
 function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useI18n();
   const { id } = use(params);
   const { pillStyle } = useColorVision();
   const { user, token, isLoading: authLoading } = useAuth();
@@ -166,7 +169,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     VersionName: '',
     IsCustomerSpecific: false,
     CustomerId: null as number | null,
-    Status: 'Planning',
+    Status: t('lit.planning'),
     ReleaseDate: '',
     PatchNotes: '',
     TaskIds: [] as number[],
@@ -266,12 +269,12 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       const res = await fetch(`${getApiUrl()}/api/applications/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Application not found');
+      if (!res.ok) throw new Error(t('lit.applicationNotFound'));
       const data = await res.json();
       setApplication(data.application);
       await loadAllCustomers(data.application?.OrganizationId);
     } catch (err: any) {
-      setError(err.message || 'Failed to load application');
+      setError(err.message || t('lit.failedToLoadApplication'));
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +290,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load branches');
+        throw new Error(data.message || t('lit.failedToLoadBranches'));
       }
       const branches = (data.data?.branches || []) as RemoteBranch[];
       setCommitBranches(branches);
@@ -295,7 +298,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       setBranchesLoaded(true);
       setCommitsLoaded(false);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load branches';
+      const message = err instanceof Error ? err.message : t('lit.failedToLoadBranches');
       setCommitsError(message);
       setCommitBranches([]);
       setCommitBranch(ALL_BRANCHES_VALUE);
@@ -323,7 +326,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load commits');
+        throw new Error(data.message || t('lit.failedToLoadCommits'));
       }
       const next = (data.data?.commits || []) as RemoteCommit[];
       setCommits((prev) => {
@@ -349,7 +352,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       }
       setCommitsLoaded(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load commits';
+      const message = err instanceof Error ? err.message : t('lit.failedToLoadCommits');
       setCommitsError(message);
       if (!append) {
         setCommits([]);
@@ -402,13 +405,13 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to update customers');
+        throw new Error(data.message || t('lit.failedToUpdateCustomers'));
       }
 
       setShowCustomerModal(false);
       await loadApplication();
     } catch (err: any) {
-      setError(err.message || 'Failed to update customers');
+      setError(err.message || t('lit.failedToUpdateCustomers'));
     } finally {
       setIsSavingCustomers(false);
     }
@@ -472,7 +475,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
   const openCreateVersionModal = () => {
     setEditingVersion(null);
-    setVersionForm({ VersionNumber: '', VersionName: '', IsCustomerSpecific: false, CustomerId: null, Status: 'Planning', ReleaseDate: '', PatchNotes: '', TaskIds: [] });
+    setVersionForm({ VersionNumber: '', VersionName: '', IsCustomerSpecific: false, CustomerId: null, Status: t('lit.planning'), ReleaseDate: '', PatchNotes: '', TaskIds: [] });
     void loadAllCustomers(application?.OrganizationId);
     loadAvailableTasks();
     void loadOpenAiAvailability();
@@ -512,16 +515,16 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     setError('');
     setIsSavingVersion(true);
     try {
-      if (!versionForm.VersionNumber.trim()) throw new Error('Version number is required');
+      if (!versionForm.VersionNumber.trim()) throw new Error(t('lit.versionNumberIsRequired'));
       if (versionForm.IsCustomerSpecific && !versionForm.CustomerId) {
-        throw new Error('Customer is required when version is customer-specific');
+        throw new Error(t('lit.customerIsRequiredWhenVersionIsCustomerSpecific'));
       }
 
       const url = editingVersion
         ? `${getApiUrl()}/api/applications/${id}/versions/${editingVersion.Id}`
         : `${getApiUrl()}/api/applications/${id}/versions`;
 
-      const method = editingVersion ? 'PUT' : 'POST';
+      const method = editingVersion ? 'PUT' : t('lit.post');
 
       const res = await fetch(url, {
         method,
@@ -539,7 +542,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || 'Failed to save version');
+        throw new Error(d.message || t('lit.failedToSaveVersion'));
       }
 
       const data = await res.json();
@@ -561,7 +564,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         loadVersionDetail(updated as AppVersion);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to save version');
+      setError(err.message || t('lit.failedToSaveVersion'));
     } finally {
       setIsSavingVersion(false);
     }
@@ -570,7 +573,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const handleDeleteVersion = (v: AppVersion) => {
     setDialog({
       type: 'confirm',
-      title: 'Delete Version',
+      title: t('lit.deleteVersion2'),
       message: `Are you sure you want to delete version "${v.VersionNumber}"? This cannot be undone.`,
       onConfirm: () => void (async () => {
         await fetch(`${getApiUrl()}/api/applications/${id}/versions/${v.Id}`, {
@@ -584,15 +587,15 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   };
 
   const buildPatchNotes = (taskIds: number[], tasks: AvailableTask[]): string => {
-    const selected = tasks.filter((t) => taskIds.includes(t.Id));
+    const selected = tasks.filter((task) => taskIds.includes(task.Id));
     if (selected.length === 0) return '';
 
     // Group by project
     const byProject: Record<string, string[]> = {};
-    for (const t of selected) {
-      const proj = t.ProjectName || 'General';
+    for (const task of selected) {
+      const proj = task.ProjectName || t('lit.general');
       if (!byProject[proj]) byProject[proj] = [];
-      byProject[proj].push(t.TaskName);
+      byProject[proj].push(task.TaskName);
     }
 
     const projects = Object.keys(byProject);
@@ -624,7 +627,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       },
     })
       .then(response => {
-        if (!response.ok) throw new Error('Failed to download PDF');
+        if (!response.ok) throw new Error(t('lit.failedToDownloadPdf'));
         return response.blob();
       })
       .then(blob => {
@@ -639,7 +642,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       })
       .catch(error => {
         console.error('Error downloading PDF:', error);
-        showAlert('Download failed', 'Failed to download PDF. Please try again.');
+        showAlert(t('lit.downloadFailed'), t('lit.failedToDownloadPdfPleaseTryAgain'));
       });
   };
 
@@ -656,7 +659,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     });
 
     if (versionsInRange.length === 0) {
-      showAlert('No versions', 'No released versions found in the selected date range.');
+      showAlert(t('lit.noVersions'), t('lit.noReleasedVersionsFoundInTheSelectedDateRange'));
       return;
     }
 
@@ -670,7 +673,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       },
     })
       .then(response => {
-        if (!response.ok) throw new Error('Failed to download PDF');
+        if (!response.ok) throw new Error(t('lit.failedToDownloadPdf'));
         return response.blob();
       })
       .then(blob => {
@@ -686,7 +689,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       })
       .catch(error => {
         console.error('Error downloading PDF:', error);
-        showAlert('Download failed', 'Failed to download PDF. Please try again.');
+        showAlert(t('lit.downloadFailed'), t('lit.failedToDownloadPdfPleaseTryAgain'));
       });
   };
 
@@ -701,7 +704,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       const fullTask = (tasksRes.tasks || []).find((task) => Number(task.Id) === Number(versionTask.Id));
       if (!fullTask) {
-        setError('Task not found in project context.');
+        setError(t('lit.taskNotFoundInProjectContext'));
         return;
       }
 
@@ -710,7 +713,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       setSelectedTaskForModal(fullTask);
       setShowTaskDetailModal(true);
     } catch (err: any) {
-      setError(err?.message || 'Failed to open task details.');
+      setError(err?.message || t('lit.failedToOpenTaskDetails'));
     }
   };
 
@@ -721,7 +724,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       const { task: summary } = await tasksApi.getById(taskId, token);
       const projectId = Number(summary.ProjectId);
       if (!Number.isFinite(projectId) || projectId <= 0) {
-        setError('Task project could not be resolved.');
+        setError(t('lit.taskProjectCouldNotBeResolved'));
         return;
       }
 
@@ -732,7 +735,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       const fullTask = (tasksRes.tasks || []).find((task) => Number(task.Id) === Number(taskId));
       if (!fullTask) {
-        setError('Task not found in project context.');
+        setError(t('lit.taskNotFoundInProjectContext'));
         return;
       }
 
@@ -741,7 +744,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       setSelectedTaskForModal(fullTask);
       setShowTaskDetailModal(true);
     } catch (err: any) {
-      setError(err?.message || 'Failed to open task details.');
+      setError(err?.message || t('lit.failedToOpenTaskDetails'));
     }
   };
 
@@ -772,7 +775,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/applications/${id}/versions/improve-patch-notes`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -785,13 +788,13 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Failed to improve patch notes with AI');
+        throw new Error(data?.message || t('lit.failedToImprovePatchNotesWithAi'));
       }
 
       const data = await res.json();
       const improvedPatchNotes = String(data?.patchNotes || '').trim();
       if (!improvedPatchNotes) {
-        throw new Error('AI returned empty patch notes');
+        throw new Error(t('lit.aiReturnedEmptyPatchNotes'));
       }
 
       setVersionForm((prev) => ({
@@ -799,7 +802,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         PatchNotes: improvedPatchNotes,
       }));
     } catch (err: any) {
-      setError(err.message || 'Failed to improve patch notes with AI');
+      setError(err.message || t('lit.failedToImprovePatchNotesWithAi'));
     } finally {
       setIsImprovingPatchNotes(false);
     }
@@ -817,7 +820,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 py-8 text-center text-gray-600 dark:text-gray-400">
-          {error || 'Application not found.'}
+          {error || t('lit.applicationNotFound2')}
         </div>
       </div>
     );
@@ -836,7 +839,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Applications
+            {t('nav.applications')}
           </Link>
 
           <div className="flex items-start justify-between gap-4">
@@ -868,7 +871,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                Repository
+                {t('lit.repository')}
               </a>
             )}
           </div>
@@ -890,8 +893,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 {tab === 'versions'
                   ? `Versions (${application.Versions?.length ?? 0})`
                   : tab === 'commits'
-                    ? 'Commits'
-                    : 'Overview'}
+                    ? t('lit.commits')
+                    : t('lit.overview')}
               </button>
             ))}
           </nav>
@@ -905,7 +908,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
               {application.Description && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                   <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    Description
+                    {t('common.description')}
                   </h2>
                   <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{application.Description}</p>
                 </div>
@@ -916,7 +919,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   Associated Projects ({application.Projects?.length ?? 0})
                 </h2>
                 {(application.Projects?.length ?? 0) === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">No projects associated yet.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">{t('lit.noProjectsAssociatedYet')}</p>
                 ) : (
                   <div className="space-y-2">
                     {application.Projects.map((p) => (
@@ -952,15 +955,15 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     <button
                       onClick={openCustomerModal}
                       className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                      title="Manage associated customers"
-                      aria-label="Manage associated customers"
+                      title={t('lit.manageAssociatedCustomers')}
+                      aria-label={t('lit.manageAssociatedCustomers')}
                     >
                       ⚙️
                     </button>
                   )}
                 </div>
                 {(application.Customers?.length ?? 0) === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">No customers linked.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">{t('lit.noCustomersLinked')}</p>
                 ) : (
                   <div className="space-y-2">
                     {application.Customers.map((c) => (
@@ -984,27 +987,27 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
-                  Quick Stats
+                  {t('lit.quickStats')}
                 </h2>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Total Versions</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('lit.totalVersions')}</span>
                     <span className="font-semibold text-gray-900 dark:text-white">{application.Versions?.length ?? 0}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Released</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('lit.released')}</span>
                     <span className="font-semibold text-green-600 dark:text-green-400">
                       {application.Versions?.filter(v => v.Status === 'Released').length ?? 0}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">In Development</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('lit.inDevelopment')}</span>
                     <span className="font-semibold text-blue-600 dark:text-blue-400">
                       {application.Versions?.filter(v => v.Status === 'In Development').length ?? 0}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Projects</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('nav.projects')}</span>
                     <span className="font-semibold text-gray-900 dark:text-white">{application.Projects?.length ?? 0}</span>
                   </div>
                 </div>
@@ -1019,12 +1022,12 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             {/* Version list */}
             <div className="w-full md:w-72 shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-gray-900 dark:text-white">Versions</h2>
+                <h2 className="font-semibold text-gray-900 dark:text-white">{t('lit.versions')}</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowDateRangePrintModal(true)}
                     className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
-                    title="Download release notes by date range as PDF"
+                    title={t('lit.downloadReleaseNotesByDateRangeAsPdf')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -1039,7 +1042,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      New
+                      {t('common.new')}
                     </button>
                   )}
                 </div>
@@ -1047,7 +1050,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
               {(application.Versions?.length ?? 0) === 0 ? (
                 <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-500 dark:text-gray-400">
-                  No versions yet
+                  {t('lit.noVersionsYet')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1091,7 +1094,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             <div className="flex-1">
               {!selectedVersion ? (
                 <div className="flex items-center justify-center h-64 bg-white dark:bg-gray-800 rounded-lg shadow text-gray-500 dark:text-gray-400">
-                  Select a version to view details
+                  {t('lit.selectAVersionToViewDetails')}
                 </div>
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -1127,7 +1130,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             <button
                               onClick={() => handleDownloadVersionPDF(selectedVersion)}
                               className="flex items-center gap-1.5 px-3 py-1.5 border border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                              title="Download this version's notes as PDF"
+                              title={t('lit.downloadThisVersionsNotesAsPdf')}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -1148,8 +1151,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                               onClick={() => {
                                 openEditVersionModal(selectedVersion);
                               }}
-                              title="Edit version"
-                              aria-label="Edit version"
+                              title={t('lit.editVersion')}
+                              aria-label={t('lit.editVersion')}
                               className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1158,8 +1161,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             </button>
                             <button
                               onClick={() => handleDeleteVersion(selectedVersion)}
-                              title="Delete version"
-                              aria-label="Delete version"
+                              title={t('lit.deleteVersion')}
+                              aria-label={t('lit.deleteVersion')}
                               className="flex items-center gap-1.5 px-3 py-1.5 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1183,7 +1186,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     )}
                     {showPatchNotes && !selectedVersion.PatchNotes && (
                       <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400">
-                        No patch notes written for this version yet.
+                        {t('lit.noPatchNotesWrittenForThisVersionYet')}
                       </div>
                     )}
                   </div>
@@ -1196,10 +1199,10 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     {isLoadingTasks ? (
                       <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        Loading tasks...
+                        {t('lit.loadingTasks')}
                       </div>
                     ) : versionTasks.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No tasks assigned to this version yet.</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noTasksAssignedToThisVersionYet')}</p>
                     ) : (
                       <div className="space-y-2">
                         {versionTasks.map((task) => (
@@ -1256,11 +1259,11 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">Commit history</h2>
+                <h2 className="font-semibold text-gray-900 dark:text-white">{t('lit.commitHistory')}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {commitBranch === ALL_BRANCHES_VALUE
                     ? 'Graph of all branches, with merge sources labelled'
-                    : 'Branch-scoped history with merge graph'}
+                    : t('lit.branchScopedHistoryWithMergeGraph')}
                   {commitsProvider ? ` (${commitsProvider})` : ''}.
                 </p>
               </div>
@@ -1275,14 +1278,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       setCommitsPage(1);
                     }}
                     options={[
-                      { value: ALL_BRANCHES_VALUE, label: 'All branches' },
+                      { value: ALL_BRANCHES_VALUE, label: t('lit.allBranches') },
                       ...commitBranches.map((b) => ({
                         value: b.name,
                         label: b.isDefault ? `${b.name} (default)` : b.name,
                       })),
                     ]}
-                    placeholder={branchesLoading ? 'Loading branches…' : 'All branches'}
-                    emptyText="All branches"
+                    placeholder={branchesLoading ? 'Loading branches…' : t('lit.allBranches')}
+                    emptyText={t('lit.allBranches')}
                     disabled={branchesLoading || !application.RepositoryUrl}
                   />
                 </div>
@@ -1296,23 +1299,23 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   disabled={commitsLoading || branchesLoading || !application.RepositoryUrl}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm transition-colors"
                 >
-                  {commitsLoading || branchesLoading ? 'Loading…' : 'Refresh'}
+                  {commitsLoading || branchesLoading ? 'Loading…' : t('lit.refresh')}
                 </button>
               </div>
             </div>
 
             {!application.RepositoryUrl ? (
               <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                No repository URL configured for this application.
+                {t('lit.noRepositoryUrlConfiguredForThisApplication')}
               </p>
             ) : (commitsLoading || branchesLoading) && commits.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">Loading commits…</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.loadingCommits')}</p>
             ) : commitsError ? (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
                 {commitsError}
               </div>
             ) : commits.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">No commits found.</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noCommitsFound')}</p>
             ) : (
               <div className="space-y-0">
                 {commits.map((c, index) => {
@@ -1345,7 +1348,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             <code className="text-xs font-mono text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">{shortSha || '—'}</code>
                             {isMerge && (
                               <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
-                                merge
+                                {t('lit.merge')}
                               </span>
                             )}
                             {mergeLabel && (
@@ -1367,7 +1370,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             ))}
                             {!isMerge && (graphRow?.joinColumns?.length || 0) > 1 && (
                               <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
-                                split
+                                {t('lit.split')}
                               </span>
                             )}
                             <CommitMessage
@@ -1379,7 +1382,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             />
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {c.author || 'Unknown author'}
+                            {c.author || t('lit.unknownAuthor')}
                             {c.date ? ` · ${new Date(c.date).toLocaleString()}` : ''}
                           </div>
                         </div>
@@ -1390,7 +1393,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                           >
-                            Open
+                            {t('common.open')}
                           </a>
                         )}
                       </div>
@@ -1405,7 +1408,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       onClick={() => void loadCommits(commitsPage + 1, true)}
                       className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                     >
-                      {commitsLoading ? 'Loading…' : 'Load more'}
+                      {commitsLoading ? 'Loading…' : t('lit.loadMore')}
                     </button>
                   </div>
                 )}
@@ -1422,7 +1425,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingVersion ? `Edit Version ${editingVersion.VersionNumber}` : 'New Version'}
+                  {editingVersion ? `Edit Version ${editingVersion.VersionNumber}` : t('lit.newVersion')}
                 </h2>
                 <button onClick={closeVersionModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1441,26 +1444,26 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Version Number <span className="text-red-500">*</span>
+                      {t('lit.versionNumber')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={versionForm.VersionNumber}
                       onChange={(e) => setVersionForm({ ...versionForm, VersionNumber: e.target.value })}
-                      placeholder="e.g. 1.0.0"
+                      placeholder={t('lit.eG100')}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Version Name
+                      {t('lit.versionName')}
                     </label>
                     <input
                       type="text"
                       value={versionForm.VersionName}
                       onChange={(e) => setVersionForm({ ...versionForm, VersionName: e.target.value })}
-                      placeholder="e.g. Summer Release"
+                      placeholder={t('lit.eGSummerRelease')}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                   </div>
@@ -1469,7 +1472,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Status
+                      {t('common.status')}
                     </label>
                     <select
                       value={versionForm.Status}
@@ -1483,7 +1486,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Release Date
+                      {t('lit.releaseDate')}
                     </label>
                     <input
                       type="date"
@@ -1508,14 +1511,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       }
                       className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                     />
-                    <span>Customer-specific version</span>
+                    <span>{t('lit.customerSpecificVersion')}</span>
                   </label>
                 </div>
 
                 {versionForm.IsCustomerSpecific && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Customer <span className="text-red-500">*</span>
+                      {t('common.customer')} <span className="text-red-500">*</span>
                     </label>
                     <SearchableSelect
                       value={versionForm.CustomerId ?? ''}
@@ -1529,8 +1532,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                         value: customer.Id,
                         label: customer.Name,
                       }))}
-                      placeholder="Customer"
-                      emptyText="Select customer..."
+                      placeholder={t('common.customer')}
+                      emptyText={t('lit.selectCustomer2')}
                     />
                   </div>
                 )}
@@ -1545,7 +1548,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       type="text"
                       value={taskSearch}
                       onChange={(e) => setTaskSearch(e.target.value)}
-                      placeholder="Search tasks..."
+                      placeholder={t('lit.searchTasks')}
                       className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
                     <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1554,7 +1557,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   </div>
                   <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 space-y-1">
                     {filteredAvailableTasks.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 py-2 text-center">No tasks found</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 py-2 text-center">{t('lit.noTasksFound')}</p>
                     ) : (
                       filteredAvailableTasks.map((task) => (
                         <label key={task.Id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
@@ -1594,9 +1597,9 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                         onClick={handleGeneratePatchNotes}
                         disabled={versionForm.TaskIds.length === 0}
                         className="h-9 px-3 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors"
-                        title="Generate patch notes from selected tasks"
+                        title={t('lit.generatePatchNotesFromSelectedTasks')}
                       >
-                        Generate from Tasks
+                        {t('lit.generateFromTasks')}
                       </button>
                       {isOpenAIAvailable && (
                         <button
@@ -1604,9 +1607,9 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                           onClick={handleImprovePatchNotesWithAI}
                           disabled={isImprovingPatchNotes || (!versionForm.PatchNotes && versionForm.TaskIds.length === 0)}
                           className="h-9 px-3 rounded-lg text-sm font-medium bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors"
-                          title="Improve patch notes with AI while preserving bullet points"
+                          title={t('lit.improvePatchNotesWithAiWhilePreservingBulletPoints')}
                         >
-                          {isImprovingPatchNotes ? 'Improving...' : 'Improve with AI'}
+                          {isImprovingPatchNotes ? 'Improving...' : t('lit.improveWithAi')}
                         </button>
                       )}
                     </div>
@@ -1614,7 +1617,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   <RichTextEditor
                     content={versionForm.PatchNotes}
                     onChange={(val) => setVersionForm({ ...versionForm, PatchNotes: val })}
-                    placeholder="Describe what changed in this version..."
+                    placeholder={t('lit.describeWhatChangedInThisVersion')}
                   />
                 </div>
 
@@ -1624,14 +1627,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     onClick={closeVersionModal}
                     className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingVersion}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                   >
-                    {isSavingVersion ? 'Saving...' : editingVersion ? 'Update Version' : 'Create Version'}
+                    {isSavingVersion ? t('lit.saving') : editingVersion ? t('lit.updateVersion') : t('lit.createVersion')}
                   </button>
                 </div>
               </form>
@@ -1671,14 +1674,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Download Release Notes PDF</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('lit.downloadReleaseNotesPdf')}</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Select a date range to download a PDF with release notes from all released versions within that period.
               </p>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Date
+                    {t('lit.startDate')}
                   </label>
                   <input
                     type="date"
@@ -1689,7 +1692,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    End Date
+                    {t('lit.endDate')}
                   </label>
                   <input
                     type="date"
@@ -1704,7 +1707,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   onClick={() => setShowDateRangePrintModal(false)}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleDownloadDateRangePDF}
@@ -1728,7 +1731,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Manage Customers
+                  {t('lit.manageCustomers')}
                 </h2>
                 <button
                   onClick={() => setShowCustomerModal(false)}
@@ -1748,7 +1751,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Associated Customers
+                  {t('lit.associatedCustomers')}
                 </label>
                 <SearchableMultiSelect
                   values={selectedCustomerIds}
@@ -1761,7 +1764,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     label: c.Name,
                     subtitle: c.Email
                   }))}
-                  placeholder="Select customers..."
+                  placeholder={t('lit.selectCustomers')}
                 />
               </div>
 
@@ -1771,14 +1774,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   onClick={() => setShowCustomerModal(false)}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveCustomers}
                   disabled={isSavingCustomers}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  {isSavingCustomers ? 'Saving...' : 'Save Changes'}
+                  {isSavingCustomers ? t('lit.saving') : t('lit.saveChanges')}
                 </button>
               </div>
             </div>
@@ -1796,7 +1799,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           dialog?.onConfirm?.();
           setDialog(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
 

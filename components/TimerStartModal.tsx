@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import SearchableSelect from './SearchableSelect';
 
 export type TimerMode = 'task' | 'callRecord';
@@ -76,14 +78,16 @@ export default function TimerStartModal({
   onStartTimeChange,
   onStart,
 }: TimerStartModalProps) {
+  const { t } = useI18n();
+
   if (!isOpen) return null;
 
   const callTypeOptions = [
-    { value: 'Teams', label: 'Teams' },
-    { value: 'Phone', label: 'Phone' },
-    { value: 'Zoom', label: 'Zoom' },
-    { value: 'Meet', label: 'Google Meet' },
-    { value: 'Other', label: 'Other' },
+    { value: t('lit.teams'), label: t('lit.teams') },
+    { value: t('lit.phone'), label: t('lit.phone') },
+    { value: t('lit.zoom'), label: t('lit.zoom') },
+    { value: t('lit.meet'), label: t('lit.googleMeet') },
+    { value: t('lit.other'), label: t('lit.other') },
   ];
 
   const canStart = timerMode === 'task'
@@ -95,10 +99,12 @@ export default function TimerStartModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Start Timer</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('lit.startTimer')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              aria-label={t('common.close')}
+              title={t('common.close')}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -115,7 +121,7 @@ export default function TimerStartModal({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Timer Type
+                {t('lit.timerType')}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -126,8 +132,8 @@ export default function TimerStartModal({
                     : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  <div className="font-medium">Task hours</div>
-                  <div className="text-xs opacity-80 mt-1">Track work time for a task and save it as a time entry.</div>
+                  <div className="font-medium">{t('lit.taskHours')}</div>
+                  <div className="text-xs opacity-80 mt-1">{t('lit.trackWorkTimeForATaskAndSaveItAsATimeEntry')}</div>
                 </button>
                 <button
                   type="button"
@@ -137,8 +143,8 @@ export default function TimerStartModal({
                     : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  <div className="font-medium">Call record</div>
-                  <div className="text-xs opacity-80 mt-1">Track a live call and save it as a call record when stopped.</div>
+                  <div className="font-medium">{t('lit.callRecord')}</div>
+                  <div className="text-xs opacity-80 mt-1">{t('lit.trackALiveCallAndSaveItAsACallRecordWhenStopped')}</div>
                 </button>
               </div>
             </div>
@@ -146,7 +152,7 @@ export default function TimerStartModal({
             {timerMode === 'task' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Task <span className="text-red-500">*</span>
+                  {t('common.task')} <span className="text-red-500">*</span>
                 </label>
                 <SearchableSelect
                   value={selectedTaskId?.toString() || ''}
@@ -155,37 +161,37 @@ export default function TimerStartModal({
                     value: task.Id,
                     label: `${task.TaskName}${task.ProjectName ? ` — ${task.ProjectName}` : ''}`,
                   }))}
-                  placeholder={isLoadingTasks ? 'Loading tasks...' : 'Select Task'}
-                  emptyText={isLoadingTasks ? 'Loading tasks...' : 'No tasks available'}
+                  placeholder={isLoadingTasks ? t('lit.loadingTasks') : t('lit.selectTask')}
+                  emptyText={isLoadingTasks ? t('lit.loadingTasks') : t('lit.noTasksAvailable')}
                   disabled={isLoadingTasks}
                   autoSelectSingleOption
                 />
                 {!isLoadingTasks && tasks.length === 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">No tasks found in projects you can access.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.noTasksFoundInProjectsYouCanAccess')}</p>
                 )}
               </div>
             ) : (
               <div className="space-y-4 rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50/60 dark:bg-gray-900/20">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Call Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.callType')}</label>
                     <SearchableSelect
                       value={callForm.callType}
                       onChange={(value) => onCallFormChange({ callType: value })}
                       options={callTypeOptions}
-                      placeholder="Select Call Type"
-                      emptyText="No call types available"
+                      placeholder={t('lit.selectCallType2')}
+                      emptyText={t('lit.noCallTypesAvailable')}
                       autoSelectSingleOption
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Organization</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.organization')}</label>
                     <SearchableSelect
                       value={callForm.organizationId}
                       onChange={(value) => onCallFormChange({ organizationId: value, projectId: '', taskId: '' })}
                       options={organizations.map((organization) => ({ value: String(organization.Id), label: organization.Name }))}
-                      placeholder="Select Organization"
-                      emptyText="No organizations available"
+                      placeholder={t('lit.selectOrganization2')}
+                      emptyText={t('lit.noOrganizationsAvailable')}
                       autoSelectSingleOption
                     />
                   </div>
@@ -193,59 +199,59 @@ export default function TimerStartModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.project')}</label>
                     <SearchableSelect
                       value={callForm.projectId}
                       onChange={(value) => onCallFormChange({ projectId: value, taskId: '' })}
                       options={projects.map((project) => ({ value: String(project.Id), label: project.ProjectName }))}
-                      placeholder={callForm.organizationId && isLoadingCallProjects ? 'Loading projects...' : 'Select Project'}
-                      emptyText={callForm.organizationId && isLoadingCallProjects ? 'Loading projects...' : 'No projects available'}
+                      placeholder={callForm.organizationId && isLoadingCallProjects ? 'Loading projects...' : t('lit.selectProject')}
+                      emptyText={callForm.organizationId && isLoadingCallProjects ? 'Loading projects...' : t('lit.noProjectsAvailable')}
                       disabled={!callForm.organizationId || isLoadingCallProjects}
                       autoSelectSingleOption
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.task')}</label>
                     <SearchableSelect
                       value={callForm.taskId}
                       onChange={(value) => onCallFormChange({ taskId: value })}
                       options={callTasks.map((task) => ({ value: String(task.Id), label: task.TaskName }))}
                       placeholder={callForm.projectId && isLoadingCallTasks ? 'Loading tasks...' : 'Select Task (optional)'}
-                      emptyText={callForm.projectId && isLoadingCallTasks ? 'Loading tasks...' : 'No tasks available'}
+                      emptyText={callForm.projectId && isLoadingCallTasks ? 'Loading tasks...' : t('lit.noTasksAvailable')}
                       disabled={!callForm.projectId || isLoadingCallTasks}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.subject')}</label>
                   <input
                     type="text"
                     value={callForm.subject}
                     onChange={(event) => onCallFormChange({ subject: event.target.value })}
-                    placeholder="Meeting topic"
+                    placeholder={t('lit.meetingTopic')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Participants</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.participants')}</label>
                   <input
                     type="text"
                     value={callForm.participants}
                     onChange={(event) => onCallFormChange({ participants: event.target.value })}
-                    placeholder="John Doe, Jane Doe"
+                    placeholder={t('lit.johnDoeJaneDoe')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.notes')}</label>
                   <textarea
                     value={callForm.notes}
                     onChange={(event) => onCallFormChange({ notes: event.target.value })}
                     rows={3}
-                    placeholder="Optional notes to save when the call ends"
+                    placeholder={t('lit.optionalNotesToSaveWhenTheCallEnds')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -254,7 +260,7 @@ export default function TimerStartModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Start Time <span className="text-red-500">*</span>
+                {t('lit.startTime')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="time"
@@ -271,7 +277,7 @@ export default function TimerStartModal({
               onClick={onClose}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -279,7 +285,7 @@ export default function TimerStartModal({
               disabled={isStarting || !canStart}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
             >
-              {isStarting ? 'Starting...' : 'Start Timer'}
+              {isStarting ? 'Starting...' : t('lit.startTimer')}
             </button>
           </div>
         </div>

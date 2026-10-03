@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { getApiUrl } from '@/lib/api/config';
 import { formatTaskCommitMessage } from '@/lib/commitMessage';
@@ -124,6 +125,7 @@ export default function TaskDetailModal({
   onRemovePlanning,
   initialCreateData,
 }: TaskDetailModalProps) {
+  const { t } = useI18n();
   const decimalHoursToHMS = useFormatHours();
   const { pillStyle, mapColor } = useColorVision();
   const router = useRouter();
@@ -285,7 +287,7 @@ export default function TaskDetailModal({
 
   const setErrorWithToast = (message: string) => {
     setError(message);
-    showToast({ type: 'error', title: 'Task Error', message });
+    showToast({ type: 'error', title: t('lit.taskError'), message });
   };
 
   // Calculate if this task has subtasks
@@ -709,7 +711,7 @@ export default function TaskDetailModal({
       }
     } catch (err) {
       console.error('Failed to load task details:', err);
-      showToast({ type: 'error', title: 'Task Error', message: 'Failed to load task details' });
+      showToast({ type: 'error', title: t('lit.taskError'), message: t('lit.failedToLoadTaskDetails') });
     } finally {
       setLoadingData(false);
     }
@@ -720,7 +722,7 @@ export default function TaskDetailModal({
     setError('');
 
     if (!formData.taskType) {
-      setErrorWithToast('Task type is required');
+      setErrorWithToast(t('lit.taskTypeIsRequired'));
       return;
     }
 
@@ -867,7 +869,7 @@ export default function TaskDetailModal({
       await Promise.resolve(onSaved());
       onClose();
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to save task');
+      setErrorWithToast(err.message || t('lit.failedToSaveTask'));
     } finally {
       setIsLoading(false);
     }
@@ -884,8 +886,8 @@ export default function TaskDetailModal({
     } catch (err: any) {
       setModalMessage({
         type: 'alert',
-        title: 'Delete Failed',
-        message: err.message || 'Failed to delete task',
+        title: t('lit.deleteFailed2'),
+        message: err.message || t('lit.failedToDeleteTask'),
       });
     } finally {
       setIsDeleting(false);
@@ -898,8 +900,8 @@ export default function TaskDetailModal({
     if (hasAnyChildren) {
       setModalMessage({
         type: 'delete-choice',
-        title: 'Delete Task with Subtasks?',
-        message: 'This task has subtasks. Do you want to delete only this task, or delete this task and all subtasks (including related allocations)?',
+        title: t('lit.deleteTaskWithSubtasks'),
+        message: t('lit.thisTaskHasSubtasksDoYouWantToDeleteOnlyThisTaskOrDeleteThisTaskAndAllSu'),
         onDeleteOnly: () => executeDeleteTask(false),
         onDeleteWithSubtasks: () => executeDeleteTask(true),
       });
@@ -908,8 +910,8 @@ export default function TaskDetailModal({
 
     setModalMessage({
       type: 'confirm',
-      title: 'Delete Task',
-      message: 'Are you sure you want to delete this task?',
+      title: t('lit.deleteTask2'),
+      message: t('lit.areYouSureYouWantToDeleteThisTask'),
       onConfirm: () => executeDeleteTask(false),
     });
   };
@@ -929,7 +931,7 @@ export default function TaskDetailModal({
       setAvailableMoveProjects(organizationProjects);
       setProjectStatusesForMove(projectStatusesResponse.statuses || []);
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to load move options');
+      setErrorWithToast(err.message || t('lit.failedToLoadMoveOptions'));
     } finally {
       setLoadingMoveMetadata(false);
     }
@@ -960,7 +962,7 @@ export default function TaskDetailModal({
     setError('');
     try {
       const response = await fetch(`${getApiUrl()}/api/tasks/${task.Id}/move-project`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -970,15 +972,15 @@ export default function TaskDetailModal({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to move task');
+        throw new Error(data.message || t('lit.failedToMoveTask'));
       }
 
       closeMoveTaskModal();
-      showAlert('Task Moved', data.message || 'Task and subtasks moved successfully.');
+      showAlert(t('lit.taskMoved'), data.message || t('lit.taskAndSubtasksMovedSuccessfully'));
       onSaved();
       onClose();
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to move task');
+      setErrorWithToast(err.message || t('lit.failedToMoveTask'));
     } finally {
       setIsMovingTask(false);
     }
@@ -1022,7 +1024,7 @@ export default function TaskDetailModal({
 
       await moveTaskSubtreeToProject(createResult.projectId);
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to create project and move task');
+      setErrorWithToast(err.message || t('lit.failedToCreateProjectAndMoveTask'));
       setIsMovingTask(false);
     }
   };
@@ -1125,7 +1127,7 @@ export default function TaskDetailModal({
         setAiResultText(data.result);
         setAiResultType(action);
       } else {
-        setAiError(data.message || 'Failed to process request.');
+        setAiError(data.message || t('lit.failedToProcessRequest'));
       }
     } catch {
       setAiError('Failed to connect to AI service.');
@@ -1186,14 +1188,14 @@ export default function TaskDetailModal({
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      showAlert('Invalid File Type', 'File type not allowed. Allowed: images, PDF, Word, Excel, ZIP, TXT');
+      showAlert(t('lit.invalidFileType'), t('lit.fileTypeNotAllowedAllowedImagesPdfWordExcelZipTxt'));
       e.target.value = '';
       return;
     }
 
     // Validate file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      showAlert('File Too Large', 'File size exceeds 10MB limit');
+      showAlert(t('lit.fileTooLarge2'), t('lit.fileSizeExceeds10mbLimit'));
       e.target.value = '';
       return;
     }
@@ -1228,11 +1230,11 @@ export default function TaskDetailModal({
             loadTaskDetails();
           } else {
             const error = await response.json();
-            showAlert('Upload Error', error.message || 'Failed to upload file');
+            showAlert(t('lit.uploadError'), error.message || t('lit.failedToUploadFile'));
           }
         } catch (err) {
           console.error('Failed to upload file:', err);
-          showAlert('Upload Error', 'Failed to upload file');
+          showAlert(t('lit.uploadError'), t('lit.failedToUploadFile'));
         } finally {
           setUploadingFile(false);
           e.target.value = '';
@@ -1240,7 +1242,7 @@ export default function TaskDetailModal({
       };
 
       reader.onerror = () => {
-        showAlert('File Error', 'Failed to read file');
+        showAlert(t('lit.fileError'), t('lit.failedToReadFile'));
         setUploadingFile(false);
         e.target.value = '';
       };
@@ -1248,7 +1250,7 @@ export default function TaskDetailModal({
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('Failed to upload file:', err);
-      showAlert('Upload Error', 'Failed to upload file');
+      showAlert(t('lit.uploadError'), t('lit.failedToUploadFile'));
       setUploadingFile(false);
       e.target.value = '';
     }
@@ -1264,7 +1266,7 @@ export default function TaskDetailModal({
       );
 
       if (!response.ok) {
-        throw new Error('Failed to preview attachment');
+        throw new Error(t('lit.failedToPreviewAttachment'));
       }
 
       const result = await response.json();
@@ -1287,7 +1289,7 @@ export default function TaskDetailModal({
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error('Failed to preview attachment:', err);
-      showAlert('Preview Error', 'Failed to preview attachment');
+      showAlert(t('lit.previewError'), t('lit.failedToPreviewAttachment'));
     }
   };
 
@@ -1301,7 +1303,7 @@ export default function TaskDetailModal({
       );
 
       if (!response.ok) {
-        throw new Error('Failed to download attachment');
+        throw new Error(t('lit.failedToDownloadAttachment'));
       }
 
       const result = await response.json();
@@ -1327,7 +1329,7 @@ export default function TaskDetailModal({
       document.body.removeChild(a);
     } catch (err) {
       console.error('Failed to download attachment:', err);
-      showAlert('Download Error', 'Failed to download attachment');
+      showAlert(t('lit.downloadError'), t('lit.failedToDownloadAttachment'));
     }
   };
 
@@ -1357,14 +1359,14 @@ export default function TaskDetailModal({
     if (!userId || !allocationDate || !allocatedHours) {
       setModalMessage({
         type: 'alert',
-        title: 'Validation Error',
-        message: 'Please fill in all required fields (User, Date, Hours).'
+        title: t('lit.validationError'),
+        message: t('lit.pleaseFillInAllRequiredFieldsUserDateHours')
       });
       return;
     }
 
     try {
-      const method = mode === 'edit' ? 'PUT' : 'POST';
+      const method = mode === 'edit' ? 'PUT' : t('lit.post');
       const url = mode === 'edit' 
         ? `${getApiUrl()}/api/task-allocations/manual/${allocationId}`
         : `${getApiUrl()}/api/task-allocations/manual`;
@@ -1398,16 +1400,16 @@ export default function TaskDetailModal({
         const error = await response.json();
         setModalMessage({
           type: 'alert',
-          title: 'Error',
-          message: error.message || 'Failed to save allocation'
+          title: t('lit.error'),
+          message: error.message || t('lit.failedToSaveAllocation')
         });
       }
     } catch (err) {
       console.error('Failed to save manual allocation:', err);
       setModalMessage({
         type: 'alert',
-        title: 'Error',
-        message: 'An error occurred while saving the allocation'
+        title: t('lit.error'),
+        message: t('lit.anErrorOccurredWhileSavingTheAllocation')
       });
     }
   };
@@ -1415,8 +1417,8 @@ export default function TaskDetailModal({
   const handleDeleteManualAllocation = async (allocationId: number) => {
     setModalMessage({
       type: 'confirm',
-      title: 'Confirm Delete',
-      message: 'Are you sure you want to delete this manual allocation?',
+      title: t('lit.confirmDelete'),
+      message: t('lit.areYouSureYouWantToDeleteThisManualAllocation'),
       onConfirm: async () => {
         try {
           const response = await fetch(
@@ -1435,16 +1437,16 @@ export default function TaskDetailModal({
             const error = await response.json();
             setModalMessage({
               type: 'alert',
-              title: 'Error',
-              message: error.message || 'Failed to delete allocation'
+              title: t('lit.error'),
+              message: error.message || t('lit.failedToDeleteAllocation')
             });
           }
         } catch (err) {
           console.error('Failed to delete manual allocation:', err);
           setModalMessage({
             type: 'alert',
-            title: 'Error',
-            message: 'An error occurred while deleting the allocation'
+            title: t('lit.error'),
+            message: t('lit.anErrorOccurredWhileDeletingTheAllocation')
           });
         }
       }
@@ -1492,18 +1494,18 @@ export default function TaskDetailModal({
 
   const getFieldLabel = (fieldName: string): string => {
     const labels: Record<string, string> = {
-      'TaskName': 'Task Name',
-      'Description': 'Description',
-      'Status': 'Status',
-      'Priority': 'Priority',
-      'AssignedTo': 'Assignee',
-      'DueDate': 'Due Date',
-      'DueDateMandatory': 'Due Date Mandatory',
-      'UnscheduledWork': 'Unscheduled Work',
-      'PlannedStartDate': 'Planned Start',
-      'PlannedEndDate': 'Planned End',
-      'EstimatedHours': 'Estimated Hours',
-      'StoryPoints': 'Story Points',
+      'TaskName': t('lit.taskName'),
+      'Description': t('lit.description2'),
+      'Status': t('lit.status'),
+      'Priority': t('lit.priority'),
+      'AssignedTo': t('lit.assignee'),
+      'DueDate': t('lit.dueDate'),
+      'DueDateMandatory': t('lit.dueDateMandatory'),
+      'UnscheduledWork': t('lit.unscheduledWork'),
+      'PlannedStartDate': t('lit.plannedStart'),
+      'PlannedEndDate': t('lit.plannedEnd'),
+      'EstimatedHours': t('lit.estimatedHours'),
+      'StoryPoints': t('lit.storyPoints'),
     };
     return labels[fieldName] || fieldName;
   };
@@ -1711,13 +1713,13 @@ export default function TaskDetailModal({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to load commits');
+        throw new Error(data.message || t('lit.failedToLoadCommits'));
       }
       setTaskCommits(data.data?.commits || []);
       setCommitsProvider(data.data?.provider || null);
       setCommitsFetched(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load commits';
+      const message = err instanceof Error ? err.message : t('lit.failedToLoadCommits');
       setCommitsError(message);
       setTaskCommits([]);
       setCommitsFetched(true);
@@ -1789,26 +1791,26 @@ export default function TaskDetailModal({
   const mainPageTabs = visibleTabs.map((tab) => ({
     id: tab,
     label:
-      tab === 'details' ? 'Details' :
+      tab === 'details' ? t('lit.details') :
       tab === 'checklist' ? `Checklist (${checklists.length})` :
-      tab === 'hours' ? 'Plan' :
+      tab === 'hours' ? t('lit.plan') :
       tab === 'comments' ? `Comments (${taskComments.length})` :
       tab === 'attachments' ? `Files (${taskAttachments.length})` :
-      tab === 'commits' ? 'Commits' :
-      'History',
+      tab === 'commits' ? t('lit.commits') :
+      t('lit.history'),
   }));
 
   const hoursPageTabs = visibleHoursSubTabs.map((tab) => ({
     id: tab,
     label:
       tab === 'planning' ? 'Planning & Dependencies' :
-      tab === 'allocations' ? 'Planned Allocations' :
-      'Time Entries',
+      tab === 'allocations' ? t('lit.plannedAllocations') :
+      t('lit.timeEntries'),
   }));
 
   const handleExportTaskPdf = async () => {
     if (!task?.Id) {
-      showAlert('Print Error', 'Task must be saved before printing.');
+      showAlert(t('lit.printError'), t('lit.taskMustBeSavedBeforePrinting'));
       return;
     }
 
@@ -1846,27 +1848,27 @@ export default function TaskDetailModal({
 
     const totalAllocatedHours = taskAllocations.reduce((sum, allocation) => sum + (parseFloat(String(allocation.AllocatedHours)) || 0), 0);
     const totalWorkedHours = timeEntries.reduce((sum, entry) => sum + (parseFloat(String(entry.Hours)) || 0), 0);
-    const descriptionHtml = String(task.Description || '').trim() || '<p>No description provided.</p>';
+    const descriptionHtml = String(task.Description || '').trim() || `<p>${t('lit.noDescriptionProvided2')}</p>`;
 
     const summaryItems = [
-      { label: 'Task ID', value: String(task.Id) },
-      { label: 'Project', value: toText(task.ProjectName || project?.ProjectName || project?.Name) },
-      { label: 'Status', value: toText(task.StatusName || formData.status) },
-      { label: 'Priority', value: toText(task.PriorityName || formData.priority) },
-      { label: 'Type', value: toText(task.TaskTypeName || formData.taskType) },
-      { label: 'Assignees', value: assigneesLabel },
-      { label: 'Tags', value: tagsLabel },
-      { label: 'Customer', value: toText(headerCustomerName) },
-      { label: 'Depends On', value: toText(task.DependsOnTaskName) },
-      { label: 'Due Date', value: toDateOnly(task.DueDate) },
-      { label: 'Planned Start', value: toDateOnly(task.PlannedStartDate) },
-      { label: 'Planned End', value: toDateOnly(task.PlannedEndDate) },
-      { label: 'Estimated', value: decimalHoursToHMS(parseFloat(String(task.EstimatedHours || 0)) || 0) },
-      { label: 'Allocated', value: decimalHoursToHMS(totalAllocatedHours) },
-      { label: 'Worked', value: decimalHoursToHMS(totalWorkedHours) },
-      { label: 'Completion', value: `${Number(task.CompletionPercentage || completionPercentage || 0)}%` },
-      { label: 'Created At', value: toDateOnly(task.CreatedAt) },
-      { label: 'Updated At', value: toDateOnly(task.UpdatedAt) },
+      { label: t('lit.taskId'), value: String(task.Id) },
+      { label: t('lit.project3'), value: toText(task.ProjectName || project?.ProjectName || project?.Name) },
+      { label: t('lit.status'), value: toText(task.StatusName || formData.status) },
+      { label: t('lit.priority'), value: toText(task.PriorityName || formData.priority) },
+      { label: t('lit.type2'), value: toText(task.TaskTypeName || formData.taskType) },
+      { label: t('lit.assignees'), value: assigneesLabel },
+      { label: t('lit.tags'), value: tagsLabel },
+      { label: t('lit.customer2'), value: toText(headerCustomerName) },
+      { label: t('lit.dependsOn'), value: toText(task.DependsOnTaskName) },
+      { label: t('lit.dueDate'), value: toDateOnly(task.DueDate) },
+      { label: t('lit.plannedStart'), value: toDateOnly(task.PlannedStartDate) },
+      { label: t('lit.plannedEnd'), value: toDateOnly(task.PlannedEndDate) },
+      { label: t('lit.estimated'), value: decimalHoursToHMS(parseFloat(String(task.EstimatedHours || 0)) || 0) },
+      { label: t('lit.allocated'), value: decimalHoursToHMS(totalAllocatedHours) },
+      { label: t('lit.worked'), value: decimalHoursToHMS(totalWorkedHours) },
+      { label: t('lit.completion'), value: `${Number(task.CompletionPercentage || completionPercentage || 0)}%` },
+      { label: t('lit.createdAt'), value: toDateOnly(task.CreatedAt) },
+      { label: t('lit.updatedAt'), value: toDateOnly(task.UpdatedAt) },
     ];
 
     const metaRowsHtml = summaryItems
@@ -1988,12 +1990,12 @@ export default function TaskDetailModal({
       <body>
         <div class="sheet">
           <div class="header">
-            <h1 class="title">${escapeHtml(task.TaskName || 'Task Details')}</h1>
+            <h1 class="title">${escapeHtml(task.TaskName || t('lit.taskDetails'))}</h1>
             <div class="subtitle">Generated on ${escapeHtml(new Date().toLocaleString())}</div>
           </div>
 
           <section class="section">
-            <h2 class="section-title">Main Fields</h2>
+            <h2 class="section-title">{t('lit.mainFields')}</h2>
             <table class="meta">
               <tbody>
                 ${metaRowsHtml}
@@ -2002,7 +2004,7 @@ export default function TaskDetailModal({
           </section>
 
           <section class="section">
-            <h2 class="section-title">Description</h2>
+            <h2 class="section-title">{t('common.description')}</h2>
             <div class="description">${descriptionHtml}</div>
           </section>
         </div>
@@ -2012,7 +2014,7 @@ export default function TaskDetailModal({
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      showAlert('Print Error', 'Unable to open print window. Please allow popups and try again.');
+      showAlert(t('lit.printError'), t('lit.unableToOpenPrintWindowPleaseAllowPopupsAndTryAgain'));
       return;
     }
 
@@ -2033,7 +2035,7 @@ export default function TaskDetailModal({
         printWindow.close();
       };
     } catch (err: any) {
-      showAlert('Print Error', err?.message || 'Failed to prepare print preview.');
+      showAlert(t('lit.printError'), err?.message || t('lit.failedToPreparePrintPreview'));
     } finally {
       setIsPreparingPrint(false);
     }
@@ -2062,7 +2064,7 @@ export default function TaskDetailModal({
           <button
             onClick={() => handleRemoveTag(tag.Id)}
             className="ml-1 hover:opacity-70"
-            title="Remove tag"
+            title={t('lit.removeTag')}
             type="button"
           >
             ×
@@ -2103,7 +2105,7 @@ export default function TaskDetailModal({
         <button
           onClick={() => handleRemoveTag(tag.Id)}
           className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs text-gray-500 hover:bg-gray-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-red-400"
-          title="Remove tag"
+          title={t('lit.removeTag')}
           type="button"
         >
           ×
@@ -2126,7 +2128,7 @@ export default function TaskDetailModal({
                   {task.TaskName}
                 </>
               ) : (
-                'Create New Task'
+                t('lit.createNewTask')
               )}
             </h2>
             <div ref={taskActionsMenuRef} className="relative flex shrink-0 items-center gap-0.5">
@@ -2140,16 +2142,16 @@ export default function TaskDetailModal({
                         await navigator.clipboard.writeText(url);
                         showToast({
                           type: 'success',
-                          title: 'Link copied',
-                          message: 'Task link copied to clipboard.',
+                          title: t('lit.linkCopied'),
+                          message: t('lit.taskLinkCopiedToClipboard'),
                         });
                       } catch {
-                        showAlert('Copy task link', url);
+                        showAlert(t('lit.copyTaskLink'), url);
                       }
                     }}
                     className={headerIconButtonClass}
-                    title="Copy task link"
-                    aria-label="Copy task link"
+                    title={t('lit.copyTaskLink')}
+                    aria-label={t('lit.copyTaskLink')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -2166,16 +2168,16 @@ export default function TaskDetailModal({
                         await navigator.clipboard.writeText(message);
                         showToast({
                           type: 'success',
-                          title: 'Commit message copied',
-                          message: 'Paste it into your git commit.',
+                          title: t('lit.commitMessageCopied'),
+                          message: t('lit.pasteItIntoYourGitCommit'),
                         });
                       } catch {
-                        showAlert('Copy commit message', message);
+                        showAlert(t('lit.copyCommitMessage'), message);
                       }
                     }}
                     className={headerIconButtonClass}
-                    title="Copy commit message"
-                    aria-label="Copy commit message"
+                    title={t('lit.copyCommitMessage')}
+                    aria-label={t('lit.copyCommitMessage')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -2187,8 +2189,8 @@ export default function TaskDetailModal({
                     onClick={handleExportTaskPdf}
                     disabled={isPreparingPrint}
                     className={`${headerIconButtonClass} disabled:opacity-50`}
-                    title={isPreparingPrint ? 'Preparing print...' : 'Print task'}
-                    aria-label="Print task as PDF"
+                    title={isPreparingPrint ? 'Preparing print...' : t('lit.printTask')}
+                    aria-label={t('lit.printTaskAsPdf')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4h12v5M6 14H5a2 2 0 01-2-2v-1a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2h-1M6 14v6h12v-6M9 17h6" />
@@ -2200,8 +2202,8 @@ export default function TaskDetailModal({
                     type="button"
                     onClick={() => setShowTaskActionsMenu((prev) => !prev)}
                     className={headerIconButtonClass}
-                    title="Task actions"
-                    aria-label="Task actions"
+                    title={t('lit.taskActions')}
+                    aria-label={t('lit.taskActions')}
                   >
                     ⋯
                   </button>
@@ -2217,16 +2219,16 @@ export default function TaskDetailModal({
                             await navigator.clipboard.writeText(url);
                             showToast({
                               type: 'success',
-                              title: 'Link copied',
-                              message: 'Task link copied to clipboard.',
+                              title: t('lit.linkCopied'),
+                              message: t('lit.taskLinkCopiedToClipboard'),
                             });
                           } catch {
-                            showAlert('Copy task link', url);
+                            showAlert(t('lit.copyTaskLink'), url);
                           }
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        Copy task link
+                        {t('lit.copyTaskLink')}
                       </button>
                       <button
                         type="button"
@@ -2240,23 +2242,23 @@ export default function TaskDetailModal({
                             await navigator.clipboard.writeText(message);
                             showToast({
                               type: 'success',
-                              title: 'Commit message copied',
-                              message: 'Paste it into your git commit.',
+                              title: t('lit.commitMessageCopied'),
+                              message: t('lit.pasteItIntoYourGitCommit'),
                             });
                           } catch {
-                            showAlert('Copy commit message', message);
+                            showAlert(t('lit.copyCommitMessage'), message);
                           }
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        Copy commit message
+                        {t('lit.copyCommitMessage')}
                       </button>
                       <button
                         type="button"
                         onClick={openMoveToExistingProjectModal}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        Move task to project
+                        {t('lit.moveTaskToProject')}
                       </button>
                       {isGlobalProject && (
                         <button
@@ -2264,7 +2266,7 @@ export default function TaskDetailModal({
                           onClick={openCreateProjectAndMoveModal}
                           className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
-                          Create project and move task
+                          {t('lit.createProjectAndMoveTask')}
                         </button>
                       )}
                       {canDeleteTask && (
@@ -2278,7 +2280,7 @@ export default function TaskDetailModal({
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                           >
-                            Delete task
+                            {t('lit.deleteTask')}
                           </button>
                         </>
                       )}
@@ -2289,7 +2291,7 @@ export default function TaskDetailModal({
               <button
                 onClick={onClose}
                 className={headerIconButtonClass}
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 ×
               </button>
@@ -2347,18 +2349,18 @@ export default function TaskDetailModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex h-7 items-center gap-1 rounded-md bg-cyan-100 px-2 text-xs font-medium text-cyan-800 transition-colors hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:hover:bg-cyan-900/50"
-                    title="Open linked Synapse note"
+                    title={t('lit.openLinkedSynapseNote')}
                   >
                     <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
-                    <span>Synapse</span>
+                    <span>{t('lit.synapse')}</span>
                     <span aria-hidden>↗</span>
                   </a>
                 )}
 
                 <span className="inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold" style={pillStyle(task.StatusColor, { alpha: '20' })}>
-                  {task.StatusName || 'Unknown'}
+                  {task.StatusName || t('lit.unknown')}
                 </span>
                 {task.PriorityName && (
                   <span className="inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold" style={pillStyle(task.PriorityColor, { alpha: '20' })}>
@@ -2375,14 +2377,14 @@ export default function TaskDetailModal({
                         </span>
                         <button
                           onClick={handleStopTimer}
-                          title="Stop timer and save time entry"
+                          title={t('lit.stopTimerAndSaveTimeEntry')}
                           className="inline-flex h-7 items-center rounded-md bg-red-500 px-2 text-xs text-white transition-colors hover:bg-red-600"
                         >
                           ⏹ Stop
                         </button>
                         <button
                           onClick={handleDiscardTimer}
-                          title="Discard timer without saving"
+                          title={t('lit.discardTimerWithoutSaving')}
                           className="inline-flex h-7 items-center rounded-md bg-gray-200 px-2 text-xs text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                         >
                           ✕
@@ -2395,7 +2397,7 @@ export default function TaskDetailModal({
                         </span>
                         <button
                           onClick={handleStartTimer}
-                          title="Save current timer and switch to this task"
+                          title={t('lit.saveCurrentTimerAndSwitchToThisTask')}
                           className="inline-flex h-7 items-center rounded-md bg-blue-500 px-2 text-xs text-white transition-colors hover:bg-blue-600"
                         >
                           ↩ Switch &amp; Save
@@ -2404,7 +2406,7 @@ export default function TaskDetailModal({
                     ) : (
                       <button
                         onClick={handleStartTimer}
-                        title="Start timer for this task"
+                        title={t('lit.startTimerForThisTask')}
                         className="inline-flex h-7 items-center rounded-md bg-blue-100 px-2 text-xs text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/60"
                       >
                         ▶ Start Timer
@@ -2419,19 +2421,19 @@ export default function TaskDetailModal({
                 {isFieldVisible('headerHoursSummary') && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <span className="inline-flex items-baseline gap-1">
-                      <span className="text-gray-500 dark:text-gray-400">Est</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('lit.est')}</span>
                       <span className="font-semibold tabular-nums text-purple-600 dark:text-purple-400">{decimalHoursToHMS(parseFloat(task.EstimatedHours as any || 0))}</span>
                     </span>
                     <span className="inline-flex items-baseline gap-1">
-                      <span className="text-gray-500 dark:text-gray-400">Alloc</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('lit.alloc')}</span>
                       <span className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">{decimalHoursToHMS(totalAllocated)}</span>
                     </span>
                     <span className="inline-flex items-baseline gap-1">
-                      <span className="text-gray-500 dark:text-gray-400">Worked</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('lit.worked')}</span>
                       <span className="font-semibold tabular-nums text-green-600 dark:text-green-400">{decimalHoursToHMS(totalWorked)}</span>
                     </span>
                     <span className="inline-flex items-baseline gap-1">
-                      <span className="text-gray-500 dark:text-gray-400">Done</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('common.done')}</span>
                       <span className="font-semibold tabular-nums text-gray-900 dark:text-white">{completionPercentage}%</span>
                     </span>
                   </div>
@@ -2451,7 +2453,7 @@ export default function TaskDetailModal({
                         <div className="absolute top-full left-0 z-10 mt-1 w-48 rounded-lg border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
                           <div className="max-h-48 overflow-y-auto p-2">
                             {availableTags.filter(t => !taskTags.find((tt) => tt.Id === t.Id)).length === 0 ? (
-                              <p className="py-2 text-center text-xs text-gray-500 dark:text-gray-400">No more tags available</p>
+                              <p className="py-2 text-center text-xs text-gray-500 dark:text-gray-400">{t('lit.noMoreTagsAvailable')}</p>
                             ) : (
                               availableTags
                                 .filter(t => !taskTags.find((tt) => tt.Id === t.Id))
@@ -2499,13 +2501,13 @@ export default function TaskDetailModal({
             <form onSubmit={handleSubmit} className="space-y-4">
               {showSectionLabels && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-                Basic Information
+                {t('lit.basicInformation')}
               </h3>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Task Name *
+                  {t('lit.taskName2')}
                 </label>
                 <input
                   type="text"
@@ -2513,7 +2515,7 @@ export default function TaskDetailModal({
                   onChange={(e) => setFormData({ ...formData, taskName: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter task name"
+                  placeholder={t('lit.enterTaskName')}
                 />
               </div>
 
@@ -2522,7 +2524,7 @@ export default function TaskDetailModal({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
+                    {t('common.description')}
                   </label>
                   {isAiAvailable && (
                     <div className="flex items-center gap-2">
@@ -2530,21 +2532,21 @@ export default function TaskDetailModal({
                         type="button"
                         onClick={() => { setShowLangInput(v => !v); setAiError(''); }}
                         className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                        title="Translate description"
+                        title={t('lit.translateDescription')}
                         disabled={aiLoading}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
-                        Translate
+                        {t('lit.translate')}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setShowLangInput(false); handleAiTextAction('summarize'); }}
                         className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                        title="Summarize description"
+                        title={t('lit.summarizeDescription')}
                         disabled={aiLoading}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Summarize
+                        {t('lit.summarize')}
                       </button>
                     </div>
                   )}
@@ -2557,12 +2559,12 @@ export default function TaskDetailModal({
                       onChange={e => setAiTargetLanguage(e.target.value)}
                       className="flex-1 px-3 py-1.5 text-sm border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                     >
-                      <option value="">Select language…</option>
-                      <option value="English">English (EN)</option>
-                      <option value="Portuguese (Portugal)">Portuguese (PT)</option>
-                      <option value="Spanish">Spanish (ES)</option>
-                      <option value="French">French (FR)</option>
-                      <option value="Italian">Italian (IT)</option>
+                      <option value="">{t('lit.selectLanguage')}</option>
+                      <option value="English">{t('lit.englishEn')}</option>
+                      <option value="Portuguese (Portugal)">{t('lit.portuguesePt')}</option>
+                      <option value="Spanish">{t('lit.spanishEs')}</option>
+                      <option value="French">{t('lit.frenchFr')}</option>
+                      <option value="Italian">{t('lit.italianIt')}</option>
                     </select>
                     <button
                       type="button"
@@ -2570,14 +2572,14 @@ export default function TaskDetailModal({
                       disabled={!aiTargetLanguage || aiLoading}
                       className="px-3 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
-                      Translate
+                      {t('lit.translate')}
                     </button>
                   </div>
                 )}
                 <RichTextEditor
                   content={formData.description || ''}
                   onChange={(html) => setFormData({ ...formData, description: html })}
-                  placeholder="Enter task description..."
+                  placeholder={t('lit.enterTaskDescription')}
                   className="min-h-[120px]"
                   contentScrollOnly={true}
                   contentMaxHeightClass="max-h-56"
@@ -2586,7 +2588,7 @@ export default function TaskDetailModal({
                 {aiLoading && (
                   <div className="mt-2 flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400">
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    Processing…
+                    {t('lit.processing')}
                   </div>
                 )}
                 {/* AI error */}
@@ -2598,13 +2600,13 @@ export default function TaskDetailModal({
                   <div className="mt-3 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 p-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">
-                        {aiResultType === 'translate' ? `Translation (${aiTargetLanguage})` : 'Summary'}
+                        {aiResultType === 'translate' ? `Translation (${aiTargetLanguage})` : t('lit.summary')}
                       </span>
                       <button
                         type="button"
                         onClick={() => { setAiResultText(''); setAiResultType(null); setAiError(''); }}
                         className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200 transition-colors"
-                        title="Dismiss"
+                        title={t('lit.dismiss')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
@@ -2636,7 +2638,7 @@ export default function TaskDetailModal({
                 || (showGitHubIssueSection && isFieldVisible('gitHubIssueNumber'))
                 || (showGiteaIssueSection && isFieldVisible('giteaIssueNumber'))) && (
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 pt-2">
-                  Linked Tickets & Jira
+                  {t('lit.linkedTicketsJira')}
                 </h3>
               )}
               {isFieldVisible('linkedTicketRefs') && task?.TicketNumber && (
@@ -2697,8 +2699,8 @@ export default function TaskDetailModal({
                     value={formData.jiraIssueKey || ''}
                     onChange={(e) => setFormData({ ...formData, jiraIssueKey: e.target.value || undefined })}
                     className="flex-1 min-w-[8rem] max-w-xs px-2.5 py-1 text-xs border border-purple-300 dark:border-purple-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                    placeholder="Jira issue key"
-                    aria-label="Jira issue key"
+                    placeholder={t('lit.jiraIssueKey')}
+                    aria-label={t('lit.jiraIssueKey')}
                   />
                   {jiraIssueKeyValue && jiraIntegration?.JiraUrl ? (
                     <a
@@ -2716,7 +2718,7 @@ export default function TaskDetailModal({
                   ) : (
                     <span
                       className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-purple-300 dark:text-purple-700 cursor-not-allowed"
-                      title="Enter a Jira issue key to open"
+                      title={t('lit.enterAJiraIssueKeyToOpen')}
                       aria-hidden="true"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2752,7 +2754,7 @@ export default function TaskDetailModal({
                   {showGitHubIssueSection && isFieldVisible('gitHubIssueNumber') && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      GitHub Issue ID
+                      {t('lit.githubIssueId')}
                     </label>
                     <input
                       type="number"
@@ -2763,7 +2765,7 @@ export default function TaskDetailModal({
                         gitHubIssueNumber: e.target.value ? parseInt(e.target.value, 10) : null,
                       })}
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 456"
+                      placeholder={t('lit.eG456')}
                     />
                     {githubIssueUrl && (
                       <a
@@ -2782,7 +2784,7 @@ export default function TaskDetailModal({
                   {showGiteaIssueSection && isFieldVisible('giteaIssueNumber') && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Gitea Issue ID
+                      {t('lit.giteaIssueId')}
                     </label>
                     <input
                       type="number"
@@ -2793,7 +2795,7 @@ export default function TaskDetailModal({
                         giteaIssueNumber: e.target.value ? parseInt(e.target.value, 10) : null,
                       })}
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 789"
+                      placeholder={t('lit.eG789')}
                     />
                   </div>
                   )}
@@ -2803,14 +2805,14 @@ export default function TaskDetailModal({
 
               {showSectionLabels && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
-                Task Setup
+                {t('lit.taskSetup')}
               </h3>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Status
+                    {t('common.status')}
                   </label>
                   <TaskDetailSearchableSelect
                     value={typeof formData.status === 'number' ? formData.status : undefined}
@@ -2820,14 +2822,14 @@ export default function TaskDetailModal({
                         .sort((a, b) => a.SortOrder - b.SortOrder)
                         .map((status) => ({ id: status.Id, label: status.StatusName }))
                       : []}
-                    placeholder={taskStatuses.length > 0 ? 'Select a status' : 'No statuses available'}
-                    emptyMessage={taskStatuses.length > 0 ? 'Select a status' : 'No statuses available'}
+                    placeholder={taskStatuses.length > 0 ? t('lit.selectAStatus') : t('lit.noStatusesAvailable')}
+                    emptyMessage={taskStatuses.length > 0 ? t('lit.selectAStatus') : t('lit.noStatusesAvailable')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Priority
+                    {t('common.priority')}
                   </label>
                   <TaskDetailSearchableSelect
                     value={typeof formData.priority === 'number' ? formData.priority : undefined}
@@ -2837,15 +2839,15 @@ export default function TaskDetailModal({
                         .sort((a, b) => a.SortOrder - b.SortOrder)
                         .map((priority) => ({ id: priority.Id, label: priority.PriorityName || `Priority ${priority.Id}` }))
                       : []}
-                    placeholder={taskPriorities.length > 0 ? 'Select a priority' : 'No priorities available'}
-                    emptyMessage={taskPriorities.length > 0 ? 'Select a priority' : 'No priorities available'}
+                    placeholder={taskPriorities.length > 0 ? t('lit.selectAPriority') : t('lit.noPrioritiesAvailable')}
+                    emptyMessage={taskPriorities.length > 0 ? t('lit.selectAPriority') : t('lit.noPrioritiesAvailable')}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Task Type *
+                  {t('lit.taskType2')}
                 </label>
                 <TaskDetailSearchableSelect
                   value={typeof formData.taskType === 'number' ? formData.taskType : undefined}
@@ -2855,14 +2857,14 @@ export default function TaskDetailModal({
                       .sort((a, b) => a.SortOrder - b.SortOrder)
                       .map((type) => ({ id: type.Id, label: type.TypeName || `Type ${type.Id}` }))
                     : []}
-                  placeholder={taskTypes.length > 0 ? 'Select a task type' : 'No task types available'}
-                  emptyMessage={taskTypes.length > 0 ? 'Select a task type' : 'No task types available'}
+                  placeholder={taskTypes.length > 0 ? t('lit.selectATaskType') : t('lit.noTaskTypesAvailable')}
+                  emptyMessage={taskTypes.length > 0 ? t('lit.selectATaskType') : t('lit.noTaskTypesAvailable')}
                 />
               </div>
 
               {showSectionLabels && ((isGlobalProject && isFieldVisible('customerId')) || isFieldVisible('assignees')) && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
-                Assignment
+                {t('lit.assignment')}
               </h3>
               )}
               <div>
@@ -2870,16 +2872,16 @@ export default function TaskDetailModal({
                   <div className="mb-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Customer *
+                        {t('lit.customer')}
                       </label>
                       {typeof formData.customerId === 'number' && formData.customerId > 0 && (
                         <button
                           type="button"
                           onClick={() => router.push(`/customers/${formData.customerId}`)}
                           className="inline-flex h-7 items-center gap-1 rounded-md bg-teal-100 px-2 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:hover:bg-teal-900/50"
-                          title="Open customer page"
+                          title={t('lit.openCustomerPage')}
                         >
-                          Open customer
+                          {t('lit.openCustomer')}
                           <span aria-hidden>↗</span>
                         </button>
                       )}
@@ -2891,8 +2893,8 @@ export default function TaskDetailModal({
                       }))}
                       value={typeof formData.customerId === 'number' ? formData.customerId : undefined}
                       onChange={(val: number | undefined) => setFormData({ ...formData, customerId: val ?? null })}
-                      placeholder="Select customer..."
-                      emptyMessage="No customers found in this organization"
+                      placeholder={t('lit.selectCustomer2')}
+                      emptyMessage={t('lit.noCustomersFoundInThisOrganization')}
                       autoSelectSingleOption={!task?.Id}
                     />
                   </div>
@@ -2903,7 +2905,7 @@ export default function TaskDetailModal({
                 {/* Principal Assignee field (searchable) */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Principal Assignee
+                    {t('lit.principalAssignee')}
                   </label>
                   <TaskDetailSearchableSelect
                     options={organizationUsers.map((u) => ({
@@ -2925,14 +2927,14 @@ export default function TaskDetailModal({
                         }
                       }
                     }}
-                    placeholder="Select principal assignee..."
+                    placeholder={t('lit.selectPrincipalAssignee')}
                     autoSelectSingleOption={!task?.Id}
                   />
                 </div>
 
                 {/* Multi-assignee dropdown and chips (unchanged) */}
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Assignees
+                  {t('lit.assignees')}
                 </label>
                 {/* Assigned users chips */}
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -2947,7 +2949,7 @@ export default function TaskDetailModal({
                           type="button"
                           onClick={() => handleRemoveAssignee(a.UserId)}
                           className="ml-1 text-blue-600 dark:text-blue-400 hover:text-red-500 dark:hover:text-red-400 font-bold leading-none"
-                          title="Remove assignee"
+                          title={t('lit.removeAssignee')}
                         >
                           ×
                         </button>
@@ -2955,7 +2957,7 @@ export default function TaskDetailModal({
                     </span>
                   ))}
                   {taskAssignees.length === 0 && (
-                    <span className="text-sm text-gray-400 dark:text-gray-500 italic">No assignees</span>
+                    <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('lit.noAssignees')}</span>
                   )}
                 </div>
                 {/* Searchable multi-assignee selector */}
@@ -2967,7 +2969,7 @@ export default function TaskDetailModal({
                       value: user.Id,
                       label: `${user.Username}${user.FirstName && user.LastName ? ` (${user.FirstName} ${user.LastName})` : ''}`,
                     }))}
-                    placeholder="Select assignees..."
+                    placeholder={t('lit.selectAssignees')}
                     dropdownMode="portal"
                   />
                 )}
@@ -2977,7 +2979,7 @@ export default function TaskDetailModal({
 
               {showSectionLabels && (isFieldVisible('dueDate') || isFieldVisible('dueDateMandatory') || isFieldVisible('unscheduledWork') || isFieldVisible('estimatedHours') || isFieldVisible('storyPoints')) && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
-                Effort & Completion
+                {t('lit.effortCompletion')}
               </h3>
               )}
               <div className="grid grid-cols-2 gap-3">
@@ -2986,7 +2988,7 @@ export default function TaskDetailModal({
                   {isFieldVisible('dueDate') && (
                   <>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Due Date
+                    {t('lit.dueDate')}
                   </label>
                   <input
                     type="date"
@@ -3004,7 +3006,7 @@ export default function TaskDetailModal({
                       onChange={(e) => setFormData({ ...formData, dueDateMandatory: e.target.checked })}
                       className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                     />
-                    Due date is mandatory for planning
+                    {t('lit.dueDateIsMandatoryForPlanning')}
                   </label>
                   )}
                   {isFieldVisible('unscheduledWork') && (
@@ -3015,7 +3017,7 @@ export default function TaskDetailModal({
                       onChange={(e) => setFormData({ ...formData, unscheduledWork: e.target.checked })}
                       className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                     />
-                    Unscheduled work (show in Planner today)
+                    {t('lit.unscheduledWorkShowInPlannerToday')}
                   </label>
                   )}
                 </div>
@@ -3039,7 +3041,7 @@ export default function TaskDetailModal({
                     className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white ${
                       hasSubtasks ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75' : 'bg-white dark:bg-gray-700'
                     }`}
-                    placeholder="e.g., 4.5"
+                    placeholder={t('lit.eG45')}
                   />
                 </div>
                 )}
@@ -3047,7 +3049,7 @@ export default function TaskDetailModal({
                 {showTaskHourlyRate && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Hourly rate
+                    {t('lit.hourlyRate')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2 text-gray-500 dark:text-gray-400">$</span>
@@ -3062,7 +3064,7 @@ export default function TaskDetailModal({
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Optional override for this task. Falls back to project rate, then user rate.
+                    {t('lit.optionalOverrideForThisTaskFallsBackToProjectRateThenUserRate')}
                   </p>
                 </div>
                 )}
@@ -3070,7 +3072,7 @@ export default function TaskDetailModal({
                 {isFieldVisible('storyPoints') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Story Points
+                    {t('lit.storyPoints')}
                   </label>
                   <input
                     type="number"
@@ -3079,7 +3081,7 @@ export default function TaskDetailModal({
                     value={formData.storyPoints || ''}
                     onChange={(e) => setFormData({ ...formData, storyPoints: e.target.value ? parseFloat(e.target.value) : undefined })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="e.g., 3"
+                    placeholder={t('lit.eG3')}
                   />
                 </div>
                 )}
@@ -3088,23 +3090,23 @@ export default function TaskDetailModal({
               {/* Application */}
               {showSectionLabels && ((applications.length > 0 && isFieldVisible('application')) || (formData.applicationId && applicationVersions.length > 0 && isFieldVisible('releaseVersion'))) && (
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
-                  Release Tracking
+                  {t('lit.releaseTracking')}
                 </h3>
               )}
               {applications.length > 0 && isFieldVisible('application') && (
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Application (Optional)
+                      {t('lit.applicationOptional')}
                     </label>
                     {typeof formData.applicationId === 'number' && formData.applicationId > 0 && (
                       <button
                         type="button"
                         onClick={() => router.push(`/applications/${formData.applicationId}`)}
                         className="inline-flex h-7 items-center gap-1 rounded-md bg-indigo-100 px-2 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
-                        title="Open application page"
+                        title={t('lit.openApplicationPage')}
                       >
-                        Open application
+                        {t('lit.openApplication')}
                         <span aria-hidden>↗</span>
                       </button>
                     )}
@@ -3118,8 +3120,8 @@ export default function TaskDetailModal({
                       else setApplicationVersions([]);
                     }}
                     options={applications.map(a => ({ value: a.Id, label: a.Name }))}
-                    placeholder="Select application..."
-                    emptyText="No application"
+                    placeholder={t('lit.selectApplication')}
+                    emptyText={t('lit.noApplication')}
                   />
                 </div>
               )}
@@ -3128,7 +3130,7 @@ export default function TaskDetailModal({
               {formData.applicationId && applicationVersions.length > 0 && isFieldVisible('releaseVersion') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Release Version (Optional)
+                    {t('lit.releaseVersionOptional')}
                   </label>
                   <SearchableSelectComponent
                     value={formData.releaseVersionId?.toString() ?? ''}
@@ -3137,11 +3139,11 @@ export default function TaskDetailModal({
                       value: v.Id,
                       label: `${v.VersionNumber}${v.VersionName ? ` – ${v.VersionName}` : ''} (${v.Status})`
                     }))}
-                    placeholder="Select version..."
-                    emptyText="Not yet released"
+                    placeholder={t('lit.selectVersion')}
+                    emptyText={t('lit.notYetReleased')}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    The version in which this task was or will be released
+                    {t('lit.theVersionInWhichThisTaskWasOrWillBeReleased')}
                   </p>
                 </div>
               )}
@@ -3163,8 +3165,8 @@ export default function TaskDetailModal({
             !task?.Id ? (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-6 text-center">
                 <div className="text-3xl mb-2">✅</div>
-                <p className="text-gray-700 dark:text-gray-300 font-medium">Checklist will be available after creating the task.</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create the task first, then add checklist items in this tab.</p>
+                <p className="text-gray-700 dark:text-gray-300 font-medium">{t('lit.checklistWillBeAvailableAfterCreatingTheTask')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.createTheTaskFirstThenAddChecklistItemsInThisTab')}</p>
               </div>
             ) : (
             <div className="space-y-4">
@@ -3233,7 +3235,7 @@ export default function TaskDetailModal({
                         } catch (err) { console.error('Failed to delete checklist item:', err); }
                       }}
                       className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-sm transition-opacity ml-2"
-                      title="Delete item"
+                      title={t('lit.deleteItem')}
                     >
                       ✕
                     </button>
@@ -3266,7 +3268,7 @@ export default function TaskDetailModal({
                       finally { setAddingChecklist(false); }
                     }
                   }}
-                  placeholder="Add checklist item (press Enter)"
+                  placeholder={t('lit.addChecklistItemPressEnter')}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                 />
                 <button
@@ -3290,15 +3292,15 @@ export default function TaskDetailModal({
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  {addingChecklist ? '...' : 'Add'}
+                  {addingChecklist ? '...' : t('common.add')}
                 </button>
               </div>
 
               {checklists.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <div className="text-4xl mb-2">✅</div>
-                  <p>No checklist items yet.</p>
-                  <p className="text-sm mt-1">Add items above to track sub-steps.</p>
+                  <p>{t('lit.noChecklistItemsYet')}</p>
+                  <p className="text-sm mt-1">{t('lit.addItemsAboveToTrackSubSteps')}</p>
                 </div>
               )}
             </div>
@@ -3312,20 +3314,20 @@ export default function TaskDetailModal({
 
                 {showSectionLabels && (isFieldVisible('parentTask') || isFieldVisible('dependsOn')) && (
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 pt-2">
-                  Plan & Dependencies
+                  {t('lit.planDependencies')}
                 </h3>
                 )}
                 {isFieldVisible('parentTask') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Parent Task (Optional)
+                    {t('lit.parentTaskOptional')}
                   </label>
                   <TaskDetailSearchableSelect
                     value={typeof formData.parentTaskId === 'number' ? formData.parentTaskId : undefined}
                     onChange={(value) => setFormData({ ...formData, parentTaskId: value })}
                     options={getAvailableParentTasks()}
-                    placeholder="No Parent (Top-level task)"
-                    emptyMessage="No tasks available"
+                    placeholder={t('lit.noParentTopLevelTask')}
+                    emptyMessage={t('lit.noTasksAvailable')}
                   />
                 </div>
                 )}
@@ -3333,14 +3335,14 @@ export default function TaskDetailModal({
                 {isFieldVisible('dependsOn') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Depends On (Optional)
+                    {t('lit.dependsOnOptional')}
                   </label>
                   <TaskDetailSearchableSelect
                     value={typeof formData.dependsOnTaskId === 'number' ? formData.dependsOnTaskId : undefined}
                     onChange={(value) => setFormData({ ...formData, dependsOnTaskId: value })}
                     options={getAvailableDependencyTasks()}
-                    placeholder="No dependency"
-                    emptyMessage="No tasks available"
+                    placeholder={t('lit.noDependency')}
+                    emptyMessage={t('lit.noTasksAvailable')}
                   />
                 </div>
                 )}
@@ -3355,7 +3357,7 @@ export default function TaskDetailModal({
               />
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  All Hours sections are hidden for this organization.
+                  {t('lit.allHoursSectionsAreHiddenForThisOrganization')}
                 </p>
               )}
 
@@ -3363,23 +3365,23 @@ export default function TaskDetailModal({
                 <div className="space-y-4">
               {showSectionLabels && (isFieldVisible('parentTask') || isFieldVisible('dependsOn')) && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-                Plan & Dependencies
+                {t('lit.planDependencies')}
               </h3>
               )}
               {isFieldVisible('parentTask') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Parent Task (Optional)
+                  {t('lit.parentTaskOptional')}
                 </label>
                 <TaskDetailSearchableSelect
                   value={typeof formData.parentTaskId === 'number' ? formData.parentTaskId : undefined}
                   onChange={(value) => setFormData({ ...formData, parentTaskId: value })}
                   options={getAvailableParentTasks()}
-                  placeholder="No Parent (Top-level task)"
-                  emptyMessage="No tasks available"
+                  placeholder={t('lit.noParentTopLevelTask')}
+                  emptyMessage={t('lit.noTasksAvailable')}
                 />
                 <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  Select a parent task to create a subtask (supports multi-level hierarchy)
+                  {t('lit.selectAParentTaskToCreateASubtaskSupportsMultiLevelHierarchy')}
                 </p>
               </div>
               )}
@@ -3387,17 +3389,17 @@ export default function TaskDetailModal({
               {isFieldVisible('dependsOn') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Depends On (Optional)
+                  {t('lit.dependsOnOptional')}
                 </label>
                 <TaskDetailSearchableSelect
                   value={typeof formData.dependsOnTaskId === 'number' ? formData.dependsOnTaskId : undefined}
                   onChange={(value) => setFormData({ ...formData, dependsOnTaskId: value })}
                   options={getAvailableDependencyTasks()}
-                  placeholder="No dependency"
-                  emptyMessage="No tasks available"
+                  placeholder={t('lit.noDependency')}
+                  emptyMessage={t('lit.noTasksAvailable')}
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  This task cannot start until the selected task is completed
+                  {t('lit.thisTaskCannotStartUntilTheSelectedTaskIsCompleted')}
                 </p>
               </div>
               )}
@@ -3405,14 +3407,14 @@ export default function TaskDetailModal({
               {isFieldVisible('childTasks') && (
               <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Child Tasks</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.childTasks')}</h4>
                   {hasAnyChildren ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
                       {childTasks.length > 0 ? childTasks.length : '1+'} child task{childTasks.length === 1 ? '' : 's'}
                     </span>
                   ) : (
                     <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium">
-                      No child tasks
+                      {t('lit.noChildTasks')}
                     </span>
                   )}
                 </div>
@@ -3426,27 +3428,27 @@ export default function TaskDetailModal({
                         onClick={() => onOpenTask?.(child)}
                         disabled={!onOpenTask}
                         className={`w-full px-3 py-2 flex items-center justify-between gap-3 text-left ${onOpenTask ? 'hover:bg-gray-50 dark:hover:bg-gray-700/40 cursor-pointer' : 'cursor-default'}`}
-                        title={onOpenTask ? 'Open task details' : undefined}
+                        title={onOpenTask ? t('lit.openTaskDetails') : undefined}
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{child.TaskName}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {child.EstimatedHours ? decimalHoursToHMS(Number(child.EstimatedHours)) : 'No estimate'}
+                            {child.EstimatedHours ? decimalHoursToHMS(Number(child.EstimatedHours)) : t('lit.noEstimate')}
                           </p>
                         </div>
                         <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 shrink-0">
-                          {child.StatusName || 'Unknown status'}
+                          {child.StatusName || t('lit.unknownStatus')}
                         </span>
                       </button>
                     ))}
                   </div>
                 ) : hasAnyChildren ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    This task has child tasks, but the current context has no visible child-task list.
+                    {t('lit.thisTaskHasChildTasksButTheCurrentContextHasNoVisibleChildTaskList')}
                   </p>
                 ) : (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    No child tasks are linked to this task.
+                    {t('lit.noChildTasksAreLinkedToThisTask')}
                   </p>
                 )}
               </div>
@@ -3459,7 +3461,7 @@ export default function TaskDetailModal({
               {hoursSubTab === 'allocations' && showHoursAllocationsSubTab && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Planned Allocations</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.plannedAllocations')}</h3>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     {!hasChildren && canShowAddManualAllocation && (
                       <button
@@ -3474,17 +3476,17 @@ export default function TaskDetailModal({
                         className="inline-flex h-9 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                       >
                         <span>+</span>
-                        <span>Add Manual Allocation</span>
+                        <span>{t('lit.addManualAllocation')}</span>
                       </button>
                     )}
                     {showRemovePlanning && taskAllocations.length > 0 && onRemovePlanning && (
                       <button
                         onClick={onRemovePlanning}
                         className="inline-flex h-9 items-center gap-1.5 rounded-md bg-red-600 px-3 text-sm font-medium text-white transition-colors hover:bg-red-700"
-                        title="Remove all planned allocations for this task"
+                        title={t('lit.removeAllPlannedAllocationsForThisTask')}
                       >
                         <span>🗑️</span>
-                        <span>Remove Planning</span>
+                        <span>{t('lit.removePlanning')}</span>
                       </button>
                     )}
                   </div>
@@ -3496,7 +3498,7 @@ export default function TaskDetailModal({
                         <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Allocation Period:</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('lit.allocationPeriod')}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded font-medium">
@@ -3517,7 +3519,7 @@ export default function TaskDetailModal({
                         <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Baseline:</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('lit.baseline')}</span>
                       </div>
                       {task?.BaselineStartDate && task?.BaselineEndDate ? (
                         <div className="flex items-center gap-2 text-sm">
@@ -3533,15 +3535,15 @@ export default function TaskDetailModal({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-400 dark:text-gray-500 italic">Not set</span>
+                        <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('lit.notSet')}</span>
                       )}
                     </div>
                   </div>
                 )}
                 {loadingData ? (
-                  <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.loading2')}</p>
                 ) : taskAllocations.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">No allocations found.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.noAllocationsFound2')}</p>
                 ) : (
                   <>
                     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
@@ -3549,14 +3551,14 @@ export default function TaskDetailModal({
                         <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
                             <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"></th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Header ID</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date Range</th>
-                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Days</th>
-                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.headerId')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.user')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.dateRange')}</th>
+                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.days')}</th>
+                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.hours')}</th>
                             {!hasChildren && (
                               <th scope="col" className="relative px-5 py-3">
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">{t('common.actions')}</span>
                               </th>
                             )}
                           </tr>
@@ -3581,8 +3583,8 @@ export default function TaskDetailModal({
                                         });
                                       }}
                                       className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded"
-                                      title={isExpanded ? 'Collapse days' : 'Expand days'}
-                                      aria-label={isExpanded ? 'Collapse days' : 'Expand days'}
+                                      title={isExpanded ? t('lit.collapseDays') : t('lit.expandDays')}
+                                      aria-label={isExpanded ? t('lit.collapseDays') : t('lit.expandDays')}
                                     >
                                       <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -3590,7 +3592,7 @@ export default function TaskDetailModal({
                                     </button>
                                   </td>
                                   <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                                    {group.headerId !== null ? `#${group.headerId}` : 'No header'}
+                                    {group.headerId !== null ? `#${group.headerId}` : t('lit.noHeader')}
                                   </td>
                                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                     {group.userName}
@@ -3653,8 +3655,8 @@ export default function TaskDetailModal({
                                                 mode: 'edit'
                                               })}
                                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
-                                              title="Edit"
-                                              aria-label="Edit"
+                                              title={t('common.edit')}
+                                              aria-label={t('common.edit')}
                                             >
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
@@ -3663,8 +3665,8 @@ export default function TaskDetailModal({
                                             <button
                                               onClick={() => handleDeleteManualAllocation(singleManualAllocation.Id!)}
                                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
-                                              title="Delete"
-                                              aria-label="Delete"
+                                              title={t('common.delete')}
+                                              aria-label={t('common.delete')}
                                             >
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -3672,9 +3674,9 @@ export default function TaskDetailModal({
                                             </button>
                                           </div>
                                         ) : summary.allocations.some((allocation) => allocation.IsManual === 1) ? (
-                                          <span className="text-gray-400 dark:text-gray-600 text-xs">Grouped</span>
+                                          <span className="text-gray-400 dark:text-gray-600 text-xs">{t('lit.grouped')}</span>
                                         ) : (
-                                          <span className="text-gray-400 dark:text-gray-600 text-xs">Auto</span>
+                                          <span className="text-gray-400 dark:text-gray-600 text-xs">{t('lit.auto')}</span>
                                         )}
                                       </td>
                                     )}
@@ -3696,7 +3698,7 @@ export default function TaskDetailModal({
                           disabled={safeAllocationsPage === 1}
                           className="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          Previous
+                          {t('common.previous')}
                         </button>
                         <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[5rem] text-center">
                           {safeAllocationsPage} / {allocationsTotalPages}
@@ -3706,7 +3708,7 @@ export default function TaskDetailModal({
                           disabled={safeAllocationsPage >= allocationsTotalPages}
                           className="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          Next
+                          {t('common.next')}
                         </button>
                       </div>
                     </div>
@@ -3718,21 +3720,21 @@ export default function TaskDetailModal({
               {/* Time Entries */}
               {hoursSubTab === 'time' && showHoursTimeSubTab && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Time Entries</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.timeEntries')}</h3>
                 {loadingData ? (
-                  <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.loading2')}</p>
                 ) : timeEntries.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">No time entries found.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.noTimeEntriesFound2')}</p>
                 ) : (
                   <>
                     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
-                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Description</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.date')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.user')}</th>
+                            <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.hours')}</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.description')}</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -3765,7 +3767,7 @@ export default function TaskDetailModal({
                           disabled={safeTimeEntriesPage === 1}
                           className="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          Previous
+                          {t('common.previous')}
                         </button>
                         <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[5rem] text-center">
                           {safeTimeEntriesPage} / {timeEntriesTotalPages}
@@ -3775,7 +3777,7 @@ export default function TaskDetailModal({
                           disabled={safeTimeEntriesPage >= timeEntriesTotalPages}
                           className="px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          Next
+                          {t('common.next')}
                         </button>
                       </div>
                     </div>
@@ -3795,22 +3797,22 @@ export default function TaskDetailModal({
                 <RichTextEditor
                   content={newComment}
                   onChange={setNewComment}
-                  placeholder="Write a comment..."
+                  placeholder={t('lit.writeAComment')}
                 />
                 <button
                   type="submit"
                   disabled={submittingComment || !newComment.trim()}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  {submittingComment ? 'Posting...' : 'Post'}
+                  {submittingComment ? 'Posting...' : t('lit.post2')}
                 </button>
               </form>
 
               {/* Comments List */}
               {loadingData ? (
-                <p className="text-gray-500 dark:text-gray-400">Loading comments...</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingComments')}</p>
               ) : taskComments.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No comments yet. Be the first to comment!</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noCommentsYetBeTheFirstToComment')}</p>
               ) : (
                 <div className="space-y-4">
                   {taskComments.map((comment) => (
@@ -3827,7 +3829,7 @@ export default function TaskDetailModal({
                           <button
                             onClick={() => handleDeleteComment(comment.Id)}
                             className="text-gray-400 hover:text-red-500 transition-colors"
-                            title="Delete comment"
+                            title={t('lit.deleteComment')}
                           >
                             🗑️
                           </button>
@@ -3850,8 +3852,8 @@ export default function TaskDetailModal({
             !task?.Id ? (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-6 text-center">
                 <div className="text-3xl mb-2">📎</div>
-                <p className="text-gray-700 dark:text-gray-300 font-medium">Files tab is ready.</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create the task first to upload attachments.</p>
+                <p className="text-gray-700 dark:text-gray-300 font-medium">{t('lit.filesTabIsReady')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.createTheTaskFirstToUploadAttachments')}</p>
               </div>
             ) : (
             <div className="space-y-4">
@@ -3872,9 +3874,9 @@ export default function TaskDetailModal({
 
               {/* Attachments List */}
               {loadingData ? (
-                <p className="text-gray-500 dark:text-gray-400">Loading attachments...</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingAttachments')}</p>
               ) : taskAttachments.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No attachments yet.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noAttachmentsYet2')}</p>
               ) : (
                 <div className="space-y-3">
                   {taskAttachments.map((attachment) => {
@@ -3895,7 +3897,7 @@ export default function TaskDetailModal({
                             <button
                               onClick={() => handlePreviewAttachment(attachment.Id)}
                               className="p-1 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
-                              title="Preview"
+                              title={t('lit.preview')}
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -3906,7 +3908,7 @@ export default function TaskDetailModal({
                           <button
                             onClick={() => handleDownloadAttachment(attachment.Id)}
                             className="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                            title="Download"
+                            title={t('common.download')}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -3916,7 +3918,7 @@ export default function TaskDetailModal({
                           <button
                             onClick={() => handleDeleteAttachment(attachment.Id)}
                             className="p-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                            title="Delete"
+                            title={t('common.delete')}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -3939,7 +3941,7 @@ export default function TaskDetailModal({
               {task?.CreatorName && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">Created by:</span> {task.CreatorName}
+                    <span className="font-medium">{t('lit.createdBy3')}</span> {task.CreatorName}
                     <span className="text-gray-500 dark:text-gray-400 ml-2">
                       on {new Date(task.CreatedAt).toLocaleDateString()}
                     </span>
@@ -3947,9 +3949,9 @@ export default function TaskDetailModal({
                 </div>
               )}
               {loadingData ? (
-                <p className="text-gray-500 dark:text-gray-400">Loading history...</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingHistory')}</p>
               ) : taskHistory.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No history available.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noHistoryAvailable2')}</p>
               ) : (
                 <div className="space-y-3">
                   {taskHistory.map((entry) => (
@@ -3978,7 +3980,7 @@ export default function TaskDetailModal({
                           {entry.Action === 'created' && 'Created this task'}
                           {entry.Action === 'updated' && entry.FieldName && (
                             <>
-                              Changed <span className="font-medium">{getFieldLabel(entry.FieldName)}</span>
+                              {t('lit.changed')} <span className="font-medium">{getFieldLabel(entry.FieldName)}</span>
                               {entry.OldValue && entry.NewValue && (
                                 <>
                                   {' '}from <span className="text-red-600 dark:text-red-400 line-through">{entry.OldValue}</span>
@@ -4012,7 +4014,7 @@ export default function TaskDetailModal({
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Linked commits</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.linkedCommits')}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     Matches messages containing Task #{task.Id}
                     {(task.GitHubIssueNumber || task.GiteaIssueNumber)
@@ -4031,19 +4033,19 @@ export default function TaskDetailModal({
                   {commitsLoading
                     ? 'Loading…'
                     : commitsFetched
-                      ? 'Refresh'
-                      : 'Load commits'}
+                      ? t('lit.refresh')
+                      : t('lit.loadCommits')}
                 </button>
               </div>
 
               {!commitsFetched && !commitsLoading && (
                 <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  Click <span className="font-medium text-gray-700 dark:text-gray-200">Load commits</span> to fetch matching remote commits.
+                  {t('lit.click')} <span className="font-medium text-gray-700 dark:text-gray-200">{t('lit.loadCommits')}</span> {t('lit.toFetchMatchingRemoteCommits')}
                 </p>
               )}
 
               {commitsLoading && (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">Searching commit history…</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.searchingCommitHistory')}</p>
               )}
 
               {commitsError && !commitsLoading && (
@@ -4054,7 +4056,7 @@ export default function TaskDetailModal({
 
               {commitsFetched && !commitsLoading && !commitsError && taskCommits.length === 0 && (
                 <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  No matching commits found in the recent history scanned.
+                  {t('lit.noMatchingCommitsFoundInTheRecentHistoryScanned')}
                 </p>
               )}
 
@@ -4104,7 +4106,7 @@ export default function TaskDetailModal({
                             />
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {c.author || 'Unknown author'}
+                            {c.author || t('lit.unknownAuthor')}
                             {c.date ? ` · ${new Date(c.date).toLocaleString()}` : ''}
                           </div>
                         </div>
@@ -4115,7 +4117,7 @@ export default function TaskDetailModal({
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                           >
-                            Open
+                            {t('common.open')}
                           </a>
                         )}
                       </div>
@@ -4134,7 +4136,7 @@ export default function TaskDetailModal({
               onClick={onClose}
               className="flex-1 h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             {canSaveTask && (
               <button
@@ -4143,7 +4145,7 @@ export default function TaskDetailModal({
                 disabled={isLoading}
                 className="flex-1 h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white transition-colors"
               >
-                {isLoading ? 'Saving...' : task?.Id ? 'Update Task' : 'Create Task'}
+                {isLoading ? t('lit.saving') : task?.Id ? t('lit.updateTask') : t('lit.createTask')}
               </button>
             )}
           </div>
@@ -4156,14 +4158,14 @@ export default function TaskDetailModal({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                {manualAllocationModal.mode === 'add' ? 'Add Manual Allocation' : 'Edit Manual Allocation'}
+                {manualAllocationModal.mode === 'add' ? t('lit.addManualAllocation') : t('lit.editManualAllocation')}
               </h3>
               
               <div className="space-y-4">
                 {/* User */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    User *
+                    {t('lit.user')}
                   </label>
                   <TaskDetailSearchableSelect
                     value={typeof manualAllocationModal.userId === 'number' ? manualAllocationModal.userId : undefined}
@@ -4175,15 +4177,15 @@ export default function TaskDetailModal({
                       id: user.Id,
                       label: `${user.FirstName} ${user.LastName} (${user.Username})`,
                     }))}
-                    placeholder="Select user..."
-                    emptyMessage="No users available"
+                    placeholder={t('lit.selectUser3')}
+                    emptyMessage={t('lit.noUsersAvailable')}
                   />
                 </div>
 
                 {/* Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Date *
+                    {t('lit.date')}
                   </label>
                   <input
                     type="date"
@@ -4196,7 +4198,7 @@ export default function TaskDetailModal({
                 {/* Hours */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Hours *
+                    {t('lit.hours')}
                   </label>
                   <input
                     type="number"
@@ -4225,13 +4227,13 @@ export default function TaskDetailModal({
                   })}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveManualAllocation}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                 >
-                  {manualAllocationModal.mode === 'add' ? 'Add' : 'Save'}
+                  {manualAllocationModal.mode === 'add' ? t('common.add') : t('common.save')}
                 </button>
               </div>
             </div>
@@ -4244,22 +4246,22 @@ export default function TaskDetailModal({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                {moveTaskModal.mode === 'existing' ? 'Move Task to Project' : 'Create Project and Move Task'}
+                {moveTaskModal.mode === 'existing' ? t('lit.moveTaskToProject2') : t('lit.createProjectAndMoveTask2')}
               </h3>
 
               {loadingMoveMetadata ? (
-                <div className="text-sm text-gray-500 dark:text-gray-400">Loading options...</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.loadingOptions')}</div>
               ) : moveTaskModal.mode === 'existing' ? (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    This will move the selected task and all its subtasks.
+                    {t('lit.thisWillMoveTheSelectedTaskAndAllItsSubtasks')}
                   </p>
                   <TaskDetailSearchableSelect
                     value={moveTargetProjectId}
                     onChange={setMoveTargetProjectId}
                     options={availableMoveProjects.map((entry) => ({ id: entry.Id, label: entry.ProjectName }))}
-                    placeholder="Select target project..."
-                    emptyMessage="No projects available"
+                    placeholder={t('lit.selectTargetProject')}
+                    emptyMessage={t('lit.noProjectsAvailable')}
                   />
                 </div>
               ) : (
@@ -4269,14 +4271,14 @@ export default function TaskDetailModal({
                   </p>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      New Project Name
+                      {t('lit.newProjectName')}
                     </label>
                     <input
                       type="text"
                       value={newProjectNameForMove}
                       onChange={(e) => setNewProjectNameForMove(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="Enter project name"
+                      placeholder={t('lit.enterProjectName')}
                     />
                   </div>
                 </div>
@@ -4289,7 +4291,7 @@ export default function TaskDetailModal({
                   disabled={isMovingTask}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -4297,7 +4299,7 @@ export default function TaskDetailModal({
                   disabled={isMovingTask || loadingMoveMetadata}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white transition-colors"
                 >
-                  {isMovingTask ? 'Moving...' : 'Confirm'}
+                  {isMovingTask ? 'Moving...' : t('lit.confirm')}
                 </button>
               </div>
             </div>
@@ -4321,7 +4323,7 @@ export default function TaskDetailModal({
                   onClick={() => setModalMessage(null)}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                 >
-                  OK
+                  {t('common.ok')}
                 </button>
               </div>
             </div>
@@ -4345,7 +4347,7 @@ export default function TaskDetailModal({
                   onClick={() => setModalMessage(null)}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -4356,7 +4358,7 @@ export default function TaskDetailModal({
                   disabled={isDeleting}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white transition-colors"
                 >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? 'Deleting...' : t('common.delete')}
                 </button>
               </div>
             </div>
@@ -4380,14 +4382,14 @@ export default function TaskDetailModal({
                   disabled={isDeleting}
                   className="w-full h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-70 text-gray-900 dark:text-white transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => modalMessage.onDeleteOnly()}
                   disabled={isDeleting}
                   className="w-full h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white transition-colors"
                 >
-                  {isDeleting ? 'Deleting...' : 'Delete Only This Task'}
+                  {isDeleting ? 'Deleting...' : t('lit.deleteOnlyThisTask')}
                 </button>
                 <button
                   onClick={() => modalMessage.onDeleteWithSubtasks()}

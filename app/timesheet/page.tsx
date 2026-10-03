@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 
@@ -80,6 +81,8 @@ interface ResumeByUserRow {
 }
 
 export default function TimesheetPage() {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { user, isLoading, token } = useAuth();
   const { permissions } = usePermissions();
@@ -322,7 +325,7 @@ export default function TimesheetPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load resume summary');
+        throw new Error(t('lit.failedToLoadResumeSummary'));
       }
 
       const data = await response.json();
@@ -558,7 +561,7 @@ export default function TimesheetPage() {
       );
 
       if (response.ok) {
-        setMessage('Time entry created successfully!');
+        setMessage(t('lit.timeEntryCreatedSuccessfully'));
         setNewEntry({
           taskId: '',
           workDate: new Date().toISOString().split('T')[0],
@@ -572,7 +575,7 @@ export default function TimesheetPage() {
         setTimeout(() => setMessage(''), 3000);
       } else {
         const data = await response.json();
-        const errorMessage = data.message || 'Failed to create time entry';
+        const errorMessage = data.message || t('lit.failedToCreateTimeEntry');
         setMessage(errorMessage);
         if (entryValues) {
           throw new Error(errorMessage);
@@ -580,7 +583,7 @@ export default function TimesheetPage() {
       }
     } catch (err) {
       console.error('Failed to create time entry:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create time entry';
+      const errorMessage = err instanceof Error ? err.message : t('lit.failedToCreateTimeEntry');
       setMessage(errorMessage);
       if (entryValues) {
         throw err instanceof Error ? err : new Error(errorMessage);
@@ -630,7 +633,7 @@ export default function TimesheetPage() {
     }
 
     if (!editEntry.workDate || hours <= 0) {
-      setMessage('Please fill all required fields (hours must be greater than 0)');
+      setMessage(t('lit.pleaseFillAllRequiredFieldsHoursMustBeGreaterThan0'));
       setTimeout(() => setMessage(''), 3000);
       return;
     }
@@ -656,7 +659,7 @@ export default function TimesheetPage() {
       );
 
       if (response.ok) {
-        setMessage('Time entry updated successfully!');
+        setMessage(t('lit.timeEntryUpdatedSuccessfully'));
         setEditingEntry(null);
         setShowEditModal(false);
         setEditEntry({
@@ -671,12 +674,12 @@ export default function TimesheetPage() {
         loadTimeEntries();
         setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage('Failed to update time entry');
+        setMessage(t('lit.failedToUpdateTimeEntry'));
         setTimeout(() => setMessage(''), 3000);
       }
     } catch (error) {
       console.error('Error updating time entry:', error);
-      setMessage('Error updating time entry');
+      setMessage(t('lit.errorUpdatingTimeEntry'));
       setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -712,13 +715,13 @@ export default function TimesheetPage() {
           );
 
           if (response.ok) {
-            setMessage('Time entry deleted successfully!');
+            setMessage(t('lit.timeEntryDeletedSuccessfully'));
             loadTimeEntries();
             setTimeout(() => setMessage(''), 3000);
           }
         } catch (err) {
           console.error('Failed to delete time entry:', err);
-          setMessage('Failed to delete time entry');
+          setMessage(t('lit.failedToDeleteTimeEntry'));
         }
       }
     );
@@ -911,7 +914,7 @@ export default function TimesheetPage() {
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       console.error('Failed to save weekly hours:', err);
-      setMessage('Failed to save time entries');
+      setMessage(t('lit.failedToSaveTimeEntries'));
     } finally {
       setIsSaving(false);
     }
@@ -938,9 +941,9 @@ export default function TimesheetPage() {
         <main className="w-full mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 sm:px-0 space-y-4">
             <div>
-              <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">Timesheet</h1>
+              <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('nav.timesheet')}</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Track your hours and review your time entries.
+                {t('lit.trackYourHoursAndReviewYourTimeEntries')}
               </p>
             </div>
 
@@ -978,7 +981,7 @@ export default function TimesheetPage() {
                       <div className="mb-4">
                         <div className="flex items-center justify-between gap-3">
                           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            My Time Entries
+                            {t('lit.myTimeEntries')}
                           </h2>
                           {permissions?.canManageTimeEntries && (
                             <button
@@ -990,7 +993,7 @@ export default function TimesheetPage() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Showing entries from the last 8 days
+                          {t('lit.showingEntriesFromTheLast8Days')}
                         </p>
                       </div>
 
@@ -1020,31 +1023,31 @@ export default function TimesheetPage() {
                           <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Date
+                                {t('common.date')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Project
+                                {t('common.project')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Task
+                                {t('common.task')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Start
+                                {t('lit.start')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                End
+                                {t('lit.end')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Hours
+                                {t('common.hours')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Description
+                                {t('common.description')}
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Status
+                                {t('common.status')}
                               </th>
                               <th scope="col" className="relative px-6 py-3">
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">{t('common.actions')}</span>
                               </th>
                             </tr>
                           </thead>
@@ -1052,7 +1055,7 @@ export default function TimesheetPage() {
                             {recentEntries.length === 0 ? (
                               <tr>
                                 <td colSpan={9} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                  No time entries in the last 8 days. Add your first entry above!
+                                  {t('lit.noTimeEntriesInTheLast8DaysAddYourFirstEntryAbove')}
                                 </td>
                               </tr>
                             ) : (
@@ -1085,13 +1088,13 @@ export default function TimesheetPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                       {entry.ApprovalStatus === 'approved' && !entry.IsHobby && !autoApproveTimeEntries ? (
-                                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">Locked</span>
+                                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">{t('lit.locked')}</span>
                                       ) : permissions?.canManageTimeEntries ? (
                                         <div className="flex items-center justify-end gap-1">
                                           <button
                                             onClick={() => handleEditTimeEntry(entry)}
-                                            title="Edit entry"
-                                            aria-label="Edit entry"
+                                            title={t('lit.editEntry')}
+                                            aria-label={t('lit.editEntry')}
                                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                                           >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1100,8 +1103,8 @@ export default function TimesheetPage() {
                                           </button>
                                           <button
                                             onClick={() => handleDeleteTimeEntry(entry.Id)}
-                                            title="Delete entry"
-                                            aria-label="Delete entry"
+                                            title={t('lit.deleteEntry')}
+                                            aria-label={t('lit.deleteEntry')}
                                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                                           >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1123,7 +1126,7 @@ export default function TimesheetPage() {
                         <div className="mt-4 px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 rounded-b-lg">
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Total Hours (last 8 days):
+                              {t('lit.totalHoursLast8Days')}
                             </span>
                             <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                               {decimalHoursToHMS(recentEntries.reduce((sum, entry) => sum + parseFloat(entry.Hours as any), 0))}
@@ -1145,7 +1148,7 @@ export default function TimesheetPage() {
                     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                          Weekly Timesheet
+                          {t('lit.weeklyTimesheet')}
                         </h2>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {getWeekLabel()}
@@ -1163,13 +1166,13 @@ export default function TimesheetPage() {
                           disabled={currentWeekOffset === 0}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                         >
-                          Current Week
+                          {t('lit.currentWeek')}
                         </button>
                         <button
                           onClick={() => setCurrentWeekOffset(prev => prev + 1)}
                           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                         >
-                          Next Week →
+                          {t('lit.nextWeek')}
                         </button>
                       </div>
                     </div>
@@ -1232,7 +1235,7 @@ export default function TimesheetPage() {
                       if (tasksForWeek.length === 0) {
                         return (
                           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                            No tasks allocated or with time entries for this week.
+                            {t('lit.noTasksAllocatedOrWithTimeEntriesForThisWeek')}
                           </div>
                         );
                       }
@@ -1244,7 +1247,7 @@ export default function TimesheetPage() {
                               <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0">
                                 <tr>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
-                                    Task
+                                    {t('common.task')}
                                   </th>
                                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
                                     const weekDates = getCurrentWeekDates();
@@ -1278,7 +1281,7 @@ export default function TimesheetPage() {
                                     );
                                   })}
                                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Total
+                                    {t('common.total')}
                                   </th>
                                 </tr>
                               </thead>
@@ -1513,7 +1516,7 @@ export default function TimesheetPage() {
                               <tfoot className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                   <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
-                                    Daily Total
+                                    {t('lit.dailyTotal')}
                                   </td>
                                   {getCurrentWeekDates().map(date => {
                                     const dayTotal = tasksForWeek.reduce((sum, task) => {
@@ -1574,14 +1577,14 @@ export default function TimesheetPage() {
                               disabled={isSaving || Object.keys(weeklyHours).length === 0}
                               className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                              Cancel Changes
+                              {t('lit.cancelChanges')}
                             </button>
                             <button
                               onClick={handleSaveWeeklyHours}
                               disabled={isSaving || Object.keys(weeklyHours).length === 0}
                               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors font-medium"
                             >
-                              {isSaving ? 'Saving...' : 'Save All Changes'}
+                              {isSaving ? t('lit.saving') : t('lit.saveAllChanges')}
                             </button>
                           </div>
                           )}
@@ -1598,7 +1601,7 @@ export default function TimesheetPage() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                          All Time Entries
+                          {t('lit.allTimeEntries')}
                         </h2>
                         <div className="flex items-center gap-2">
                           <button
@@ -1611,7 +1614,7 @@ export default function TimesheetPage() {
                                 if (historyTaskFilter && entry.TaskId !== parseInt(historyTaskFilter)) return false;
                                 return true;
                               });
-                              const header = ['Date', 'Customer', 'Project', 'Task', 'Start', 'End', 'Hours', 'Description', 'Status'];
+                              const header = [t('lit.date2'), t('lit.customer2'), t('lit.project3'), t('lit.task'), 'Start', 'End', t('lit.hours2'), t('lit.description2'), t('lit.status')];
                               const rows = filtered.map(e => [
                                 normalizeDateString(e.WorkDate),
                                 e.CustomerName || '',
@@ -1649,7 +1652,7 @@ export default function TimesheetPage() {
                                 return true;
                               });
 
-                              const header = ['Date', 'Customer', 'Project', 'Task', 'Start', 'End', 'Hours', 'Description', 'Status'];
+                              const header = [t('lit.date2'), t('lit.customer2'), t('lit.project3'), t('lit.task'), 'Start', 'End', t('lit.hours2'), t('lit.description2'), t('lit.status')];
                               const rows = filtered.map(e => [
                                 normalizeDateString(e.WorkDate),
                                 e.CustomerName || '',
@@ -1664,14 +1667,14 @@ export default function TimesheetPage() {
 
                               try {
                                 await downloadTablePdf({
-                                  title: 'Time Entries',
+                                  title: t('lit.timeEntries'),
                                   filename: `time-entries-${historyDateFrom}-${historyDateTo}`,
                                   headers: header,
                                   rows,
                                 }, token);
                               } catch (error) {
                                 console.error('Error exporting PDF:', error);
-                                setMessage(error instanceof Error ? error.message : 'Failed to export PDF');
+                                setMessage(error instanceof Error ? error.message : t('lit.failedToExportPdf'));
                               }
                             }}
                             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
@@ -1682,7 +1685,7 @@ export default function TimesheetPage() {
                       </div>
                       <CollapsibleFilterPanel
                         className="mb-2"
-                        title="Entry filters"
+                        title={t('lit.entryFilters')}
                         activeCount={historyFilterActiveCount}
                         onClear={() => {
                           setHistoryDateFrom(defaultHistoryDateFrom);
@@ -1695,7 +1698,7 @@ export default function TimesheetPage() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            From
+                            {t('common.from')}
                           </label>
                           <input
                             type="date"
@@ -1706,7 +1709,7 @@ export default function TimesheetPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            To
+                            {t('common.to')}
                           </label>
                           <input
                             type="date"
@@ -1717,14 +1720,14 @@ export default function TimesheetPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Project
+                            {t('common.project')}
                           </label>
                           <select
                             value={historyProjectFilter}
                             onChange={(e) => { setHistoryProjectFilter(e.target.value); setHistoryTaskFilter(''); }}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
-                            <option value="">All Projects</option>
+                            <option value="">{t('lit.allProjects2')}</option>
                             {Array.from(new Set(timeEntries.map(e => e.ProjectName))).sort().map(projectName => (
                               <option key={projectName} value={projectName}>{projectName}</option>
                             ))}
@@ -1732,14 +1735,14 @@ export default function TimesheetPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Task
+                            {t('common.task')}
                           </label>
                           <select
                             value={historyTaskFilter}
                             onChange={(e) => setHistoryTaskFilter(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
-                            <option value="">All Tasks</option>
+                            <option value="">{t('lit.allTasks')}</option>
                             {Array.from(new Set(
                               timeEntries
                                 .filter(e => !historyProjectFilter || e.ProjectName === historyProjectFilter)
@@ -1763,7 +1766,7 @@ export default function TimesheetPage() {
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                           />
                           <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Group by Days
+                            {t('lit.groupByDays')}
                           </span>
                         </label>
                       </div>
@@ -1797,40 +1800,40 @@ export default function TimesheetPage() {
                               <thead className="bg-gray-50 dark:bg-gray-900">
                                 <tr>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Date
+                                    {t('common.date')}
                                   </th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Customer
+                                    {t('common.customer')}
                                   </th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Project
+                                    {t('common.project')}
                                   </th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Task
+                                    {t('common.task')}
                                   </th>
                                   {!groupByDays && (
                                     <>
                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Start
+                                        {t('lit.start')}
                                       </th>
                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        End
+                                        {t('lit.end')}
                                       </th>
                                     </>
                                   )}
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Hours
+                                    {t('common.hours')}
                                   </th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                    Description
+                                    {t('common.description')}
                                   </th>
                                   {!groupByDays && (
                                     <>
                                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Status
+                                        {t('common.status')}
                                       </th>
                                       <th scope="col" className="relative px-6 py-3">
-                                        <span className="sr-only">Actions</span>
+                                        <span className="sr-only">{t('common.actions')}</span>
                                       </th>
                                     </>
                                   )}
@@ -1840,7 +1843,7 @@ export default function TimesheetPage() {
                                 {filteredEntries.length === 0 ? (
                                   <tr>
                                     <td colSpan={groupByDays ? 6 : 10} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                      No time entries found for the selected filters.
+                                      {t('lit.noTimeEntriesFoundForTheSelectedFilters')}
                                     </td>
                                   </tr>
                                 ) : groupByDays ? (
@@ -1986,13 +1989,13 @@ export default function TimesheetPage() {
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         {entry.ApprovalStatus === 'approved' && !entry.IsHobby && !autoApproveTimeEntries ? (
-                                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">Locked</span>
+                                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">{t('lit.locked')}</span>
                                         ) : permissions?.canManageTimeEntries ? (
                                           <div className="flex items-center justify-end gap-1">
                                             <button
                                               onClick={() => handleEditTimeEntry(entry)}
-                                              title="Edit entry"
-                                              aria-label="Edit entry"
+                                              title={t('lit.editEntry')}
+                                              aria-label={t('lit.editEntry')}
                                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                                             >
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2001,8 +2004,8 @@ export default function TimesheetPage() {
                                             </button>
                                             <button
                                               onClick={() => handleDeleteTimeEntry(entry.Id)}
-                                              title="Delete entry"
-                                              aria-label="Delete entry"
+                                              title={t('lit.deleteEntry')}
+                                              aria-label={t('lit.deleteEntry')}
                                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                                             >
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2044,11 +2047,11 @@ export default function TimesheetPage() {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">📋 User Time Resume</h3>
                         <div className="flex flex-wrap items-center gap-2">
                           {([
-                            { key: 'thisWeek', label: 'This Week' },
-                            { key: 'lastWeek', label: 'Last Week' },
-                            { key: 'thisMonth', label: 'This Month' },
-                            { key: 'lastMonth', label: 'Last Month' },
-                            { key: 'allTime', label: 'All Time' },
+                            { key: 'thisWeek', label: t('lit.thisWeek') },
+                            { key: 'lastWeek', label: t('lit.lastWeek') },
+                            { key: 'thisMonth', label: t('lit.thisMonth') },
+                            { key: 'lastMonth', label: t('lit.lastMonth') },
+                            { key: 'allTime', label: t('lit.allTime') },
                           ] as { key: ResumePeriod; label: string }[]).map(period => (
                             <button
                               key={period.key}
@@ -2066,51 +2069,51 @@ export default function TimesheetPage() {
                       </div>
 
                       {resumeLoading ? (
-                        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Loading resume…</div>
+                        <div className="text-center py-10 text-gray-500 dark:text-gray-400">{t('lit.loadingResume')}</div>
                       ) : resumeSummary.length === 0 ? (
-                        <div className="text-center py-10 text-gray-500 dark:text-gray-400">No entries found for selected period.</div>
+                        <div className="text-center py-10 text-gray-500 dark:text-gray-400">{t('lit.noEntriesFoundForSelectedPeriod')}</div>
                       ) : (
                         <>
                           <div className="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600">
                             <div className="text-sm text-gray-600 dark:text-gray-300">
                               {resumePeriod === 'allTime' || !selectedResumeRange ? (
-                                <>Period: <span className="font-semibold text-gray-900 dark:text-white">All Time</span></>
+                                <>{t('lit.period2')} <span className="font-semibold text-gray-900 dark:text-white">{t('lit.allTime')}</span></>
                               ) : (
-                                <>Period: <span className="font-semibold text-gray-900 dark:text-white">{selectedResumeRange.from}</span> to <span className="font-semibold text-gray-900 dark:text-white">{selectedResumeRange.to}</span></>
+                                <>{t('lit.period2')} <span className="font-semibold text-gray-900 dark:text-white">{selectedResumeRange.from}</span> {t('lit.to')} <span className="font-semibold text-gray-900 dark:text-white">{selectedResumeRange.to}</span></>
                               )}
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-4">
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
-                              <p className="text-sm text-blue-700 dark:text-blue-300">Users</p>
+                              <p className="text-sm text-blue-700 dark:text-blue-300">{t('nav.users')}</p>
                               <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{resumeTotals.totalUsers}</p>
                             </div>
                             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-100 dark:border-green-800">
-                              <p className="text-sm text-green-700 dark:text-green-300">Total Entries</p>
+                              <p className="text-sm text-green-700 dark:text-green-300">{t('lit.totalEntries')}</p>
                               <p className="text-2xl font-bold text-green-900 dark:text-green-100">{resumeTotals.totalEntries}</p>
                             </div>
                             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
-                              <p className="text-sm text-purple-700 dark:text-purple-300">Total Hours</p>
+                              <p className="text-sm text-purple-700 dark:text-purple-300">{t('lit.totalHours2')}</p>
                               <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{decimalHoursToHMS(resumeTotals.totalHours)}</p>
                             </div>
                             <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border border-cyan-100 dark:border-cyan-800">
-                              <p className="text-sm text-cyan-700 dark:text-cyan-300">Avg / Entry</p>
+                              <p className="text-sm text-cyan-700 dark:text-cyan-300">{t('lit.avgEntry')}</p>
                               <p className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{decimalHoursToHMS(resumeTotals.avgHoursPerEntry)}</p>
                             </div>
                             <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800">
-                              <p className="text-sm text-indigo-700 dark:text-indigo-300">Avg / User</p>
+                              <p className="text-sm text-indigo-700 dark:text-indigo-300">{t('lit.avgUser')}</p>
                               <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{decimalHoursToHMS(resumeTotals.avgHoursPerUser)}</p>
                             </div>
                             <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-100 dark:border-emerald-800">
-                              <p className="text-sm text-emerald-700 dark:text-emerald-300">Approval Rate</p>
+                              <p className="text-sm text-emerald-700 dark:text-emerald-300">{t('lit.approvalRate')}</p>
                               <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{resumeTotals.approvalRate.toFixed(1)}%</p>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                             <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Approval Distribution</h4>
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.approvalDistribution')}</h4>
                               <div className="w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 mb-3 flex">
                                 <div className="bg-green-500" style={{ width: `${resumeTotals.approvalRate}%` }} />
                                 <div className="bg-yellow-500" style={{ width: `${resumeTotals.pendingRate}%` }} />
@@ -2124,7 +2127,7 @@ export default function TimesheetPage() {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Top Contributors by Hours</h4>
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.topContributorsByHours')}</h4>
                               <div className="space-y-3">
                                 {resumeTopUsers.map((row, idx) => {
                                   const maxHours = resumeTopUsers[0]?.TotalHours || 1;
@@ -2148,7 +2151,7 @@ export default function TimesheetPage() {
 
                           {resumeAttentionUsers.length > 0 && (
                             <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
-                              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">Needs Attention</h4>
+                              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">{t('lit.needsAttention')}</h4>
                               <div className="space-y-1 text-sm">
                                 {resumeAttentionUsers.slice(0, 5).map(row => {
                                   const displayName = row.FirstName && row.LastName ? `${row.FirstName} ${row.LastName}` : row.Username;
@@ -2167,15 +2170,15 @@ export default function TimesheetPage() {
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                               <thead className="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Entries</th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Hours</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tasks</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Projects</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customers</th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Approved</th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pending</th>
-                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rejected</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.user')}</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.entries')}</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.hours')}</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.tasks')}</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('nav.projects')}</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('nav.customers')}</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.approved')}</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.pending')}</th>
+                                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.rejected')}</th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -2230,8 +2233,8 @@ export default function TimesheetPage() {
 
         <TimeEntryFormModal
           isOpen={showCreateTimeEntryModal}
-          title="Add Time Entry"
-          submitLabel="Add Entry"
+          title={t('lit.addTimeEntry2')}
+          submitLabel={t('lit.addEntry')}
           onClose={() => setShowCreateTimeEntryModal(false)}
           onSubmit={handleCreateTimeEntry}
           token={token || undefined}
@@ -2244,7 +2247,7 @@ export default function TimesheetPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Time Entry</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.editTimeEntry')}</h3>
                   <button onClick={handleCancelEdit} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl font-bold">
                     ×
                   </button>
@@ -2252,7 +2255,7 @@ export default function TimesheetPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.date')}</label>
                     <input
                       type="date"
                       value={editEntry.workDate}
@@ -2262,7 +2265,7 @@ export default function TimesheetPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.startTime')}</label>
                       <input
                         type="time"
                         value={editEntry.startTime}
@@ -2271,7 +2274,7 @@ export default function TimesheetPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.endTime')}</label>
                       <input
                         type="time"
                         value={editEntry.endTime}
@@ -2281,7 +2284,7 @@ export default function TimesheetPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.hours')}</label>
                     <input
                       type="number"
                       min="0"
@@ -2292,11 +2295,11 @@ export default function TimesheetPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.description')}</label>
                     <RichTextEditor
                       content={editEntry.description}
                       onChange={(html) => setEditEntry({ ...editEntry, description: html })}
-                      placeholder="What did you work on?"
+                      placeholder={t('lit.whatDidYouWorkOn')}
                     />
                   </div>
                   <CustomFieldsFormSection
@@ -2312,13 +2315,13 @@ export default function TimesheetPage() {
                     onClick={handleCancelEdit}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleUpdateTimeEntry}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                   >
-                    Save Changes
+                    {t('lit.saveChanges')}
                   </button>
                 </div>
               </div>
@@ -2333,7 +2336,7 @@ export default function TimesheetPage() {
           message={modalMessage?.message || ''}
           onClose={closeModal}
           onConfirm={handleModalConfirm}
-          confirmLabel="Delete"
+          confirmLabel={t('common.delete')}
           confirmVariant="danger"
         />
 

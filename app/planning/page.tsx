@@ -1,6 +1,8 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+import { htmlLang } from '@/lib/i18n/config';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -166,6 +168,9 @@ function mergePlanningAllocationFilters(
 }
 
 export default function PlanningPage() {
+  const { t, locale } = useI18n();
+  const dateLocale = htmlLang(locale);
+
   const { user, isLoading, token } = useAuth();
   const { mapColor } = useColorVision();
   const { permissions, isLoading: isLoadingPermissions } = usePermissions();
@@ -789,7 +794,7 @@ export default function PlanningPage() {
     setMilestoneEditor({
       show: true,
       milestone,
-      projectName: project?.ProjectName || 'Unknown Project',
+      projectName: project?.ProjectName || t('lit.unknownProject'),
       customerName: project?.CustomerName || '',
       name: milestone.Name || '',
       description: milestone.Description || '',
@@ -806,7 +811,7 @@ export default function PlanningPage() {
   const handleMilestoneSave = async () => {
     if (!milestoneEditor.milestone || !token) return;
     if (!milestoneEditor.name.trim()) {
-      setMilestoneEditor((prev) => ({ ...prev, error: 'Milestone name is required.' }));
+      setMilestoneEditor((prev) => ({ ...prev, error: t('lit.milestoneNameIsRequired') }));
       return;
     }
 
@@ -829,7 +834,7 @@ export default function PlanningPage() {
       setMilestoneEditor((prev) => ({
         ...prev,
         isSaving: false,
-        error: error?.message || 'Failed to save milestone.',
+        error: error?.message || t('lit.failedToSaveMilestone'),
       }));
     }
   };
@@ -846,7 +851,7 @@ export default function PlanningPage() {
       setMilestoneEditor((prev) => ({
         ...prev,
         isDeleting: false,
-        error: error?.message || 'Failed to delete milestone.',
+        error: error?.message || t('lit.failedToDeleteMilestone'),
       }));
     }
   };
@@ -934,18 +939,18 @@ export default function PlanningPage() {
 
     const dueDate = normalizeDateOnly(task.DueDate);
     if (!dueDate) {
-      showAlert('Planning Blocked', `Task "${task.TaskName}" has mandatory due date enabled but no due date set.`);
+      showAlert(t('lit.planningBlocked'), `Task "${task.TaskName}" has mandatory due date enabled but no due date set.`);
       return false;
     }
 
     if (!plannedEndDate) {
-      showAlert('Planning Blocked', `Unable to determine planned end date for task "${task.TaskName}".`);
+      showAlert(t('lit.planningBlocked'), `Unable to determine planned end date for task "${task.TaskName}".`);
       return false;
     }
 
     if (plannedEndDate > dueDate) {
       showAlert(
-        'Planning Blocked',
+        t('lit.planningBlocked'),
         `Task "${task.TaskName}" has a mandatory due date (${new Date(dueDate + 'T12:00:00').toLocaleDateString()}) but the plan ends on ${new Date(plannedEndDate + 'T12:00:00').toLocaleDateString()}.\n\nPlease choose an earlier start date, increase daily hours, or reduce total hours.`
       );
       return false;
@@ -965,7 +970,7 @@ export default function PlanningPage() {
     if (!selectedTask) return;
     
     showConfirm(
-      'Remove Planning',
+      t('lit.removePlanning'),
       `Are you sure you want to remove all planning allocations for task "${selectedTask.TaskName}"? This action cannot be undone.`,
       async () => {
         try {
@@ -981,7 +986,7 @@ export default function PlanningPage() {
           );
 
           if (!response.ok) {
-            throw new Error('Failed to delete allocations');
+            throw new Error(t('lit.failedToDeleteAllocations'));
           }
 
           // Close the modal
@@ -992,9 +997,9 @@ export default function PlanningPage() {
             await reloadTasksAndAllocations();
           }
 
-          showAlert('Success', 'Planning allocations removed successfully');
+          showAlert(t('lit.success'), t('lit.planningAllocationsRemovedSuccessfully'));
         } catch (err: any) {
-          showAlert('Error', err.message || 'Failed to remove planning allocations');
+          showAlert(t('common.error'), err.message || t('lit.failedToRemovePlanningAllocations'));
         }
       }
     );
@@ -1699,7 +1704,7 @@ export default function PlanningPage() {
 
             const label = entry.Notes
               ? `Dev Support: ${entry.Notes}`
-              : 'Dev Support';
+              : t('lit.devSupport');
 
             if (!devSupportMapForUser[dateKey].includes(label)) {
               devSupportMapForUser[dateKey].push(label);
@@ -1896,7 +1901,7 @@ export default function PlanningPage() {
       let subheader = '';
 
       if (viewMode === 'day' || viewMode === 'week') {
-        header = date.toLocaleDateString('en-US', { weekday: 'short' });
+        header = date.toLocaleDateString(dateLocale, { weekday: 'short' });
         subheader = `${date.getDate()}/${date.getMonth() + 1}`;
       } else if (viewMode === 'month') {
         header = `${date.getDate()}`;
@@ -1907,11 +1912,11 @@ export default function PlanningPage() {
       } else {
         const customInterval = getCustomIntervalType(days.length);
         if (customInterval === 'day') {
-          header = date.toLocaleDateString('en-US', { weekday: 'short' });
+          header = date.toLocaleDateString(dateLocale, { weekday: 'short' });
           subheader = `${date.getDate()}/${date.getMonth() + 1}`;
         } else if (customInterval === 'week') {
           header = `${date.getDate()}`;
-          subheader = date.toLocaleDateString('en-US', { month: 'short' });
+          subheader = date.toLocaleDateString(dateLocale, { month: 'short' });
         } else {
           header = `${date.getDate()}`;
           subheader = `${date.getMonth() + 1}`;
@@ -2872,7 +2877,7 @@ export default function PlanningPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save subtask order');
+        throw new Error(t('lit.failedToSaveSubtaskOrder'));
       }
 
       // Reload tasks
@@ -2881,7 +2886,7 @@ export default function PlanningPage() {
       }
     } catch (error) {
       console.error('Error reordering subtasks:', error);
-      showAlert('Error', 'Failed to save subtask order');
+      showAlert(t('common.error'), t('lit.failedToSaveSubtaskOrder'));
     }
 
     setSubtasksModal(prev => ({ ...prev, draggedSubtask: null }));
@@ -2933,7 +2938,7 @@ export default function PlanningPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load task allocations');
+        throw new Error(t('lit.failedToLoadTaskAllocations'));
       }
 
       const data = await response.json();
@@ -2955,7 +2960,7 @@ export default function PlanningPage() {
       }
 
       if (!plannedStartDate || !plannedEndDate) {
-        showAlert('No Allocations', 'This task has no allocations to calculate dates from.');
+        showAlert(t('lit.noAllocations'), t('lit.thisTaskHasNoAllocationsToCalculateDatesFrom'));
         return;
       }
 
@@ -2968,10 +2973,10 @@ export default function PlanningPage() {
         PlannedEndDate: plannedEndDate,
       });
       await loadAllAllocations();
-      showAlert('Success', 'Task dates recalculated from allocations successfully.');
+      showAlert(t('lit.success'), t('lit.taskDatesRecalculatedFromAllocationsSuccessfully'));
     } catch (error: any) {
       console.error('Failed to recalculate task dates:', error);
-      showAlert('Error', error.message || 'Failed to recalculate task dates.');
+      showAlert(t('common.error'), error.message || t('lit.failedToRecalculateTaskDates'));
     }
   };
 
@@ -2979,7 +2984,7 @@ export default function PlanningPage() {
     if (!token || !canUseGanttPlanningActions()) return;
 
     if (!task.PlannedStartDate || !task.PlannedEndDate) {
-      showAlert('Cannot Set Baseline', 'This task must have planned start and end dates before setting a baseline.');
+      showAlert(t('lit.cannotSetBaseline'), t('lit.thisTaskMustHavePlannedStartAndEndDatesBeforeSettingABaseline'));
       return;
     }
 
@@ -2994,17 +2999,17 @@ export default function PlanningPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.message || 'Failed to set task baseline');
+        throw new Error(data?.message || t('lit.failedToSetTaskBaseline'));
       }
 
       if (projects.length > 0) {
         await loadAllProjectsTasks(projects);
       }
       setShowBaseline(true);
-      showAlert('Baseline Set', `Baseline snapshot saved for task "${task.TaskName}".`);
+      showAlert(t('lit.baselineSet'), `Baseline snapshot saved for task "${task.TaskName}".`);
     } catch (error: any) {
       console.error('Set task baseline error:', error);
-      showAlert('Error', error?.message || 'Failed to set task baseline.');
+      showAlert(t('common.error'), error?.message || t('lit.failedToSetTaskBaseline2'));
     }
   };
 
@@ -3016,10 +3021,10 @@ export default function PlanningPage() {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || 'Failed to load snapshots');
+      if (!response.ok) throw new Error(data?.message || t('lit.failedToLoadSnapshots'));
       setSnapshotModal(prev => ({ ...prev, snapshots: data.snapshots || [], isLoading: false }));
     } catch (err: any) {
-      setSnapshotModal(prev => ({ ...prev, isLoading: false, error: err.message || 'Failed to load snapshots' }));
+      setSnapshotModal(prev => ({ ...prev, isLoading: false, error: err.message || t('lit.failedToLoadSnapshots') }));
     }
   };
 
@@ -3032,7 +3037,7 @@ export default function PlanningPage() {
     if (!token) return;
     const name = snapshotModal.newName.trim();
     if (!name) {
-      setSnapshotModal(prev => ({ ...prev, error: 'Snapshot name is required' }));
+      setSnapshotModal(prev => ({ ...prev, error: t('lit.snapshotNameIsRequired') }));
       return;
     }
     setSnapshotModal(prev => ({ ...prev, isSaving: true, error: '' }));
@@ -3043,19 +3048,19 @@ export default function PlanningPage() {
         body: JSON.stringify({ name, description: snapshotModal.newDescription.trim() || null }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || 'Failed to create snapshot');
+      if (!response.ok) throw new Error(data?.message || t('lit.failedToCreateSnapshot'));
       showToast({ type: 'success', message: `Snapshot "${name}" created successfully` });
       setSnapshotModal(prev => ({ ...prev, isSaving: false, newName: '', newDescription: '' }));
       await loadSnapshots();
       await loadToolbarSnapshots();
     } catch (err: any) {
-      setSnapshotModal(prev => ({ ...prev, isSaving: false, error: err.message || 'Failed to create snapshot' }));
+      setSnapshotModal(prev => ({ ...prev, isSaving: false, error: err.message || t('lit.failedToCreateSnapshot') }));
     }
   };
 
   const handleRestoreSnapshot = (snapshot: any) => {
     showConfirm(
-      'Restore Snapshot',
+      t('lit.restoreSnapshot2'),
       `Restore snapshot "${snapshot.Name}"?\n\nThis will REPLACE all current allocations with the data from this snapshot. This action cannot be undone.`,
       async () => {
         if (!token) return;
@@ -3065,13 +3070,13 @@ export default function PlanningPage() {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const data = await response.json();
-          if (!response.ok) throw new Error(data?.message || 'Failed to restore snapshot');
+          if (!response.ok) throw new Error(data?.message || t('lit.failedToRestoreSnapshot'));
           setSnapshotModal(prev => ({ ...prev, show: false }));
-          showToast({ type: 'success', message: data.message || 'Snapshot restored successfully' });
+          showToast({ type: 'success', message: data.message || t('lit.snapshotRestoredSuccessfully') });
           await loadAllAllocations();
           if (projects.length > 0) await loadAllProjectsTasks(projects);
         } catch (err: any) {
-          setSnapshotModal(prev => ({ ...prev, error: err.message || 'Failed to restore snapshot' }));
+          setSnapshotModal(prev => ({ ...prev, error: err.message || t('lit.failedToRestoreSnapshot') }));
         }
       }
     );
@@ -3079,7 +3084,7 @@ export default function PlanningPage() {
 
   const handleDeleteSnapshot = (snapshot: any) => {
     showConfirm(
-      'Delete Snapshot',
+      t('lit.deleteSnapshot2'),
       `Delete snapshot "${snapshot.Name}"? This action cannot be undone.`,
       async () => {
         if (!token) return;
@@ -3089,13 +3094,13 @@ export default function PlanningPage() {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const data = await response.json();
-          if (!response.ok) throw new Error(data?.message || 'Failed to delete snapshot');
-          showToast({ type: 'success', message: 'Snapshot deleted successfully' });
+          if (!response.ok) throw new Error(data?.message || t('lit.failedToDeleteSnapshot'));
+          showToast({ type: 'success', message: t('lit.snapshotDeletedSuccessfully') });
           if (selectedSnapshotId === Number(snapshot.Id)) handleClearSnapshotOverlay();
           await loadSnapshots();
           await loadToolbarSnapshots();
         } catch (err: any) {
-          setSnapshotModal(prev => ({ ...prev, error: err.message || 'Failed to delete snapshot' }));
+          setSnapshotModal(prev => ({ ...prev, error: err.message || t('lit.failedToDeleteSnapshot') }));
         }
       }
     );
@@ -3144,7 +3149,7 @@ export default function PlanningPage() {
     const snapshot = toolbarSnapshots.find(s => Number(s.Id) === selectedSnapshotId);
     if (!snapshot) return;
     showConfirm(
-      'Restore Snapshot',
+      t('lit.restoreSnapshot2'),
       `Restore snapshot "${snapshot.Name}"?\n\nThis will REPLACE all current allocations with the data from this snapshot. This action cannot be undone.`,
       async () => {
         if (!token) return;
@@ -3154,13 +3159,13 @@ export default function PlanningPage() {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const data = await response.json();
-          if (!response.ok) throw new Error(data?.message || 'Failed to restore snapshot');
+          if (!response.ok) throw new Error(data?.message || t('lit.failedToRestoreSnapshot'));
           handleClearSnapshotOverlay();
-          showToast({ type: 'success', message: data.message || 'Snapshot restored successfully' });
+          showToast({ type: 'success', message: data.message || t('lit.snapshotRestoredSuccessfully') });
           await loadAllAllocations();
           if (projects.length > 0) await loadAllProjectsTasks(projects);
         } catch (err: any) {
-          showAlert('Error', err.message || 'Failed to restore snapshot');
+          showAlert(t('common.error'), err.message || t('lit.failedToRestoreSnapshot'));
         }
       }
     );
@@ -3259,35 +3264,35 @@ export default function PlanningPage() {
     const parsedHpd = roundToPlanningStep(parseFloat(hoursPerDay));
 
     if (!parsedExtra || parsedExtra <= 0) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'Enter a valid number of extra hours (> 0).' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.enterValidNumberOfExtraHours') }));
       return;
     }
     if (!parsedHpd || parsedHpd <= 0) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'Enter a valid max hours per day (> 0).' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.enterValidMaxHoursPerDay') }));
       return;
     }
     if (!isPlanningStepValue(parsedExtra) || !isPlanningStepValue(parsedHpd)) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'Planning supports 30-minute steps only (0.5h).' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.planningSupports30MinuteStepsOnly') }));
       return;
     }
 
     const isParentTask = leafTasks.length > 0;
 
     if (isParentTask && selectedSubtaskIds.length === 0) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'Select at least one subtask to distribute the extra time to.' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.selectAtLeastOneSubtaskToDistributeExtraTime') }));
       return;
     }
 
     // Resolve userId
     const resolvedUserId = userId ?? (task.AssignedTo ? Number(task.AssignedTo) : null);
     if (!resolvedUserId) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'No user associated with this task allocation.' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.noUserAssociatedWithThisTaskAllocation') }));
       return;
     }
 
     const targetUser = users.find(u => u.Id === resolvedUserId);
     if (!targetUser) {
-      setExtraTimeModal(prev => ({ ...prev, error: 'User not found.' }));
+      setExtraTimeModal(prev => ({ ...prev, error: t('lit.userNotFound') }));
       return;
     }
 
@@ -3341,7 +3346,7 @@ export default function PlanningPage() {
         );
 
         if (!parentSliceResult || !Array.isArray(parentSliceResult.allocations) || parentSliceResult.allocations.length === 0) {
-          setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: 'Failed to allocate parent extra time. Check user availability.' }));
+          setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: t('lit.failedToAllocateParentExtraTimeCheckUserAvailability') }));
           return;
         }
 
@@ -3421,7 +3426,7 @@ export default function PlanningPage() {
               body: JSON.stringify({ allocations: childPayload, replaceParent: false }),
             });
             if (!childSaveRes.ok) {
-              setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: 'Extra time allocated to parent but failed to distribute to subtasks.' }));
+              setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: t('lit.extraTimeAllocatedToParentButFailedToDistributeToSubtasks') }));
               return;
             }
           }
@@ -3464,7 +3469,7 @@ export default function PlanningPage() {
                   }, token!);
                 }));
                 if (projects.length > 0) await loadAllProjectsTasks(projects);
-              } catch (err: any) { showAlert('Error', err?.message || 'Failed to update estimated hours.'); }
+              } catch (err: any) { showAlert(t('common.error'), err?.message || t('lit.failedToUpdateEstimatedHours')); }
             }
           );
         }
@@ -3478,7 +3483,7 @@ export default function PlanningPage() {
       );
 
       if (!result) {
-        setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: 'Failed to allocate extra time. Check user availability.' }));
+        setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: t('lit.failedToAllocateExtraTimeCheckUserAvailability') }));
         return;
       }
 
@@ -3499,12 +3504,12 @@ export default function PlanningPage() {
               plannedStartDate: task.PlannedStartDate, plannedEndDate: task.PlannedEndDate,
             }, token!);
             if (projects.length > 0) await loadAllProjectsTasks(projects);
-          } catch (err: any) { showAlert('Error', err?.message || 'Failed to update estimated hours.'); }
+          } catch (err: any) { showAlert(t('common.error'), err?.message || t('lit.failedToUpdateEstimatedHours')); }
         }
       );
     } catch (err: any) {
       console.error('Add extra time error:', err);
-      setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: err?.message || 'Failed to add extra time.' }));
+      setExtraTimeModal(prev => ({ ...prev, isProcessing: false, error: err?.message || t('lit.failedToAddExtraTime') }));
     }
   };
 
@@ -3530,12 +3535,12 @@ export default function PlanningPage() {
     if (!task) return;
 
     if (!forceDatesModal.startDate || !forceDatesModal.endDate) {
-      setForceDatesModal((prev) => ({ ...prev, error: 'Start date and end date are required.' }));
+      setForceDatesModal((prev) => ({ ...prev, error: t('lit.startDateAndEndDateAreRequired') }));
       return;
     }
 
     if (forceDatesModal.endDate < forceDatesModal.startDate) {
-      setForceDatesModal((prev) => ({ ...prev, error: 'End date must be after or equal to start date.' }));
+      setForceDatesModal((prev) => ({ ...prev, error: t('lit.endDateMustBeAfterOrEqualToStartDate') }));
       return;
     }
 
@@ -3558,12 +3563,12 @@ export default function PlanningPage() {
         isSaving: false,
         error: '',
       });
-      showAlert('Success', 'Task dates updated successfully.');
+      showAlert(t('lit.success'), t('lit.taskDatesUpdatedSuccessfully'));
     } catch (error: any) {
       setForceDatesModal((prev) => ({
         ...prev,
         isSaving: false,
-        error: error?.message || 'Failed to update task dates.',
+        error: error?.message || t('lit.failedToUpdateTaskDates'),
       }));
     }
   };
@@ -3719,7 +3724,7 @@ export default function PlanningPage() {
         const totalHours = sourceSliceAllocations.reduce((sum, allocation) => sum + Number(allocation.AllocatedHours || 0), 0);
         if (!Number.isFinite(totalHours) || totalHours <= 0) {
           closeTaskResize();
-          showAlert('Resize Planning', 'Could not determine total hours for this allocation slice.');
+          showAlert(t('lit.resizePlanning'), t('lit.couldNotDetermineTotalHoursForThisAllocationSlice'));
           return;
         }
 
@@ -3754,7 +3759,7 @@ export default function PlanningPage() {
           }, { syncAllocationHeaderDates: true });
         } catch (error: any) {
           console.error('Failed to resize task dates:', error);
-          showAlert('Error', error?.message || 'Failed to update task dates.');
+          showAlert(t('common.error'), error?.message || t('lit.failedToUpdateTaskDates'));
         } finally {
           closeTaskResize();
         }
@@ -3801,14 +3806,14 @@ export default function PlanningPage() {
     if (!Number.isFinite(parsedTotalHours) || parsedTotalHours <= 0) {
       setShiftResizeSuggestionModal((prev) => ({
         ...prev,
-        error: 'Total hours must be greater than 0 and use 30-minute steps.',
+        error: t('lit.totalHoursMustBeGreaterThan0AndUse30MinuteSteps'),
       }));
       return;
     }
     if (!Number.isFinite(parsedHoursPerDay) || parsedHoursPerDay <= 0) {
       setShiftResizeSuggestionModal((prev) => ({
         ...prev,
-        error: 'Hours per day must be greater than 0 and use 30-minute steps.',
+        error: t('lit.hoursPerDayMustBeGreaterThan0AndUse30MinuteSteps'),
       }));
       return;
     }
@@ -3834,12 +3839,12 @@ export default function PlanningPage() {
       });
 
       closeShiftResizeSuggestionModal();
-      showAlert('Resize Planning', 'Allocation slice replanned successfully with the selected hours/day.');
+      showAlert(t('lit.resizePlanning'), t('lit.allocationSliceReplannedSuccessfullyWithTheSelectedHoursDay'));
     } catch (error: any) {
       setShiftResizeSuggestionModal((prev) => ({
         ...prev,
         isSubmitting: false,
-        error: error?.message || 'Failed to replan allocation slice.',
+        error: error?.message || t('lit.failedToReplanAllocationSlice2'),
       }));
     }
   };
@@ -3917,7 +3922,7 @@ export default function PlanningPage() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete allocation slice');
+      throw new Error(t('lit.failedToDeleteAllocationSlice'));
     }
   };
 
@@ -3931,7 +3936,7 @@ export default function PlanningPage() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete child allocation slice');
+      throw new Error(t('lit.failedToDeleteChildAllocationSlice'));
     }
   };
 
@@ -3962,7 +3967,7 @@ export default function PlanningPage() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete child allocations for selected slice dates');
+      throw new Error(t('lit.failedToDeleteChildAllocationsForSelectedSliceDates'));
     }
   };
 
@@ -4185,7 +4190,7 @@ export default function PlanningPage() {
     }
 
     if (availableChildTaskIds.length > 0 && selectedChildTaskIds.length === 0) {
-      showAlert('Slice Transfer', 'Select at least one subtask to move.');
+      showAlert(t('lit.sliceTransfer'), t('lit.selectAtLeastOneSubtaskToMove'));
       return;
     }
 
@@ -4195,7 +4200,7 @@ export default function PlanningPage() {
       const task = tasks.find((entry) => Number(entry.Id) === Number(taskId));
       const targetUser = users.find((entry) => Number(entry.Id) === Number(targetUserId));
       if (!task || !targetUser) {
-        throw new Error('Task or target user not found');
+        throw new Error(t('lit.taskOrTargetUserNotFound'));
       }
 
       const sourceAllocations = allAllocations
@@ -4207,7 +4212,7 @@ export default function PlanningPage() {
         .map((allocation) => ({ ...allocation, dateKey: normalizeDateKey(allocation.AllocationDate) }));
 
       if (sourceAllocations.length === 0) {
-        throw new Error('No allocations found in selected slice period');
+        throw new Error(t('lit.noAllocationsFoundInSelectedSlicePeriod'));
       }
 
       const totalSliceHours = sourceAllocations.reduce(
@@ -4217,7 +4222,7 @@ export default function PlanningPage() {
       const totalHoursToMove = roundToPlanningStep(Math.min(normalizedMoveHours, totalSliceHours));
 
       if (totalHoursToMove <= 0) {
-        throw new Error('Invalid hours to move');
+        throw new Error(t('lit.invalidHoursToMove'));
       }
 
       const dropStartDate = new Date(`${dropDate}T12:00:00`);
@@ -4230,7 +4235,7 @@ export default function PlanningPage() {
       }));
 
       if (maxDailyHours <= 0) {
-        throw new Error('Target user has no configured daily hours for this task type');
+        throw new Error(t('lit.targetUserHasNoConfiguredDailyHoursForThisTaskType'));
       }
 
       const allocationResult = await executeTaskAllocation(
@@ -4251,7 +4256,7 @@ export default function PlanningPage() {
       );
 
       if (!allocationResult) {
-        throw new Error('Failed to allocate selected slice to target user');
+        throw new Error(t('lit.failedToAllocateSelectedSliceToTargetUser'));
       }
 
       if (availableChildTaskIds.length > 0 && selectedChildTaskIds.length > 0) {
@@ -4373,7 +4378,7 @@ export default function PlanningPage() {
               });
 
               if (!childSaveRes.ok) {
-                throw new Error('Failed to replan moved subtasks for selected slice');
+                throw new Error(t('lit.failedToReplanMovedSubtasksForSelectedSlice'));
               }
 
               await deleteParentChildAllocationDates(Number(taskId), sourceAllocations.map((allocation) => allocation.dateKey), sourceHeaderId, selectedChildTaskIds);
@@ -4392,7 +4397,7 @@ export default function PlanningPage() {
       });
 
       if (!deleteResponse.ok) {
-        throw new Error('Failed to remove selected slice from source allocation');
+        throw new Error(t('lit.failedToRemoveSelectedSliceFromSourceAllocation'));
       }
 
       if (projects.length > 0) {
@@ -4416,7 +4421,7 @@ export default function PlanningPage() {
       });
     } catch (error: any) {
       console.error('Failed to transfer allocation slice:', error);
-      showAlert('Slice Transfer', error?.message || 'Failed to transfer selected slice');
+      showAlert(t('lit.sliceTransfer'), error?.message || t('lit.failedToTransferSelectedSlice'));
       setSliceTransferModal((prev) => ({ ...prev, isProcessing: false }));
     }
   };
@@ -4449,7 +4454,7 @@ export default function PlanningPage() {
         .map((allocation) => allocation.UserId)
     ).size;
     if (splitUserCount > 1) {
-      showAlert('Split Task', 'For split tasks, drop on a specific day to replan only that user slice.');
+      showAlert(t('lit.splitTask'), t('lit.forSplitTasksDropOnASpecificDayToReplanOnlyThatUserSlice'));
       draggedTaskRef.current = null;
       draggedTaskSourceUserIdRef.current = null;
       setDraggedTask(null);
@@ -4462,7 +4467,7 @@ export default function PlanningPage() {
       if (taskProject) {
         const userOrgs = userOrganizations[userId] || [];
         if (!userOrgs.includes(taskProject.OrganizationId)) {
-          showAlert('No Access', 'This user does not have access to the project this task belongs to.');
+          showAlert(t('lit.noAccess'), t('lit.thisUserDoesNotHaveAccessToTheProjectThisTaskBelongsTo'));
           draggedTaskRef.current = null;
           draggedTaskSourceUserIdRef.current = null;
           setDraggedTask(null);
@@ -4511,8 +4516,8 @@ export default function PlanningPage() {
     if (isSliceDrag && sliceByHours) {
       if (!sourceHeaderId || !sourceUserId) {
         showAlert(
-          'Slice Transfer',
-          'This allocation cannot be partially moved because it has no allocation header. Replan normally or recreate this slice first.'
+          t('lit.sliceTransfer'),
+          t('lit.thisAllocationCannotBePartiallyMovedBecauseItHasNoAllocationHeaderReplan')
         );
         draggedTaskRef.current = null;
         draggedTaskSourceUserIdRef.current = null;
@@ -4572,7 +4577,7 @@ export default function PlanningPage() {
     const droppedDateIsFullyUnavailable = droppedDateHolidayNames.some((label) => !isHalfDayLeaveLabel(label));
     if (droppedDateIsFullyUnavailable) {
       showAlert(
-        'Unavailable Day',
+        t('lit.unavailableDay'),
         `Cannot plan on unavailable day for this user (${droppedDateStr}): ${droppedDateHolidayNames.join(', ')}`
       );
       draggedTaskRef.current = null;
@@ -4590,7 +4595,7 @@ export default function PlanningPage() {
     if (taskProject) {
       const userOrgs = userOrganizations[userId] || [];
       if (!userOrgs.includes(taskProject.OrganizationId)) {
-        showAlert('No Access', 'This user does not have access to the project this task belongs to.');
+        showAlert(t('lit.noAccess'), t('lit.thisUserDoesNotHaveAccessToTheProjectThisTaskBelongsTo'));
         draggedTaskRef.current = null;
         draggedTaskSourceUserIdRef.current = null;
         setDraggedTask(null);
@@ -4620,7 +4625,7 @@ export default function PlanningPage() {
         : allLeafTasks;
       
       if (leafTasks.length === 0) {
-        showAlert('No Leaf Tasks', 'No leaf tasks found to plan.');
+        showAlert(t('lit.noLeafTasks'), t('lit.noLeafTasksFoundToPlan'));
         draggedTaskRef.current = null;
         setDraggedTask(null);
         return;
@@ -4682,7 +4687,7 @@ export default function PlanningPage() {
 
       if (!isSliceDrag && totalRemainingHours < 0) {
         showAlert(
-          'No Remaining Hours',
+          t('lit.noRemainingHours'),
           `All leaf tasks have no remaining hours.\n\nTotal Estimated: ${totalEstimatedHours}h\nAlready worked: ${totalHoursWorked}h`
         );
         setDraggedTask(null);
@@ -4722,7 +4727,7 @@ export default function PlanningPage() {
           if (planningDate < dependencyEndDate) {
             const minStartDate = new Date(dependencyEndDate);
             showAlert(
-              'Dependency Constraint',
+              t('lit.dependencyConstraint'),
               `This task depends on "${dependsOnTask.TaskName}" which ends on ${dependencyEndDate.toLocaleDateString()}.\n\nPlease plan this task for ${minStartDate.toLocaleDateString()} or later.`
             );
             setDraggedTask(null);
@@ -4731,7 +4736,7 @@ export default function PlanningPage() {
         } else {
           // Dependency task has no planned end date - it must be planned first
           showAlert(
-            'Dependency Not Planned',
+            t('lit.dependencyNotPlanned'),
             `This task depends on "${dependsOnTask.TaskName}" which is not yet planned.\n\nPlease plan the dependency task first.`
           );
           setDraggedTask(null);
@@ -4747,7 +4752,7 @@ export default function PlanningPage() {
       // Get user's work hours configuration
       const user = users.find(u => u.Id === userId);
       if (!user) {
-        showAlert('Error', 'User not found');
+        showAlert(t('common.error'), t('lit.userNotFound'));
         draggedTaskRef.current = null;
         draggedTaskSourceUserIdRef.current = null;
         setDraggedTask(null);
@@ -4788,7 +4793,7 @@ export default function PlanningPage() {
       // Check if there are remaining hours to plan
       if (remainingHoursToWork < 0) {
         showAlert(
-          'No Remaining Hours',
+          t('lit.noRemainingHours'),
           isSliceDrag
             ? 'This split slice has no allocated hours to replan.'
             : `This task has no remaining hours to plan.\n\nEstimated: ${estimatedHours}h\nAlready worked: ${hoursAlreadyWorked.toFixed(2)}h\n\nPlease update the estimated hours if more work is needed.`
@@ -4811,7 +4816,7 @@ export default function PlanningPage() {
       });
 
       if (!hasAnyHours) {
-        const hoursType = isHobbyTask ? 'Hobby' : 'Work';
+        const hoursType = isHobbyTask ? t('lit.hobby') : t('lit.work2');
         showAlert(`No ${hoursType} Hours`, `User has no ${hoursType.toLowerCase()} hours configured. Please configure ${hoursType.toLowerCase()} hours in settings.`);
         setDraggedTask(null);
         return;
@@ -4835,7 +4840,7 @@ export default function PlanningPage() {
       if (dropDayHours <= 0) {
         const dayType = isHobbyTask ? 'hobby' : 'work';
         showAlert(
-          `Not a ${isHobbyTask ? 'Hobby' : 'Work'} Day`,
+          `Not a ${isHobbyTask ? t('lit.hobby') : t('lit.work2')} Day`,
           `${dayNameForDrop} is not configured as a ${dayType} day for this user.\n\nPlease drop the task on a day the user has ${dayType} hours, or configure ${dayType} hours in settings.`
         );
         setDraggedTask(null);
@@ -4959,7 +4964,7 @@ export default function PlanningPage() {
       draggedTaskSliceByHoursRef.current = false;
     } catch (err) {
       console.error('Failed to allocate task:', err);
-      showAlert('Error', 'Failed to allocate task');
+      showAlert(t('common.error'), t('lit.failedToAllocateTask'));
       draggedTaskRef.current = null;
       draggedTaskSourceUserIdRef.current = null;
       draggedTaskSourceHeaderIdRef.current = null;
@@ -4985,7 +4990,7 @@ export default function PlanningPage() {
       const startDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12, 0, 0);
       const user = users.find(u => u.Id === userId);
       if (!user) {
-        showAlert('Error', 'User not found');
+        showAlert(t('common.error'), t('lit.userNotFound'));
         return;
       }
 
@@ -5008,7 +5013,7 @@ export default function PlanningPage() {
 
       if (dropDayHours <= 0) {
         showAlert(
-          `Not a ${isHobbyTask ? 'Hobby' : 'Work'} Day`,
+          `Not a ${isHobbyTask ? t('lit.hobby') : t('lit.work2')} Day`,
           `${dayName} is not configured as a ${isHobbyTask ? 'hobby' : 'work'} day for this user.`
         );
         return;
@@ -5096,7 +5101,7 @@ export default function PlanningPage() {
       });
     } catch (err) {
       console.error('Failed to plan parent task:', err);
-      showAlert('Error', 'Failed to plan parent task');
+      showAlert(t('common.error'), t('lit.failedToPlanParentTask'));
     }
   };
 
@@ -5200,7 +5205,7 @@ export default function PlanningPage() {
 
       if (!availabilityRes.ok) {
         setPlanningProgress(prev => ({ ...prev, show: false }));
-        showAlert('Error', 'Failed to check user availability');
+        showAlert(t('common.error'), t('lit.failedToCheckUserAvailability'));
         return;
       }
 
@@ -5354,7 +5359,7 @@ export default function PlanningPage() {
         setPlanningProgress(prev => ({ ...prev, show: false }));
         
         const yearsDiff = Math.ceil(windowDays / 365);
-        showAlert('Partial Allocation', 
+        showAlert(t('lit.partialAllocation'), 
           `Unable to fully allocate task - ${remainingHours.toFixed(2)}h remaining.\n\n` +
           `Searched: ${windowDays} days (~${yearsDiff} years)\n` +
           `From: ${startDate.toISOString().split('T')[0]}\n` +
@@ -5409,7 +5414,7 @@ export default function PlanningPage() {
         const error = await response.text();
         console.error('Failed to allocate parent task:', error);
         setPlanningProgress(prev => ({ ...prev, show: false }));
-        showAlert('Error', 'Failed to allocate parent task');
+        showAlert(t('common.error'), t('lit.failedToAllocateParentTask'));
         return;
       }
 
@@ -5471,7 +5476,7 @@ export default function PlanningPage() {
     } catch (err) {
       console.error('Failed to plan parent task:', err);
       setPlanningProgress(prev => ({ ...prev, show: false }));
-      showAlert('Error', 'Failed to plan parent task');
+      showAlert(t('common.error'), t('lit.failedToPlanParentTask'));
     }
   };
 
@@ -5892,13 +5897,13 @@ export default function PlanningPage() {
         : [];
 
       if (entries.length === 0) {
-        showAlert('Split Planning', 'Add at least one user split with planned hours.');
+        showAlert(t('lit.splitPlanning2'), t('lit.addAtLeastOneUserSplitWithPlannedHours'));
         return;
       }
 
       if (isParentTask) {
         if (!Array.isArray(leafTasks) || leafTasks.length === 0) {
-          showAlert('Split Planning', 'No subtasks found for this parent task.');
+          showAlert(t('lit.splitPlanning2'), t('lit.noSubtasksFoundForThisParentTask'));
           return;
         }
 
@@ -5907,19 +5912,19 @@ export default function PlanningPage() {
 
         for (const entry of entries) {
           if (!entry.selectedLeafTaskIds || entry.selectedLeafTaskIds.length === 0) {
-            showAlert('Split Planning', 'Select at least one subtask for each split user entry.');
+            showAlert(t('lit.splitPlanning2'), t('lit.selectAtLeastOneSubtaskForEachSplitUserEntry'));
             return;
           }
 
           for (const leafTaskId of entry.selectedLeafTaskIds) {
             if (!validLeafIds.has(leafTaskId)) {
-              showAlert('Split Planning', `Invalid subtask selected (ID: ${leafTaskId}).`);
+              showAlert(t('lit.splitPlanning2'), `Invalid subtask selected (ID: ${leafTaskId}).`);
               return;
             }
 
             if (selectedTaskOwner.has(leafTaskId) && selectedTaskOwner.get(leafTaskId) !== entry.userId) {
               const leafTaskName = leafTasks.find((leafTask) => leafTask.Id === leafTaskId)?.TaskName || `Task #${leafTaskId}`;
-              showAlert('Split Planning', `Subtask "${leafTaskName}" is assigned to multiple users. Assign each subtask to only one user.`);
+              showAlert(t('lit.splitPlanning2'), `Subtask "${leafTaskName}" is assigned to multiple users. Assign each subtask to only one user.`);
               return;
             }
 
@@ -5930,7 +5935,7 @@ export default function PlanningPage() {
         const unassignedLeafTasks = leafTasks.filter((leafTask) => !selectedTaskOwner.has(leafTask.Id));
         if (unassignedLeafTasks.length > 0) {
           showAlert(
-            'Split Planning',
+            t('lit.splitPlanning2'),
             `Assign all subtasks before planning. Unassigned: ${unassignedLeafTasks.map((leafTask) => leafTask.TaskName).join(', ')}`
           );
           return;
@@ -6017,7 +6022,7 @@ export default function PlanningPage() {
           );
 
           if (!parentSliceResult || !Array.isArray(parentSliceResult.allocations) || parentSliceResult.allocations.length === 0) {
-            showAlert('Error', `Failed to allocate parent slice for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
+            showAlert(t('common.error'), `Failed to allocate parent slice for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
             return;
           }
 
@@ -6152,7 +6157,7 @@ export default function PlanningPage() {
               });
 
               if (!childAllocationsSaveRes.ok) {
-                showAlert('Error', `Failed to distribute selected subtasks for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
+                showAlert(t('common.error'), `Failed to distribute selected subtasks for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
                 return;
               }
             }
@@ -6169,7 +6174,7 @@ export default function PlanningPage() {
           await reloadTasksAndAllocations();
         }
 
-        showAlert('Success', 'Parent task subtasks planned across selected users successfully.');
+        showAlert(t('lit.success'), t('lit.parentTaskSubtasksPlannedAcrossSelectedUsersSuccessfully'));
         return;
       }
 
@@ -6213,7 +6218,7 @@ export default function PlanningPage() {
         );
 
         if (!result) {
-          showAlert('Error', `Failed to allocate split for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
+          showAlert(t('common.error'), `Failed to allocate split for ${targetUser.FirstName || targetUser.Username || `User ${targetUser.Id}`}.`);
           return;
         }
 
@@ -6228,13 +6233,13 @@ export default function PlanningPage() {
         await reloadTasksAndAllocations();
       }
 
-      showAlert('Success', 'Task planned across multiple users successfully.');
+      showAlert(t('lit.success'), t('lit.taskPlannedAcrossMultipleUsersSuccessfully'));
       return;
     }
 
     // Use the parsed value, capped at the actual daily capacity (not a fixed 8h fallback)
     if (!canUseSplitPlanning && (!Number.isFinite(normalizedTotalHours) || normalizedTotalHours <= 0)) {
-      showAlert('Planning Hours', 'Enter planned hours greater than 0.');
+      showAlert(t('lit.planningHours'), t('lit.enterPlannedHoursGreaterThan0'));
       return;
     }
 
@@ -6270,7 +6275,7 @@ export default function PlanningPage() {
         );
 
         if (!pushRes.ok) {
-          showAlert('Error', 'Failed to push forward existing tasks');
+          showAlert(t('common.error'), t('lit.failedToPushForwardExistingTasks'));
           return;
         }
         
@@ -6280,7 +6285,7 @@ export default function PlanningPage() {
         }
       } catch (err) {
         console.error('Failed to push forward:', err);
-        showAlert('Error', 'Failed to push forward allocations');
+        showAlert(t('common.error'), t('lit.failedToPushForwardAllocations'));
       }
     } else {
       // Normal allocation (plan when available)
@@ -6299,7 +6304,7 @@ export default function PlanningPage() {
           });
 
           if (!parentSliceResult || !Array.isArray(parentSliceResult.allocations) || parentSliceResult.allocations.length === 0) {
-            showAlert('Error', 'Failed to replan selected parent slice.');
+            showAlert(t('common.error'), t('lit.failedToReplanSelectedParentSlice'));
             return;
           }
 
@@ -6322,7 +6327,7 @@ export default function PlanningPage() {
             });
 
             if (!childAllocationsSaveRes.ok) {
-              showAlert('Error', 'Failed to distribute subtasks for selected slice.');
+              showAlert(t('common.error'), t('lit.failedToDistributeSubtasksForSelectedSlice'));
               return;
             }
           }
@@ -6388,13 +6393,13 @@ export default function PlanningPage() {
       const normalizedMaxHoursPerDay = floorToPlanningStep(maxHoursPerDay);
       if (!Number.isFinite(normalizedRemainingHoursToWork) || normalizedRemainingHoursToWork <= 0) {
         if (!options?.silent) {
-          showAlert('Allocation Error', 'Planned hours must use 30-minute steps and be greater than 0.');
+          showAlert(t('lit.allocationError'), t('lit.plannedHoursMustUse30MinuteStepsAndBeGreaterThan0'));
         }
         return null;
       }
       if (!Number.isFinite(normalizedMaxHoursPerDay) || normalizedMaxHoursPerDay <= 0) {
         if (!options?.silent) {
-          showAlert('Allocation Error', 'Hours per day must use 30-minute steps and be greater than 0.');
+          showAlert(t('lit.allocationError'), t('lit.hoursPerDayMustUse30MinuteStepsAndBeGreaterThan0'));
         }
         return null;
       }
@@ -6456,7 +6461,7 @@ export default function PlanningPage() {
 
       if (!availabilityRes.ok) {
         if (!options?.silent) {
-          showAlert('Error', 'Failed to check user availability');
+          showAlert(t('common.error'), t('lit.failedToCheckUserAvailability'));
         }
         return null;
       }
@@ -6654,7 +6659,7 @@ export default function PlanningPage() {
       if (daysProcessed >= maxDaysToProcess) {
         if (!options?.silent) {
           setPlanningProgress(prev => ({ ...prev, show: false }));
-          showAlert('Allocation Error', `Task requires too many work days (${daysProcessed}) to allocate. Please review estimated hours or user availability.`);
+          showAlert(t('lit.allocationError'), `Task requires too many work days (${daysProcessed}) to allocate. Please review estimated hours or user availability.`);
         }
         return null;
       }
@@ -6662,7 +6667,7 @@ export default function PlanningPage() {
       if (allocations.length === 0) {
         if (!options?.silent) {
           setPlanningProgress(prev => ({ ...prev, show: false }));
-          showAlert('Allocation Error', 'Unable to allocate task - no available hours found in the next year');
+          showAlert(t('lit.allocationError'), t('lit.unableToAllocateTaskNoAvailableHoursFoundInTheNextYear'));
         }
         return null;
       }
@@ -6670,7 +6675,7 @@ export default function PlanningPage() {
       if (remainingHours > 0) {
         if (!options?.silent) {
           setPlanningProgress(prev => ({ ...prev, show: false }));
-          showAlert('Partial Allocation', `Unable to fully allocate task - ${remainingHours.toFixed(2)}h remaining. User doesn't have enough availability in the next year.`);
+          showAlert(t('lit.partialAllocation'), `Unable to fully allocate task - ${remainingHours.toFixed(2)}h remaining. User doesn't have enough availability in the next year.`);
         }
         return null;
       }
@@ -6723,8 +6728,8 @@ export default function PlanningPage() {
           const apiMessage =
             typeof saveData?.message === 'string' && saveData.message.trim()
               ? saveData.message.trim()
-              : 'Failed to save task allocation';
-          showAlert('Error', apiMessage);
+              : t('lit.failedToSaveTaskAllocation');
+          showAlert(t('common.error'), apiMessage);
         }
         return null;
       }
@@ -6761,7 +6766,7 @@ export default function PlanningPage() {
       console.error('Failed to allocate task:', err);
       if (!options?.silent) {
         setPlanningProgress(prev => ({ ...prev, show: false }));
-        showAlert('Error', 'Failed to allocate task');
+        showAlert(t('common.error'), t('lit.failedToAllocateTask'));
       }
       return null;
     }
@@ -6783,27 +6788,27 @@ export default function PlanningPage() {
 
     const task = tasks.find((entry) => Number(entry.Id) === Number(taskId));
     if (!task) {
-      throw new Error('Task not found');
+      throw new Error(t('lit.taskNotFound'));
     }
 
     const hasChildren = tasks.some((entry) => Number(entry.ParentTaskId) === Number(task.Id));
     if (hasChildren) {
-      throw new Error('Replanning parent task slices from this modal is not supported yet. Use the planning actions for parent tasks.');
+      throw new Error(t('lit.replanningParentTaskSlicesFromThisModalIsNotSupportedYetUseThePlanningAc'));
     }
 
     const planningUser = users.find((entry) => Number(entry.Id) === Number(userId));
     if (!planningUser) {
-      throw new Error('User not found');
+      throw new Error(t('lit.userNotFound'));
     }
 
     const maxHoursPerDay = Number(hoursPerDay || 0);
     if (!Number.isFinite(maxHoursPerDay) || maxHoursPerDay <= 0) {
-      throw new Error('Hours per day must be greater than 0');
+      throw new Error(t('lit.hoursPerDayMustBeGreaterThan02'));
     }
 
     const startDateObj = new Date(`${startDate}T12:00:00`);
     if (Number.isNaN(startDateObj.getTime())) {
-      throw new Error('Invalid start date');
+      throw new Error(t('lit.invalidStartDate'));
     }
 
     const allocationResult = await executeTaskAllocation(
@@ -6827,7 +6832,7 @@ export default function PlanningPage() {
     );
 
     if (!allocationResult) {
-      throw new Error('Failed to replan allocation slice');
+      throw new Error(t('lit.failedToReplanAllocationSlice'));
     }
 
     await deleteTaskAllocationHeaderSlice(headerId);
@@ -6907,7 +6912,7 @@ export default function PlanningPage() {
     if (!token) return;
 
     showConfirm(
-      'Delete All Allocations',
+      t('lit.deleteAllAllocations2'),
       'Are you sure you want to delete ALL allocations for this task? This action cannot be undone.',
       async () => {
         try {
@@ -6922,7 +6927,7 @@ export default function PlanningPage() {
 
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to delete allocations');
+            throw new Error(errorData.message || t('lit.failedToDeleteAllocations'));
           }
 
           // Also delete child allocations for this parent task
@@ -6939,10 +6944,10 @@ export default function PlanningPage() {
           }
           await reloadTasksAndAllocations();
           
-          showAlert('Success', 'All allocations deleted successfully');
+          showAlert(t('lit.success'), t('lit.allAllocationsDeletedSuccessfully'));
         } catch (error: any) {
           console.error('Error deleting allocations:', error);
-          showAlert('Error', error.message || 'Failed to delete allocations');
+          showAlert(t('common.error'), error.message || t('lit.failedToDeleteAllocations'));
         }
       }
     );
@@ -6965,7 +6970,7 @@ export default function PlanningPage() {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to delete allocation');
+        throw new Error(t('lit.failedToDeleteAllocation'));
       }
 
       // Reload tasks and allocations
@@ -6973,10 +6978,10 @@ export default function PlanningPage() {
       }
       await reloadTasksAndAllocations();
       
-      showAlert('Success', 'Allocation removed successfully');
+      showAlert(t('lit.success'), t('lit.allocationRemovedSuccessfully'));
     } catch (err) {
       console.error('Failed to delete allocation:', err);
-      showAlert('Error', 'Failed to remove allocation');
+      showAlert(t('common.error'), t('lit.failedToRemoveAllocation'));
     }
   };
 
@@ -7016,25 +7021,25 @@ export default function PlanningPage() {
 
   const handleSaveManualAllocation = async () => {
     if (!manualAllocationModal.taskId || !manualAllocationModal.userId) {
-      showAlert('Error', 'Task and User are required');
+      showAlert(t('common.error'), t('lit.taskAndUserAreRequired'));
       return;
     }
 
     if (!manualAllocationModal.allocationDate || !manualAllocationModal.allocatedHours) {
-      showAlert('Error', 'Date and Hours are required');
+      showAlert(t('common.error'), t('lit.dateAndHoursAreRequired'));
       return;
     }
 
     const hours = roundToPlanningStep(parseFloat(manualAllocationModal.allocatedHours));
     if (isNaN(hours) || hours <= 0 || !isPlanningStepValue(hours)) {
-      showAlert('Error', 'Hours must be greater than 0 and use 30-minute steps (0.5h).');
+      showAlert(t('common.error'), t('lit.hoursMustBeGreaterThan0AndUse30MinuteSteps05h'));
       return;
     }
 
     if (manualAllocationModal.mode === 'add' && isUserHoliday(manualAllocationModal.userId, manualAllocationModal.allocationDate)) {
       const holidayNames = getUserHolidayNames(manualAllocationModal.userId, manualAllocationModal.allocationDate);
       showAlert(
-        'Unavailable Day',
+        t('lit.unavailableDay'),
         `Cannot create manual allocation on unavailable day (${manualAllocationModal.allocationDate}): ${holidayNames.join(', ')}`
       );
       return;
@@ -7060,10 +7065,10 @@ export default function PlanningPage() {
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.message || 'Failed to create manual allocation');
+          throw new Error(error.message || t('lit.failedToCreateManualAllocation'));
         }
 
-        showAlert('Success', 'Manual allocation created successfully');
+        showAlert(t('lit.success'), t('lit.manualAllocationCreatedSuccessfully'));
       } else {
         const response = await fetch(`${getApiUrl()}/api/task-allocations/manual/${manualAllocationModal.allocationId}`, {
           method: 'PUT',
@@ -7080,10 +7085,10 @@ export default function PlanningPage() {
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.message || 'Failed to update manual allocation');
+          throw new Error(error.message || t('lit.failedToUpdateManualAllocation'));
         }
 
-        showAlert('Success', 'Manual allocation updated successfully');
+        showAlert(t('lit.success'), t('lit.manualAllocationUpdatedSuccessfully'));
       }
 
       setManualAllocationModal({
@@ -7099,13 +7104,13 @@ export default function PlanningPage() {
       await loadAllAllocations();
     } catch (err: any) {
       console.error('Failed to save manual allocation:', err);
-      showAlert('Error', err.message || 'Failed to save manual allocation');
+      showAlert(t('common.error'), err.message || t('lit.failedToSaveManualAllocation'));
     }
   };
 
   const _handleDeleteManualAllocation = async (allocationId: number) => {
     showConfirm(
-      'Confirm Delete',
+      t('lit.confirmDelete'),
       'Are you sure you want to delete this manual allocation?',
       async () => {
         try {
@@ -7118,16 +7123,16 @@ export default function PlanningPage() {
 
           if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to delete manual allocation');
+            throw new Error(error.message || t('lit.failedToDeleteManualAllocation'));
           }
 
-          showAlert('Success', 'Manual allocation deleted successfully');
+          showAlert(t('lit.success'), t('lit.manualAllocationDeletedSuccessfully'));
           
           // Reload allocations
           await loadAllAllocations();
         } catch (err: any) {
           console.error('Failed to delete manual allocation:', err);
-          showAlert('Error', err.message || 'Failed to delete manual allocation');
+          showAlert(t('common.error'), err.message || t('lit.failedToDeleteManualAllocation'));
         }
       }
     );
@@ -7183,8 +7188,8 @@ export default function PlanningPage() {
         const project = projects.find((p) => p.Id === task?.ProjectId);
         acc[a.TaskId] = {
           TaskId: a.TaskId,
-          TaskName: task?.TaskName || 'Unknown Task',
-          ProjectName: project?.ProjectName || 'Unknown Project',
+          TaskName: task?.TaskName || t('lit.unknownTask'),
+          ProjectName: project?.ProjectName || t('lit.unknownProject'),
           ProjectId: task?.ProjectId,
           totalHours: 0,
           users: new Set<number>(),
@@ -7215,7 +7220,7 @@ export default function PlanningPage() {
         const userIds = Array.from(group.users as Set<number>);
         group.userNames = userIds.map((userId) => {
           const matched = users.find((u) => u.Id === userId);
-          return matched?.Username || 'Unknown';
+          return matched?.Username || t('lit.unknown');
         });
         return group;
       })
@@ -7269,8 +7274,8 @@ export default function PlanningPage() {
         <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="text-5xl mb-4">🔒</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-            <p className="text-gray-600 dark:text-gray-400">You don&apos;t have permission to view the planning page.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.accessDenied2')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('lit.youDontHavePermissionToViewThePlanningPage')}</p>
           </div>
         </main>
       </div>
@@ -7451,22 +7456,22 @@ export default function PlanningPage() {
         },
         body: JSON.stringify({
           timerType: 'callRecord',
-          callType: 'Teams',
+          callType: t('lit.teams'),
           subject: selectedOutlookEvent.subject || null,
           clientTimezone,
         }),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to start call timer');
+        throw new Error(data.message || t('lit.failedToStartCallTimer'));
       }
       window.dispatchEvent(new CustomEvent('timer-changed'));
-      showToast({ type: 'success', message: 'Call timer started' });
+      showToast({ type: 'success', message: t('lit.callTimerStarted') });
       closeOutlookActionModal();
     } catch (error) {
       showToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to start call timer',
+        message: error instanceof Error ? error.message : t('lit.failedToStartCallTimer'),
       });
     } finally {
       setIsStartingOutlookTimer(false);
@@ -7487,7 +7492,7 @@ export default function PlanningPage() {
   };
 
   const formatOutlookEventTimeRange = (event: PlannerOutlookEvent) => {
-    if (event.isAllDay) return 'All day';
+    if (event.isAllDay) return t('lit.allDay');
     const start = new Date(event.start);
     const end = new Date(event.end);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
@@ -7575,19 +7580,19 @@ export default function PlanningPage() {
           grouped.set(key, {
             id: key,
             label: projectName,
-            subLabel: project?.CustomerName ? `Customer: ${project.CustomerName}` : 'No customer',
+            subLabel: project?.CustomerName ? `Customer: ${project.CustomerName}` : t('lit.noCustomer'),
             tasks: [],
           });
         }
         grouped.get(key)!.tasks.push(task);
       } else {
-        const customerName = task.CustomerName || project?.CustomerName || 'No Customer';
+        const customerName = task.CustomerName || project?.CustomerName || t('lit.noCustomer2');
         const key = `customer-${customerName.toLowerCase()}`;
         if (!grouped.has(key)) {
           grouped.set(key, {
             id: key,
             label: customerName,
-            subLabel: 'Customer',
+            subLabel: t('lit.customer2'),
             tasks: [],
           });
         }
@@ -7693,10 +7698,10 @@ export default function PlanningPage() {
               <NavModuleIcon href="/planning" size={48} />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              No tasks to plan
+              {t('lit.noTasksToPlan')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Select a project and add tasks to start planning
+              {t('lit.selectAProjectAndAddTasksToStartPlanning')}
             </p>
           </div>
         ) : (
@@ -7707,7 +7712,7 @@ export default function PlanningPage() {
                 <div className="min-w-0 flex-1">
                   <PageTabs
                     tabs={[
-                      { id: 'gantt', label: 'Gantt Chart' },
+                      { id: 'gantt', label: t('lit.ganttChart') },
                       { id: 'allocations', label: `All Allocations (${filteredAllocationGroups.length})` },
                     ]}
                     activeId={activeTab}
@@ -7720,7 +7725,7 @@ export default function PlanningPage() {
                       type="text"
                       value={ganttSearch}
                       onChange={(e) => setGanttSearch(e.target.value)}
-                      placeholder="Search tasks in Gantt..."
+                      placeholder={t('lit.searchTasksInGantt')}
                       className="h-8 w-56 sm:w-72 rounded-md border border-gray-300 bg-white px-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                     {isGanttSearchActive && (
@@ -7729,7 +7734,7 @@ export default function PlanningPage() {
                         onClick={() => setGanttSearch('')}
                         className="inline-flex h-8 items-center rounded-md bg-gray-200 px-2.5 text-sm text-gray-900 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                       >
-                        Clear
+                        {t('common.clear')}
                       </button>
                     )}
                   </div>
@@ -7744,7 +7749,7 @@ export default function PlanningPage() {
                 {isLoadingOutlookCalendar && (
                   <div className="flex items-center gap-1.5 text-xs text-amber-800 dark:text-amber-300">
                     <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-amber-600 border-t-transparent dark:border-amber-400 dark:border-t-transparent" aria-hidden="true" />
-                    <span>Still loading Outlook calendar…</span>
+                    <span>{t('lit.stillLoadingOutlookCalendar')}</span>
                   </div>
                 )}
 
@@ -7779,15 +7784,15 @@ export default function PlanningPage() {
                                 type="button"
                                 onClick={() => { setActiveTab('gantt'); focusTimelineDate(entry.dueDate); }}
                                 className="px-2 py-0.5 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
-                                title="Show in Gantt"
+                                title={t('lit.showInGantt')}
                               >
-                                Show
+                                {t('lit.show')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => void openMilestoneEditor(entry.milestone)}
                                 className="px-2 py-0.5 text-xs bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded transition-colors"
-                                title="Edit milestone"
+                                title={t('lit.editMilestone')}
                               >
                                 ✎
                               </button>
@@ -7796,7 +7801,7 @@ export default function PlanningPage() {
                         ))}
                         {overdueMilestones.length > overdueMilestonesPreview.length && (
                           <div className="text-xs text-amber-700 dark:text-amber-400 py-1 px-2">
-                            +{overdueMilestones.length - overdueMilestonesPreview.length} more
+                            +{overdueMilestones.length - overdueMilestonesPreview.length} {t('lit.more')}
                           </div>
                         )}
                       </div>
@@ -7840,9 +7845,9 @@ export default function PlanningPage() {
                                   type="button"
                                   onClick={() => void handleTaskClick(task)}
                                   className="px-2 py-0.5 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
-                                  title="Open task"
+                                  title={t('lit.openTask')}
                                 >
-                                  Open
+                                  {t('common.open')}
                                 </button>
                               </div>
                             </div>
@@ -7850,7 +7855,7 @@ export default function PlanningPage() {
                         })}
                         {hiddenUnassignedTasks.length > hiddenUnassignedTasksPreview.length && (
                           <div className="text-xs text-amber-700 dark:text-amber-400 py-1 px-2">
-                            +{hiddenUnassignedTasks.length - hiddenUnassignedTasksPreview.length} more
+                            +{hiddenUnassignedTasks.length - hiddenUnassignedTasksPreview.length} {t('lit.more')}
                           </div>
                         )}
                         <div className="pt-1 px-2">
@@ -7859,7 +7864,7 @@ export default function PlanningPage() {
                             onClick={() => setHideNotPlannedTasks(false)}
                             className="text-xs font-medium text-amber-800 dark:text-amber-300 underline hover:no-underline"
                           >
-                            Show them in Not Planned
+                            {t('lit.showThemInNotPlanned')}
                           </button>
                         </div>
                       </div>
@@ -7890,7 +7895,7 @@ export default function PlanningPage() {
                   </span>
                   {isMobile && permissions?.canPlanTasks && (
                     <span className="text-xs text-yellow-700/90 dark:text-yellow-300/90">
-                      Drag, resize, and planning tools stay on larger screens by design.
+                      {t('lit.dragResizeAndPlanningToolsStayOnLargerScreensByDesign')}
                     </span>
                   )}
                 </div>
@@ -7900,7 +7905,7 @@ export default function PlanningPage() {
               <div className="border-b border-orange-400 bg-orange-50 px-3 py-1.5 dark:border-orange-600 dark:bg-orange-900/20">
                 <div className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
                   <span className="text-sm">🔎</span>
-                  <span className="text-xs font-medium sm:text-sm">Search filter active — planning is locked while filtering.</span>
+                  <span className="text-xs font-medium sm:text-sm">{t('lit.searchFilterActivePlanningIsLockedWhileFiltering')}</span>
                 </div>
               </div>
             )}
@@ -7908,7 +7913,7 @@ export default function PlanningPage() {
               <div className="border-b border-blue-200 bg-blue-50 px-3 py-1.5 dark:border-blue-700 dark:bg-blue-900/20">
                 <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-200 sm:text-sm">
                   <span>ℹ️</span>
-                  <span className="font-medium">Customer/Project views are visualization-only. Planning drag-and-drop is available in Resource view.</span>
+                  <span className="font-medium">{t('lit.customerProjectViewsAreVisualizationOnlyPlanningDragAndDropIsAvailableIn')}</span>
                 </div>
               </div>
             )}
@@ -7940,7 +7945,7 @@ export default function PlanningPage() {
                 <button
                   onClick={goToToday}
                   className="inline-flex h-8 items-center rounded-md bg-blue-600 px-2.5 text-sm font-medium text-white hover:bg-blue-700"
-                  title="Go to today"
+                  title={t('lit.goToToday')}
                 >
                   📅 Today
                 </button>
@@ -7963,13 +7968,13 @@ export default function PlanningPage() {
                   }}
                   className="inline-flex h-8 items-center rounded-md bg-gray-200 px-2.5 text-sm text-gray-900 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                 >
-                  Next →
+                  {t('lit.next')}
                 </button>
               </div>
               
               {viewMode === 'custom' ? (
                 <div className="flex items-center gap-1.5 text-sm text-gray-900 dark:text-white">
-                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.from')}</label>
                   <input
                     type="date"
                     value={customStartDate}
@@ -7987,7 +7992,7 @@ export default function PlanningPage() {
                     }}
                     className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
-                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
+                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('common.to')}</label>
                   <input
                     type="date"
                     value={customEndDate}
@@ -8010,25 +8015,25 @@ export default function PlanningPage() {
               )}
               <div className="flex items-center gap-1.5">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Subtask Levels
+                  {t('lit.subtaskLevels')}
                 </label>
                 <select
                   value={maxVisibleLevel}
                   onChange={(e) => setMaxVisibleLevel(parseInt(e.target.value))}
                   className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  title="Maximum subtask level to show in Gantt"
+                  title={t('lit.maximumSubtaskLevelToShowInGantt')}
                 >
-                  <option value={0}>None</option>
-                  <option value={1}>Level 1 only</option>
-                  <option value={2}>Up to Level 2</option>
-                  <option value={3}>Up to Level 3</option>
-                  <option value={4}>Up to Level 4</option>
-                  <option value={99}>Show All</option>
+                  <option value={0}>{t('common.none')}</option>
+                  <option value={1}>{t('lit.level1Only')}</option>
+                  <option value={2}>{t('lit.upToLevel2')}</option>
+                  <option value={3}>{t('lit.upToLevel3')}</option>
+                  <option value={4}>{t('lit.upToLevel4')}</option>
+                  <option value={99}>{t('lit.showAll')}</option>
                 </select>
               </div>
               <div className="flex items-center gap-1.5">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  View Mode
+                  {t('lit.viewMode')}
                 </label>
                 <select
                   value={viewMode}
@@ -8045,28 +8050,28 @@ export default function PlanningPage() {
                   }}
                   className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="day">Day</option>
-                  <option value="week">Week</option>
-                  <option value="month">Month</option>
-                  <option value="year">Year</option>
-                  <option value="custom">Custom</option>
+                  <option value="day">{t('lit.day')}</option>
+                  <option value="week">{t('lit.week')}</option>
+                  <option value="month">{t('lit.month')}</option>
+                  <option value="year">{t('lit.year')}</option>
+                  <option value="custom">{t('lit.custom')}</option>
                 </select>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Group By
+                  {t('lit.groupBy2')}
                 </label>
                 <select
                   value={ganttGroupBy}
                   onChange={(e) => setGanttGroupBy(e.target.value as 'resource' | 'customer' | 'project' | 'time-entries')}
                   className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  title="Choose how rows are grouped in Gantt"
+                  title={t('lit.chooseHowRowsAreGroupedInGantt')}
                 >
-                  <option value="resource">Resource</option>
-                  <option value="customer">Customer</option>
-                  <option value="project">Project</option>
-                  <option value="time-entries">Time Entries</option>
+                  <option value="resource">{t('lit.resource')}</option>
+                  <option value="customer">{t('common.customer')}</option>
+                  <option value="project">{t('common.project')}</option>
+                  <option value="time-entries">{t('lit.timeEntries')}</option>
                 </select>
               </div>
 
@@ -8082,7 +8087,7 @@ export default function PlanningPage() {
                           : 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-950/70 dark:text-red-200 dark:hover:bg-red-900/70'
                       }`}
                       aria-expanded={notPlannedTrayExpanded}
-                      title="Search and drag not-planned tasks without scrolling to the bottom"
+                      title={t('lit.searchAndDragNotPlannedTasksWithoutScrollingToTheBottom')}
                     >
                       <span className="truncate">Not Planned ({visibleUnassignedTasks.length})</span>
                       <svg
@@ -8108,7 +8113,7 @@ export default function PlanningPage() {
                             type="search"
                             value={notPlannedTrayQuery}
                             onChange={(e) => setNotPlannedTrayQuery(e.target.value)}
-                            placeholder="Filter by task, project, or customer…"
+                            placeholder={t('lit.filterByTaskProjectOrCustomer')}
                             className="min-w-0 flex-1 rounded border border-red-200 dark:border-red-800 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-gray-100"
                             autoFocus
                           />
@@ -8120,13 +8125,13 @@ export default function PlanningPage() {
                               setNotPlannedTrayExpanded(false);
                             }}
                           >
-                            Jump to bottom
+                            {t('lit.jumpToBottom')}
                           </button>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto rounded border border-red-100 dark:border-red-900/60">
                           {notPlannedTrayFilter.matches.length === 0 ? (
                             <p className="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">
-                              No matching not-planned tasks
+                              {t('lit.noMatchingNotPlannedTasks')}
                             </p>
                           ) : (
                             <ul className="divide-y divide-red-100 dark:divide-red-900/40">
@@ -8150,7 +8155,7 @@ export default function PlanningPage() {
                                       }`}
                                       title={
                                         canDragFromTray
-                                          ? 'Drag onto a user row to plan'
+                                          ? t('lit.dragOntoAUserRowToPlan')
                                           : 'Clear Gantt search to drag; click to open'
                                       }
                                     >
@@ -8161,7 +8166,7 @@ export default function PlanningPage() {
                                         <span className="block truncate text-[10px] text-gray-500 dark:text-gray-400">
                                           {[project?.ProjectName, task.CustomerName || project?.CustomerName]
                                             .filter(Boolean)
-                                            .join(' · ') || 'No project'}
+                                            .join(' · ') || t('lit.noProject2')}
                                         </span>
                                       </span>
                                     </div>
@@ -8186,7 +8191,7 @@ export default function PlanningPage() {
                     type="text"
                     value={ganttSearch}
                     onChange={(e) => setGanttSearch(e.target.value)}
-                    placeholder="Search tasks..."
+                    placeholder={t('lit.searchTasks')}
                     className="h-8 w-44 rounded-md border border-gray-300 bg-white px-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:w-56"
                   />
                 )}
@@ -8194,8 +8199,8 @@ export default function PlanningPage() {
                   <button
                     onClick={() => setShowGanttViewOptions((prev) => !prev)}
                     className="inline-flex h-8 items-center gap-1.5 rounded-md bg-gray-200 px-2.5 text-sm text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                    title="Gantt view options"
-                    aria-label="Gantt view options"
+                    title={t('lit.ganttViewOptions')}
+                    aria-label={t('lit.ganttViewOptions')}
                   >
                     ⚙️ View Options
                     <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -8217,7 +8222,7 @@ export default function PlanningPage() {
                           onChange={(e) => setShowDependencyLines(e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                         />
-                        Show dependencies
+                        {t('lit.showDependencies')}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
@@ -8226,7 +8231,7 @@ export default function PlanningPage() {
                           onChange={(e) => setShowCriticalPath(e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                         />
-                        Show critical path
+                        {t('lit.showCriticalPath')}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
@@ -8235,7 +8240,7 @@ export default function PlanningPage() {
                           onChange={(e) => setShowBaseline(e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                         />
-                        Show baseline
+                        {t('lit.showBaseline')}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
@@ -8244,7 +8249,7 @@ export default function PlanningPage() {
                           onChange={(e) => setShowGanttTotals(e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                         />
-                        Show daily totals
+                        {t('lit.showDailyTotals')}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
@@ -8253,7 +8258,7 @@ export default function PlanningPage() {
                           onChange={(e) => setShowTaskBarHours(e.target.checked)}
                           className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                         />
-                        Show task bar hours
+                        {t('lit.showTaskBarHours')}
                       </label>
                       {ganttGroupBy !== 'time-entries' && (
                         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
@@ -8263,7 +8268,7 @@ export default function PlanningPage() {
                             onChange={(e) => setShowTimeEntriesOverlay(e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500 bg-white dark:bg-gray-700"
                           />
-                          Show time entries
+                          {t('lit.showTimeEntries')}
                         </label>
                       )}
                       {isResourceGrouping && (
@@ -8275,7 +8280,7 @@ export default function PlanningPage() {
                             className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                           />
                           <span>
-                            <span className="block">Hide not-planned tasks without hours</span>
+                            <span className="block">{t('lit.hideNotPlannedTasksWithoutHours')}</span>
                             <span className="block text-xs text-gray-500 dark:text-gray-400">
                               Hides unplanned tasks with no estimated hours. Tasks with hours stay visible; Unscheduled stay on assignee rows.
                             </span>
@@ -8286,13 +8291,13 @@ export default function PlanningPage() {
                         <>
                           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                             <div className="flex items-center justify-between gap-2 mb-2">
-                              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Users to render</span>
+                              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.usersToRender')}</span>
                               <button
                                 type="button"
                                 onClick={resetGanttUserSelectionToAll}
                                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                               >
-                                All users
+                                {t('lit.allUsers')}
                               </button>
                             </div>
                             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer mb-1">
@@ -8302,7 +8307,7 @@ export default function PlanningPage() {
                                 onChange={toggleGanttUserSelectAll}
                                 className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                               />
-                              Select all users
+                              {t('lit.selectAllUsers')}
                             </label>
                             <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
                               {availableGanttUsers.map((planningUser) => {
@@ -8337,8 +8342,8 @@ export default function PlanningPage() {
                 <button
                   onClick={togglePlanningTools}
                   className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${showPlanningTools ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'}`}
-                  title={showPlanningTools ? 'Collapse planning tools' : 'Expand planning tools'}
-                  aria-label={showPlanningTools ? 'Collapse planning tools' : 'Expand planning tools'}
+                  title={showPlanningTools ? t('lit.collapsePlanningTools') : t('lit.expandPlanningTools')}
+                  aria-label={showPlanningTools ? t('lit.collapsePlanningTools') : t('lit.expandPlanningTools')}
                 >
                   <svg className={`h-4 w-4 transition-transform ${showPlanningTools ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -8352,8 +8357,8 @@ export default function PlanningPage() {
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                   }`}
-                  title={isGanttExpanded ? 'Exit full page (Esc)' : 'Expand Gantt to full page'}
-                  aria-label={isGanttExpanded ? 'Exit full page' : 'Expand Gantt to full page'}
+                  title={isGanttExpanded ? 'Exit full page (Esc)' : t('lit.expandGanttToFullPage')}
+                  aria-label={isGanttExpanded ? t('lit.exitFullPage') : t('lit.expandGanttToFullPage')}
                   aria-pressed={isGanttExpanded}
                 >
                   {isGanttExpanded ? (
@@ -8390,17 +8395,17 @@ export default function PlanningPage() {
                               });
                               if (res.ok) successCount++; else failCount++;
                             }
-                            showAlert('Baseline Set', `Baseline snapshot completed. Success: ${successCount}, Failed: ${failCount}`);
+                            showAlert(t('lit.baselineSet'), `Baseline snapshot completed. Success: ${successCount}, Failed: ${failCount}`);
                             await loadData();
                             setShowBaseline(true);
                           } catch (err: any) {
-                            showAlert('Error', `Failed to set baseline: ${err.message}`);
+                            showAlert(t('common.error'), `Failed to set baseline: ${err.message}`);
                           }
                         }
                       );
                     }}
                     className="h-8 px-3 rounded text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:border-purple-400 transition-colors"
-                    title="Snapshot current planned dates as baseline for all visible projects"
+                    title={t('lit.snapshotCurrentPlannedDatesAsBaselineForAllVisibleProjects')}
                   >
                     📐 Set Baseline
                   </button>
@@ -8408,7 +8413,7 @@ export default function PlanningPage() {
                 <button
                   onClick={openSnapshotModal}
                   className="h-8 px-3 rounded text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400 transition-colors"
-                  title="Manage allocation snapshots"
+                  title={t('lit.manageAllocationSnapshots')}
                 >
                   📸 Manage Snapshots
                 </button>
@@ -8416,9 +8421,9 @@ export default function PlanningPage() {
                 <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
                 {/* Snapshot overlay selector */}
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Overlay:</span>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('lit.overlay')}</span>
                 {isLoadingToolbarSnapshots ? (
-                  <span className="text-xs text-gray-400 italic">Loading…</span>
+                  <span className="text-xs text-gray-400 italic">{t('common.loading')}</span>
                 ) : (
                   <select
                     value={selectedSnapshotId ?? ''}
@@ -8441,27 +8446,27 @@ export default function PlanningPage() {
                 )}
                 {selectedSnapshotId !== null && snapshotOverlayData && !isLoadingSnapshotOverlay && (
                   <span className="text-xs text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded px-2 py-0.5">
-                    Overlay active — amber ghost bars shown in Gantt
+                    {t('lit.overlayActiveAmberGhostBarsShownInGantt')}
                   </span>
                 )}
                 {selectedSnapshotId !== null && (
                   <button
                     onClick={handleRestoreSelectedSnapshot}
                     className="h-8 px-3 rounded text-sm bg-amber-600 hover:bg-amber-700 text-white transition-colors inline-flex items-center gap-1.5"
-                    title="Restore this snapshot, replacing all current allocations"
+                    title={t('lit.restoreThisSnapshotReplacingAllCurrentAllocations')}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Restore
+                    {t('lit.restore')}
                   </button>
                 )}
                 {selectedSnapshotId !== null && (
                   <button
                     onClick={handleClearSnapshotOverlay}
                     className="h-8 w-8 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
-                    title="Clear snapshot overlay"
-                    aria-label="Clear overlay"
+                    title={t('lit.clearSnapshotOverlay')}
+                    aria-label={t('lit.clearOverlay')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -8525,7 +8530,7 @@ export default function PlanningPage() {
                   {timelineColumns.length > 0 && (
                     <div className="flex border-b-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800">
                       <div className="w-48 min-w-48 max-w-48 flex-none sticky left-0 z-[40] bg-gray-100 dark:bg-gray-800 p-2 font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">
-                        Month
+                        {t('lit.month')}
                       </div>
                       <div className="flex-1 flex" style={useFixedPixelColumns ? { minWidth: `${timelineDaysWidthPx}px` } : undefined}>
                         {(() => {
@@ -8540,7 +8545,7 @@ export default function PlanningPage() {
                               currentMonth = month;
                               currentYear = year;
                               monthGroups.push({
-                                month: day.toLocaleDateString('en-US', { month: 'long' }),
+                                month: day.toLocaleDateString(dateLocale, { month: 'long' }),
                                 year: year.toString(),
                                 count: 1
                               });
@@ -8569,7 +8574,7 @@ export default function PlanningPage() {
                   {/* Header with dates */}
                   <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                     <div className="w-48 min-w-48 max-w-48 flex-none sticky left-0 z-[40] bg-gray-50 dark:bg-gray-700 p-3 font-semibold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">
-                      {ganttGroupBy === 'resource' ? 'User' : ganttGroupBy === 'customer' ? 'Customer' : ganttGroupBy === 'time-entries' ? 'User' : 'Project'}
+                      {ganttGroupBy === 'resource' ? t('lit.user2') : ganttGroupBy === 'customer' ? t('lit.customer2') : ganttGroupBy === 'time-entries' ? t('lit.user2') : t('lit.project3')}
                     </div>
                     <div className="flex-1 flex" style={useFixedPixelColumns ? { minWidth: `${timelineDaysWidthPx}px` } : undefined}>
                       {timelineColumns.map((column, idx) => {
@@ -8651,7 +8656,7 @@ export default function PlanningPage() {
 
                       if (dayIndex === -1) return null;
 
-                      const projectName = projects.find((project) => Number(project.Id) === Number(milestone.ProjectId))?.ProjectName || 'Project';
+                      const projectName = projects.find((project) => Number(project.Id) === Number(milestone.ProjectId))?.ProjectName || t('lit.project3');
                       const milestoneColor = milestone.MilestoneTypeColor || '#059669';
                       const isCompletedMilestone = Number(milestone.IsCompleted || 0) === 1;
                       const isOverdueMilestone = !isCompletedMilestone && dueDate < todayDateKey;
@@ -8685,7 +8690,7 @@ export default function PlanningPage() {
                             const customerLabel = projects.find((p) => Number(p.Id) === Number(milestone.ProjectId))?.CustomerName;
                             const lines = ['Click to edit milestone', '', projectName];
                             if (customerLabel) lines.push(`Customer: ${customerLabel}`);
-                            lines.push(milestone.Name, `Type: ${milestone.MilestoneTypeName || 'No type'}`, `Due: ${new Date(`${dueDate}T12:00:00`).toLocaleDateString()}`);
+                            lines.push(milestone.Name, `Type: ${milestone.MilestoneTypeName || t('lit.noType')}`, `Due: ${new Date(`${dueDate}T12:00:00`).toLocaleDateString()}`);
                             lines.push(isCompletedMilestone ? 'Status: Completed' : isOverdueMilestone ? `Status: Open (Overdue by ${Math.max(1, Math.round((today.getTime() - new Date(`${dueDate}T00:00:00`).getTime()) / 86400000))} days)` : 'Status: Open');
                             return lines.join('\n');
                           })()}
@@ -8714,7 +8719,7 @@ export default function PlanningPage() {
                         ⚠️ Not Planned ({visibleUnassignedTasks.length})
                       </div>
                       <div className="text-xs text-red-600 dark:text-red-500">
-                        Click to plan subtasks
+                        {t('lit.clickToPlanSubtasks')}
                       </div>
                     </div>
                     <div className="flex-1 relative" style={useFixedPixelColumns ? { minHeight: `${Math.max(40, visibleUnassignedTasks.length * 24 + 8)}px`, minWidth: `${timelineDaysWidthPx}px` } : { minHeight: `${Math.max(40, visibleUnassignedTasks.length * 24 + 8)}px` }}>
@@ -8774,12 +8779,12 @@ export default function PlanningPage() {
                           || (parentTask.GiteaIssueNumber ? `#${parentTask.GiteaIssueNumber}` : null)
                           || null;
                         const parentTooltipLines = [
-                          `Project: ${project?.ProjectName || 'Unknown'}`,
+                          `Project: ${project?.ProjectName || t('lit.unknown')}`,
                           `Task: ${parentTask.TaskName}`,
-                          `Status: ${parentTask.StatusName || 'Unknown'}`,
-                          `Priority: ${parentTask.PriorityName || 'Unknown'}`,
+                          `Status: ${parentTask.StatusName || t('lit.unknown')}`,
+                          `Priority: ${parentTask.PriorityName || t('lit.unknown')}`,
                           `Estimated: ${Number(parentTask.EstimatedHours || 0).toFixed(1)}h`,
-                          `Planned Dates: ${parentTask.PlannedStartDate || 'Not planned'} → ${parentTask.PlannedEndDate || 'Not planned'}`,
+                          `Planned Dates: ${parentTask.PlannedStartDate || t('lit.notPlanned')} → ${parentTask.PlannedEndDate || t('lit.notPlanned')}`,
                         ];
 
                         if (!hasEstimatedHours) {
@@ -8844,7 +8849,7 @@ export default function PlanningPage() {
                                 onMouseDown={(e) => handleTaskResizeHandleMouseDown(e, parentTask, 'start', position.startIndex, position.startIndex + position.duration - 1)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l bg-black/20 hover:bg-black/35"
-                                title="Hold Shift and drag to resize start"
+                                title={t('lit.holdShiftAndDragToResizeStart')}
                               />
                             )}
                             <TaskTypeIconMark
@@ -8854,7 +8859,7 @@ export default function PlanningPage() {
                               className="w-3 h-3 shrink-0 mr-1"
                             />
                             {taskIsHobbyProject && (
-                              <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">HOBBY</span>
+                              <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">{t('lit.hobby2')}</span>
                             )}
                             {parentIssueRef && (
                               <span className="mr-1 bg-black/30 text-white text-[9px] px-1 py-0.5 rounded font-bold flex-shrink-0 pointer-events-none">{parentIssueRef}</span>
@@ -8877,7 +8882,7 @@ export default function PlanningPage() {
                                 onMouseDown={(e) => handleTaskResizeHandleMouseDown(e, parentTask, 'end', position.startIndex, position.startIndex + position.duration - 1)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r bg-black/20 hover:bg-black/35"
-                                title="Hold Shift and drag to resize end"
+                                title={t('lit.holdShiftAndDragToResizeEnd')}
                               />
                             )}
                           </div>
@@ -9122,9 +9127,9 @@ export default function PlanningPage() {
 
                     // Helper function to calculate task level
                     const getTaskLevel = (taskId: number): number => {
-                      const t = tasks.find(x => x.Id === taskId);
-                      if (!t || !t.ParentTaskId) return 0;
-                      return 1 + getTaskLevel(t.ParentTaskId);
+                      const taskNode = tasks.find(x => x.Id === taskId);
+                      if (!taskNode || !taskNode.ParentTaskId) return 0;
+                      return 1 + getTaskLevel(taskNode.ParentTaskId);
                     };
 
                     // Check previous tasks to find overlaps
@@ -9349,7 +9354,7 @@ export default function PlanningPage() {
                               >
                                 {showDayDropTarget && (
                                   <div className="absolute inset-1 rounded border-2 border-dashed border-blue-500 dark:border-blue-400 bg-blue-100/40 dark:bg-blue-900/30 pointer-events-none flex items-center justify-center">
-                                    <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">Drop here</span>
+                                    <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">{t('lit.dropHere')}</span>
                                   </div>
                                 )}
                               </div>
@@ -9492,8 +9497,8 @@ export default function PlanningPage() {
                           const planningCoverage = remainingHours > 0
                             ? `${((plannedHours / remainingHours) * 100).toFixed(0)}% of remaining`
                             : plannedHours > 0
-                              ? 'Complete scope planned'
-                              : 'No remaining hours';
+                              ? t('lit.completeScopePlanned')
+                              : t('lit.noRemainingHours2');
                           const taskCustomerName = task.CustomerName || project?.CustomerName || null;
                           const taskJiraRef = task.ExternalTicketId || task.JiraIssueKey || null;
                           const taskIssueRef = task.JiraIssueKey || task.ExternalTicketId || task.ExternalIssueId
@@ -9505,12 +9510,12 @@ export default function PlanningPage() {
                             ? `${userRow.FirstName} ${userRow.LastName}`
                             : userRow.Username;
                           const taskTooltipLines = [
-                            `Project: ${project?.ProjectName || 'Unknown'}`,
+                            `Project: ${project?.ProjectName || t('lit.unknown')}`,
                             `Task: ${task.TaskName}${isSubtask ? ` (Level ${level} Subtask)` : ''}`,
                             `Assignee: ${assigneeName}`,
-                            `Status: ${task.StatusName || 'Unknown'}`,
-                            `Priority: ${task.PriorityName || 'Unknown'}`,
-                            `Dates: ${displayedStartDate || 'Not planned'} → ${displayedEndDate || 'Not planned'}`,
+                            `Status: ${task.StatusName || t('lit.unknown')}`,
+                            `Priority: ${task.PriorityName || t('lit.unknown')}`,
+                            `Dates: ${displayedStartDate || t('lit.notPlanned')} → ${displayedEndDate || t('lit.notPlanned')}`,
                             `Hours: Est ${estimatedHours}h | Planned ${plannedHours}h | Worked ${workedHours}h | Remaining ${remainingHours}h`,
                             `Coverage: ${planningCoverage}`,
                           ];
@@ -9669,7 +9674,7 @@ export default function PlanningPage() {
                                   segment.endDate <= lastTimelineDateKey
                                 );
                                 const segmentTooltip = taskTooltip.replace(
-                                  `Dates: ${displayedStartDate || 'Not planned'} → ${displayedEndDate || 'Not planned'}`,
+                                  `Dates: ${displayedStartDate || t('lit.notPlanned')} → ${displayedEndDate || t('lit.notPlanned')}`,
                                   `Dates: ${segment.startDate} → ${segment.endDate}`
                                 );
                                 const segmentHeaderId = segment.headerId;
@@ -9745,7 +9750,7 @@ export default function PlanningPage() {
                                         )}
                                         onClick={(e) => e.stopPropagation()}
                                         className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l bg-black/20 hover:bg-black/35"
-                                        title="Hold Shift and drag to resize start"
+                                        title={t('lit.holdShiftAndDragToResizeStart')}
                                       />
                                     )}
                                     <TaskTypeIconMark
@@ -9756,7 +9761,7 @@ export default function PlanningPage() {
                                     />
                                     {!isSubtask && isOverPlanned && <span className="mr-1">⚠️</span>}
                                     {!isSubtask && taskIsHobbyProject && (
-                                      <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">HOBBY</span>
+                                      <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">{t('lit.hobby2')}</span>
                                     )}
                                     {taskIssueRef && (
                                       <span className="mr-1 bg-black/30 text-white text-[9px] px-1 py-0.5 rounded font-bold flex-shrink-0 pointer-events-none">{taskIssueRef}</span>
@@ -9784,7 +9789,7 @@ export default function PlanningPage() {
                                         )}
                                         onClick={(e) => e.stopPropagation()}
                                         className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r bg-black/20 hover:bg-black/35"
-                                        title="Hold Shift and drag to resize end"
+                                        title={t('lit.holdShiftAndDragToResizeEnd')}
                                       />
                                     )}
                                   </div>
@@ -9873,7 +9878,7 @@ export default function PlanningPage() {
 
                             const ownerLabel = outlookEvent.userName || outlookEvent.userEmail || userRow.Username;
                             const isSelf = Number(outlookEvent.userId) === Number(user?.id);
-                            const displaySubject = isSelf ? outlookEvent.subject : 'Busy';
+                            const displaySubject = isSelf ? outlookEvent.subject : t('lit.busy');
 
                             // Compute local time range and duration for tooltip
                             const evtStartDate = new Date(outlookEvent.start);
@@ -9919,7 +9924,7 @@ export default function PlanningPage() {
                           const { entry, dateKey, colIdx, laneIndex } = item;
                           const isCall = entry.RecordType === 'CallRecord';
                           const hours = parseFloat(entry.Hours || 0);
-                          const label = isCall ? (entry.Subject || entry.CallType || 'Call') : (entry.TaskName || '');
+                          const label = isCall ? (entry.Subject || entry.CallType || t('lit.call')) : (entry.TaskName || '');
                           const hoursLabel = isCall ? decimalHoursToHMSOverlay(entry.DurationMinutes / 60) : decimalHoursToHMSOverlay(hours);
                           const barColor = isCall
                             ? 'bg-amber-400 dark:bg-amber-500 border-amber-500'
@@ -9960,7 +9965,7 @@ export default function PlanningPage() {
                                 >
                                   {showDayDropTarget && (
                                     <div className="absolute inset-1 rounded border-2 border-dashed border-blue-500 dark:border-blue-400 bg-blue-100/50 dark:bg-blue-900/30 pointer-events-none flex items-center justify-center">
-                                      <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">Drop here</span>
+                                      <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">{t('lit.dropHere')}</span>
                                     </div>
                                   )}
                                 </div>
@@ -10305,7 +10310,7 @@ export default function PlanningPage() {
                               borderLeft: `4px solid ${priorityBorderHex}`,
                               zIndex: 21,
                             }}
-                            title={`Project: ${project?.ProjectName || 'Unknown'}\nTask: ${task.TaskName}\nStatus: ${task.StatusName || 'Unknown'}\nPriority: ${task.PriorityName || 'Unknown'}\nDates: ${task.PlannedStartDate || 'Not planned'} → ${task.PlannedEndDate || 'Not planned'}`}
+                            title={`Project: ${project?.ProjectName || t('lit.unknown')}\nTask: ${task.TaskName}\nStatus: ${task.StatusName || t('lit.unknown')}\nPriority: ${task.PriorityName || t('lit.unknown')}\nDates: ${task.PlannedStartDate || t('lit.notPlanned')} → ${task.PlannedEndDate || t('lit.notPlanned')}`}
                           >
                             <TaskTypeIconMark
                               name={task.TaskTypeName}
@@ -10314,7 +10319,7 @@ export default function PlanningPage() {
                               className="w-3 h-3 shrink-0 mr-1"
                             />
                             {taskIsHobbyProject && (
-                              <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">HOBBY</span>
+                              <span className="mr-1 bg-purple-700 text-white text-[9px] px-1 py-0.5 rounded font-semibold flex-shrink-0 pointer-events-none">{t('lit.hobby2')}</span>
                             )}
                             {groupedIssueRef && (
                               <span className="mr-1 bg-black/30 text-white text-[9px] px-1 py-0.5 rounded font-bold flex-shrink-0 pointer-events-none">{groupedIssueRef}</span>
@@ -10348,7 +10353,7 @@ export default function PlanningPage() {
                         const { entry, dateKey, colIdx, laneIndex } = item;
                         const isCall = entry.RecordType === 'CallRecord';
                         const hours = parseFloat(entry.Hours || 0);
-                        const label = isCall ? (entry.Subject || entry.CallType || 'Call') : (entry.TaskName || '');
+                        const label = isCall ? (entry.Subject || entry.CallType || t('lit.call')) : (entry.TaskName || '');
                         const hoursLabel = isCall ? decimalHoursToHMS(entry.DurationMinutes / 60) : decimalHoursToHMS(hours);
                         const barColor = isCall
                           ? 'bg-amber-400 dark:bg-amber-500 border-amber-500'
@@ -10381,7 +10386,7 @@ export default function PlanningPage() {
                 if (isLoadingPlannerTimeEntries) {
                   return (
                     <div className="flex items-center justify-center py-10 text-sm text-gray-500 dark:text-gray-400">
-                      Loading time entries…
+                      {t('lit.loadingTimeEntries2')}
                     </div>
                   );
                 }
@@ -10405,7 +10410,7 @@ export default function PlanningPage() {
                 if (userRows.length === 0) {
                   return (
                     <div className="flex items-center justify-center py-10 text-sm text-gray-500 dark:text-gray-400">
-                      No time entries or call records in this period.
+                      {t('lit.noTimeEntriesOrCallRecordsInThisPeriod')}
                     </div>
                   );
                 }
@@ -10426,7 +10431,7 @@ export default function PlanningPage() {
                     const startMinuteOfDay = (Number.isFinite(startHourRaw) ? startHourRaw : 0) * 60
                       + (Number.isFinite(startMinuteRaw) ? startMinuteRaw : 0);
                     const label = isCall
-                      ? (entry.Subject || entry.CallType || 'Call')
+                      ? (entry.Subject || entry.CallType || t('lit.call'))
                       : (entry.TaskName || '');
                     return { entry, colIdx, isCall, hours, label, dateKey, startMinuteOfDay };
                   }).filter(Boolean) as { entry: any; colIdx: number; isCall: boolean; hours: number; label: string; dateKey: string; startMinuteOfDay: number }[];
@@ -10546,7 +10551,7 @@ export default function PlanningPage() {
               }}
               className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              Remove allocations
+              {t('lit.removeAllocations')}
             </button>
             <button
               onClick={() => {
@@ -10558,7 +10563,7 @@ export default function PlanningPage() {
               }}
               className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700"
             >
-              Recalculate start/end from allocations
+              {t('lit.recalculateStartEndFromAllocations')}
             </button>
             <button
               onClick={() => {
@@ -10570,7 +10575,7 @@ export default function PlanningPage() {
               }}
               className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700"
             >
-              Force new start/end dates
+              {t('lit.forceNewStartEndDates')}
             </button>
             <button
               onClick={() => {
@@ -10582,7 +10587,7 @@ export default function PlanningPage() {
               }}
               className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700"
             >
-              Set baseline for this task
+              {t('lit.setBaselineForThisTask')}
             </button>
             <button
               onClick={() => {
@@ -10596,7 +10601,7 @@ export default function PlanningPage() {
               }}
               className="w-full px-4 py-3 text-left text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 border-t border-gray-200 dark:border-gray-700"
             >
-              Add extra time
+              {t('lit.addExtraTime')}
             </button>
           </div>
         )}
@@ -10618,13 +10623,13 @@ export default function PlanningPage() {
 
             if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
-              throw new Error(errorData?.message || 'Failed to delete task allocations');
+              throw new Error(errorData?.message || t('lit.failedToDeleteTaskAllocations'));
             }
 
             if (projects.length > 0) {
             }
             await reloadTasksAndAllocations();
-            showAlert('Success', 'All allocations for this task were deleted successfully.');
+            showAlert(t('lit.success'), t('lit.allAllocationsForThisTaskWereDeletedSuccessfully'));
           }}
           onOpenTaskDetails={async (taskId) => {
             const task = tasks.find((entry) => Number(entry.Id) === Number(taskId));
@@ -10642,7 +10647,7 @@ export default function PlanningPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[130] p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Shift resize suggestion</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('lit.shiftResizeSuggestion')}</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{shiftResizeSuggestionModal.task.TaskName}</p>
               </div>
 
@@ -10655,7 +10660,7 @@ export default function PlanningPage() {
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Start date</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('common.startDate')}</label>
                     <input
                       type="date"
                       value={shiftResizeSuggestionModal.plannedStartDate}
@@ -10675,7 +10680,7 @@ export default function PlanningPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">End date</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('common.endDate')}</label>
                     <input
                       type="date"
                       value={shiftResizeSuggestionModal.plannedEndDate}
@@ -10698,7 +10703,7 @@ export default function PlanningPage() {
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Total hours</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.totalHours')}</label>
                     <input
                       type="number"
                       min="0.5"
@@ -10720,7 +10725,7 @@ export default function PlanningPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Hours/day (suggested)</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('lit.hoursDaySuggested')}</label>
                     <input
                       type="number"
                       min="0.5"
@@ -10735,7 +10740,7 @@ export default function PlanningPage() {
                       disabled={shiftResizeSuggestionModal.isSubmitting}
                     />
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                      Suggested: {shiftResizeSuggestionModal.suggestedHoursPerDay} h/day
+                      {t('lit.suggested')}: {shiftResizeSuggestionModal.suggestedHoursPerDay} {t('lit.hDay')}
                     </p>
                   </div>
                 </div>
@@ -10748,7 +10753,7 @@ export default function PlanningPage() {
                   className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   disabled={shiftResizeSuggestionModal.isSubmitting}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -10756,7 +10761,7 @@ export default function PlanningPage() {
                   className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
                   disabled={shiftResizeSuggestionModal.isSubmitting}
                 >
-                  {shiftResizeSuggestionModal.isSubmitting ? 'Replanning...' : 'Apply suggestion'}
+                  {shiftResizeSuggestionModal.isSubmitting ? 'Replanning...' : t('lit.applySuggestion')}
                 </button>
               </div>
             </div>
@@ -10767,7 +10772,7 @@ export default function PlanningPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[130] p-4">
             <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${extraTimeModal.leafTasks.length > 0 ? 'max-w-md' : 'max-w-sm'} border border-gray-200 dark:border-gray-700 overflow-hidden`}>
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Add extra time</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('lit.addExtraTime')}</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{extraTimeModal.task.TaskName}</p>
                 {extraTimeModal.userId && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
@@ -10784,7 +10789,7 @@ export default function PlanningPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Extra hours to add
+                      {t('lit.extraHoursToAdd')}
                     </label>
                     <input
                       type="number"
@@ -10792,7 +10797,7 @@ export default function PlanningPage() {
                       step="0.5"
                       value={extraTimeModal.extraHours}
                       onChange={(e) => setExtraTimeModal(prev => ({ ...prev, extraHours: e.target.value, error: '' }))}
-                      placeholder="e.g. 4"
+                      placeholder={t('lit.eG4')}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       disabled={extraTimeModal.isProcessing}
                       autoFocus
@@ -10800,7 +10805,7 @@ export default function PlanningPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Max hours per day
+                      {t('lit.maxHoursPerDay')}
                     </label>
                     <input
                       type="number"
@@ -10819,7 +10824,7 @@ export default function PlanningPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Distribute extra time to subtasks
+                        {t('lit.distributeExtraTimeToSubtasks')}
                       </label>
                       <div className="flex gap-2 text-xs">
                         <button
@@ -10828,7 +10833,7 @@ export default function PlanningPage() {
                           className="text-blue-600 dark:text-blue-400 hover:underline"
                           disabled={extraTimeModal.isProcessing}
                         >
-                          All
+                          {t('common.all')}
                         </button>
                         <span className="text-gray-400">|</span>
                         <button
@@ -10837,7 +10842,7 @@ export default function PlanningPage() {
                           className="text-gray-500 dark:text-gray-400 hover:underline"
                           disabled={extraTimeModal.isProcessing}
                         >
-                          None
+                          {t('common.none')}
                         </button>
                       </div>
                     </div>
@@ -10871,7 +10876,7 @@ export default function PlanningPage() {
                       })}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Extra hours are distributed proportionally based on each subtask's remaining hours.
+                      {t('lit.extraHoursAreDistributedProportionallyBasedOnEachSubtasksRemainingHours')}
                     </p>
                   </div>
                 )}
@@ -10886,7 +10891,7 @@ export default function PlanningPage() {
                   disabled={extraTimeModal.isProcessing}
                   className="h-9 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleExecuteAddExtraTime}
@@ -10899,9 +10904,9 @@ export default function PlanningPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Scheduling...
+                      {t('lit.scheduling')}
                     </>
-                  ) : 'Add extra time'}
+                  ) : t('lit.addExtraTime')}
                 </button>
               </div>
             </div>
@@ -10912,7 +10917,7 @@ export default function PlanningPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[130] p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Force Task Dates</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.forceTaskDates')}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{forceDatesModal.task.TaskName}</p>
               </div>
               <div className="p-4 space-y-4">
@@ -10923,7 +10928,7 @@ export default function PlanningPage() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.startDate')}</label>
                     <input
                       type="date"
                       value={forceDatesModal.startDate}
@@ -10932,7 +10937,7 @@ export default function PlanningPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.endDate')}</label>
                     <input
                       type="date"
                       value={forceDatesModal.endDate}
@@ -10947,14 +10952,14 @@ export default function PlanningPage() {
                   onClick={closeForceDatesModal}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => void handleForceDatesSave()}
                   disabled={forceDatesModal.isSaving}
                   className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white"
                 >
-                  {forceDatesModal.isSaving ? 'Saving...' : 'Save dates'}
+                  {forceDatesModal.isSaving ? t('lit.saving') : t('lit.saveDates')}
                 </button>
               </div>
             </div>
@@ -10967,13 +10972,13 @@ export default function PlanningPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Milestone</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.editMilestone2')}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{milestoneEditor.projectName}{milestoneEditor.customerName ? <span className="ml-2 text-gray-400 dark:text-gray-500">— {milestoneEditor.customerName}</span> : null}</p>
                 </div>
                 <button
                   onClick={closeMilestoneEditor}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl"
-                  aria-label="Close milestone editor"
+                  aria-label={t('lit.closeMilestoneEditor')}
                 >
                   ✕
                 </button>
@@ -10987,7 +10992,7 @@ export default function PlanningPage() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.name')}</label>
                   <input
                     type="text"
                     value={milestoneEditor.name}
@@ -10999,7 +11004,7 @@ export default function PlanningPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.dueDate')}</label>
                     <input
                       type="date"
                       value={milestoneEditor.dueDate}
@@ -11009,14 +11014,14 @@ export default function PlanningPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.type')}</label>
                     <select
                       value={milestoneEditor.milestoneTypeId}
                       onChange={(e) => setMilestoneEditor((prev) => ({ ...prev, milestoneTypeId: e.target.value ? Number(e.target.value) : '' }))}
                       disabled={!permissions?.canManageProjects}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                     >
-                      <option value="">No type</option>
+                      <option value="">{t('lit.noType')}</option>
                       {milestoneEditor.milestoneTypes.map((type) => (
                         <option key={type.Id} value={type.Id}>
                           {getMilestoneTypeLabel(type)}
@@ -11027,7 +11032,7 @@ export default function PlanningPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.description')}</label>
                   <textarea
                     value={milestoneEditor.description}
                     onChange={(e) => setMilestoneEditor((prev) => ({ ...prev, description: e.target.value }))}
@@ -11045,7 +11050,7 @@ export default function PlanningPage() {
                     disabled={!permissions?.canManageProjects}
                     className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
                   />
-                  Mark milestone as completed
+                  {t('lit.markMilestoneAsCompleted')}
                 </label>
               </div>
 
@@ -11057,7 +11062,7 @@ export default function PlanningPage() {
                       disabled={milestoneEditor.isDeleting || milestoneEditor.isSaving}
                       className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white"
                     >
-                      {milestoneEditor.isDeleting ? 'Deleting...' : 'Delete'}
+                      {milestoneEditor.isDeleting ? 'Deleting...' : t('common.delete')}
                     </button>
                   )}
                 </div>
@@ -11066,7 +11071,7 @@ export default function PlanningPage() {
                     onClick={closeMilestoneEditor}
                     className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
                   >
-                    {permissions?.canManageProjects ? 'Cancel' : 'Close'}
+                    {permissions?.canManageProjects ? t('common.cancel') : t('common.close')}
                   </button>
                   {permissions?.canManageProjects && (
                     <button
@@ -11074,7 +11079,7 @@ export default function PlanningPage() {
                       disabled={milestoneEditor.isSaving || milestoneEditor.isDeleting}
                       className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white"
                     >
-                      {milestoneEditor.isSaving ? 'Saving...' : 'Save'}
+                      {milestoneEditor.isSaving ? t('lit.saving') : t('common.save')}
                     </button>
                   )}
                 </div>
@@ -11128,7 +11133,7 @@ export default function PlanningPage() {
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('lit.title')}</label>
                   <div className="text-gray-900 dark:text-white font-medium">
                     {recurringDetailModal.recurring.Title}
                   </div>
@@ -11136,7 +11141,7 @@ export default function PlanningPage() {
                 
                 {recurringDetailModal.recurring.Description && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('common.description')}</label>
                     <div className="text-gray-700 dark:text-gray-300 text-sm">
                       {recurringDetailModal.recurring.Description}
                     </div>
@@ -11145,25 +11150,25 @@ export default function PlanningPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('common.date')}</label>
                     <div className="text-gray-900 dark:text-white">
                       {(() => {
                         const dateVal = recurringDetailModal.recurring.OccurrenceDate;
                         if (dateVal instanceof Date) {
-                          return dateVal.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                          return dateVal.toLocaleDateString(dateLocale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
                         }
                         // Handle string date - extract just the date part
                         const dateStr = String(dateVal).split('T')[0];
                         const parsedDate = new Date(dateStr + 'T12:00:00');
                         if (isNaN(parsedDate.getTime())) {
-                          return dateStr || 'Unknown';
+                          return dateStr || t('lit.unknown');
                         }
-                        return parsedDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                        return parsedDate.toLocaleDateString(dateLocale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
                       })()}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Hours</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('common.hours')}</label>
                     <div className="text-gray-900 dark:text-white">
                       {recurringDetailModal.recurring.AllocatedHours}h
                     </div>
@@ -11172,13 +11177,13 @@ export default function PlanningPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Start Time</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('lit.startTime')}</label>
                     <div className="text-gray-900 dark:text-white">
                       {recurringDetailModal.recurring.StartTime}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">End Time</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('lit.endTime')}</label>
                     <div className="text-gray-900 dark:text-white">
                       {recurringDetailModal.recurring.EndTime}
                     </div>
@@ -11187,7 +11192,7 @@ export default function PlanningPage() {
                 
                 <div className="bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-700 rounded-lg p-3">
                   <p className="text-sm text-pink-700 dark:text-pink-300">
-                    <strong>Note:</strong> This is a recurring task occurrence. To edit recurring task settings, go to <strong>Profile → Recurring Tasks</strong>.
+                    <strong>{t('lit.note')}</strong> {t('lit.thisIsARecurringTaskOccurrenceToEditRecurringTaskSettingsGoTo')} <strong>{t('lit.profileRecurringTasks')}</strong>.
                   </p>
                 </div>
               </div>
@@ -11196,7 +11201,7 @@ export default function PlanningPage() {
                   onClick={() => setRecurringDetailModal({ show: false, recurring: null })}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>
@@ -11209,7 +11214,7 @@ export default function PlanningPage() {
         {activeTab === 'allocations' && (
           <div className="w-full space-y-2" data-grid-enhancer-ignore="true">
             <CollapsibleFilterPanel
-              title="Allocation filters"
+              title={t('lit.allocationFilters')}
               activeCount={allocationFilterActiveCount}
               onClear={clearAllocationFilters}
               headerExtra={
@@ -11222,7 +11227,7 @@ export default function PlanningPage() {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    From
+                    {t('common.from')}
                   </label>
                   <input
                     type="date"
@@ -11233,7 +11238,7 @@ export default function PlanningPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    To
+                    {t('common.to')}
                   </label>
                   <input
                     type="date"
@@ -11244,33 +11249,33 @@ export default function PlanningPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    User
+                    {t('common.user')}
                   </label>
                   <SearchableSelect
                     options={users.map((u) => ({ value: String(u.Id), label: u.Username }))}
                     value={allocationFilters.userId}
                     onChange={(value) => setAllocationFilters((prev) => ({ ...prev, userId: value }))}
-                    placeholder="Users"
-                    emptyText="All Users"
+                    placeholder={t('nav.users')}
+                    emptyText={t('lit.allUsers2')}
                     className="w-full"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Project
+                    {t('common.project')}
                   </label>
                   <SearchableSelect
                     options={projects.map((p) => ({ value: String(p.Id), label: p.ProjectName }))}
                     value={allocationFilters.projectId}
                     onChange={(value) => setAllocationFilters((prev) => ({ ...prev, projectId: value }))}
-                    placeholder="Projects"
-                    emptyText="All Projects"
+                    placeholder={t('nav.projects')}
+                    emptyText={t('lit.allProjects2')}
                     className="w-full"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Task
+                    {t('common.task')}
                   </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11278,7 +11283,7 @@ export default function PlanningPage() {
                     </svg>
                     <input
                       type="text"
-                      placeholder="Search tasks..."
+                      placeholder={t('lit.searchTasks')}
                       value={allocationFilters.taskName}
                       onChange={(e) => setAllocationFilters((prev) => ({ ...prev, taskName: e.target.value }))}
                       className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-9 pr-4 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
@@ -11296,14 +11301,14 @@ export default function PlanningPage() {
                     }
                     className="h-4 w-4 rounded text-blue-600"
                   />
-                  Hide closed / cancelled
+                  {t('lit.hideClosedCancelled')}
                 </label>
                 <button
                   type="button"
                   onClick={clearAllocationFilters}
                   className="rounded-lg bg-gray-200 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
-                  Clear filters
+                  {t('lit.clearFilters')}
                 </button>
               </div>
             </CollapsibleFilterPanel>
@@ -11315,25 +11320,25 @@ export default function PlanningPage() {
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Task
+                      {t('common.task')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Project
+                      {t('common.project')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Assigned Users
+                      {t('lit.assignedUsers')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Date Range
+                      {t('lit.dateRange')}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Total Hours
+                      {t('lit.totalHours2')}
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                      Allocations
+                      {t('lit.allocations')}
                     </th>
                     <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -11341,7 +11346,7 @@ export default function PlanningPage() {
                   {filteredAllocationGroups.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No allocations match the selected filters
+                        {t('lit.noAllocationsMatchTheSelectedFilters')}
                       </td>
                     </tr>
                   ) : (
@@ -11365,9 +11370,9 @@ export default function PlanningPage() {
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                           {group.startDate && group.endDate && (
                             <>
-                              {new Date(group.startDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {new Date(group.startDate + 'T12:00:00').toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                               {' → '}
-                              {new Date(group.endDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {new Date(group.endDate + 'T12:00:00').toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </>
                           )}
                         </td>
@@ -11381,8 +11386,8 @@ export default function PlanningPage() {
                           {canPlanOnThisDevice && (
                             <button
                               onClick={() => handleDeleteTaskAllocations(group.TaskId)}
-                              title="Delete all allocations"
-                              aria-label="Delete all allocations"
+                              title={t('lit.deleteAllAllocations')}
+                              aria-label={t('lit.deleteAllAllocations')}
                               className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11426,14 +11431,14 @@ export default function PlanningPage() {
                 </div>
                 <div className="ml-3 flex-1">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    Day Already Has Tasks
+                    {t('lit.dayAlreadyHasTasks')}
                   </h3>
                 </div>
               </div>
               
               <div className="text-sm text-gray-700 dark:text-gray-300 mb-4 space-y-3">
                 <p>
-                  This day already has the following tasks allocated:
+                  {t('lit.thisDayAlreadyHasTheFollowingTasksAllocated')}
                 </p>
                 <ul className="list-disc list-inside pl-2 space-y-1 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                   {conflictModal.existingTasks.map((taskName, idx) => (
@@ -11441,10 +11446,10 @@ export default function PlanningPage() {
                   ))}
                 </ul>
                 <p>
-                  You want to add: <strong>{conflictModal.task?.TaskName}</strong> ({conflictModal.totalHoursToAllocate.toFixed(1)}h)
+                  {t('lit.youWantToAdd')} <strong>{conflictModal.task?.TaskName}</strong> ({conflictModal.totalHoursToAllocate.toFixed(1)}h)
                 </p>
                 <p className="text-gray-500 dark:text-gray-400">
-                  What would you like to do?
+                  {t('lit.whatWouldYouLikeToDo')}
                 </p>
               </div>
 
@@ -11455,7 +11460,7 @@ export default function PlanningPage() {
                 >
                   <div className="font-medium text-blue-700 dark:text-blue-300">⏩ Push Existing Tasks Forward</div>
                   <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                    Move all existing tasks on this day and onwards to make room for the new task
+                    {t('lit.moveAllExistingTasksOnThisDayAndOnwardsToMakeRoomForTheNewTask')}
                   </div>
                 </button>
                 
@@ -11465,7 +11470,7 @@ export default function PlanningPage() {
                 >
                   <div className="font-medium text-green-700 dark:text-green-300">📅 Plan When Available</div>
                   <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-                    Use available time slots around existing tasks (may span multiple days)
+                    {t('lit.useAvailableTimeSlotsAroundExistingTasksMaySpanMultipleDays')}
                   </div>
                 </button>
               </div>
@@ -11475,7 +11480,7 @@ export default function PlanningPage() {
                   onClick={() => setConflictModal(prev => ({ ...prev, show: false }))}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -11509,17 +11514,17 @@ export default function PlanningPage() {
                   {hoursPerDayModal.isParentTask && hoursPerDayModal.leafTasks && (
                     <p className="text-blue-800 dark:text-blue-300">
                       <strong>{hoursPerDayModal.leafTasks.length}</strong> leaf task(s) with{' '}
-                      <strong>{hoursPerDayModal.totalEstimatedHours.toFixed(1)}h</strong> total estimated
+                      <strong>{hoursPerDayModal.totalEstimatedHours.toFixed(1)}h</strong> {t('lit.totalEstimated')}
                     </p>
                   )}
                   {!hoursPerDayModal.isParentTask && (
                     <p className="text-blue-800 dark:text-blue-300">
-                      Total estimated: <strong>{hoursPerDayModal.totalEstimatedHours.toFixed(1)}h</strong>
+                      {t('lit.totalEstimated3')} <strong>{hoursPerDayModal.totalEstimatedHours.toFixed(1)}h</strong>
                     </p>
                   )}
                   {hoursPerDayModal.hoursAlreadyWorked > 0 && (
                     <p className="text-blue-800 dark:text-blue-300">
-                      Already worked: <strong>{hoursPerDayModal.hoursAlreadyWorked.toFixed(1)}h</strong>
+                      {t('lit.alreadyWorked')} <strong>{hoursPerDayModal.hoursAlreadyWorked.toFixed(1)}h</strong>
                     </p>
                   )}
                 </div>
@@ -11537,7 +11542,7 @@ export default function PlanningPage() {
                           ? 'bg-blue-600 text-white'
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                       >
-                        Normal planning
+                        {t('lit.normalPlanning')}
                       </button>
                       <button
                         type="button"
@@ -11577,33 +11582,33 @@ export default function PlanningPage() {
                           ? 'bg-blue-600 text-white'
                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
-                        Split planning
+                        {t('lit.splitPlanning')}
                       </button>
                     </div>
 
                     {!!(hoursPerDayModal.sourceUserId || hoursPerDayModal.sourceHeaderId || hoursPerDayModal.suppressDependentReplan) && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Split planning is disabled when replanning or moving an existing allocation slice.
+                        {t('lit.splitPlanningIsDisabledWhenReplanningOrMovingAnExistingAllocationSlice')}
                       </p>
                     )}
 
                     {hoursPerDayModal.isParentTask && hoursPerDayModal.enableSplit && !(hoursPerDayModal.sourceUserId || hoursPerDayModal.sourceHeaderId || hoursPerDayModal.suppressDependentReplan) && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        For parent tasks, select which subtasks each user will own.
+                        {t('lit.forParentTasksSelectWhichSubtasksEachUserWillOwn')}
                       </p>
                     )}
 
                     {hoursPerDayModal.enableSplit && !(hoursPerDayModal.sourceUserId || hoursPerDayModal.sourceHeaderId || hoursPerDayModal.suppressDependentReplan) && (
                       <>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Allocation Mode</label>
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.allocationMode')}</label>
                           <select
                             value={hoursPerDayModal.splitMode || 'parallel'}
                             onChange={(e) => setHoursPerDayModal((prev) => ({ ...prev, splitMode: e.target.value === 'sequential' ? 'sequential' : 'parallel' }))}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
-                            <option value="parallel">Parallel</option>
-                            <option value="sequential">Sequential</option>
+                            <option value="parallel">{t('lit.parallel')}</option>
+                            <option value="sequential">{t('lit.sequential')}</option>
                           </select>
                         </div>
 
@@ -11612,7 +11617,7 @@ export default function PlanningPage() {
                             <div key={index} className="space-y-3 p-3 border border-gray-200 dark:border-gray-700 rounded">
                               <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_40px] gap-3 items-start">
                               <div className="min-w-0">
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">User</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('common.user')}</label>
                                 <SearchableSelect
                                   value={entry.userId || ''}
                                   onChange={(value) => {
@@ -11629,12 +11634,12 @@ export default function PlanningPage() {
                                       ? `${planningUser.FirstName} ${planningUser.LastName} (${planningUser.Username})`
                                       : planningUser.FirstName || planningUser.Username,
                                   }))}
-                                  placeholder="User"
-                                  emptyText="Select user"
+                                  placeholder={t('common.user')}
+                                  emptyText={t('lit.selectUser')}
                                 />
                               </div>
                               <div className="min-w-0">
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hours</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('common.hours')}</label>
                                 <input
                                   type="number"
                                   min="0.5"
@@ -11650,11 +11655,11 @@ export default function PlanningPage() {
                                   className="w-full px-2 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 />
                                 <p className={`mt-1 text-[11px] min-h-[16px] ${hoursPerDayModal.isParentTask ? 'text-gray-500 dark:text-gray-400' : 'invisible'}`}>
-                                  Auto from subtasks (editable)
+                                  {t('lit.autoFromSubtasksEditable')}
                                 </p>
                               </div>
                               <div className="min-w-0">
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">h/day</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('lit.hDay')}</label>
                                 <input
                                   type="number"
                                   min="0.5"
@@ -11680,8 +11685,8 @@ export default function PlanningPage() {
                                     }));
                                   }}
                                   className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                                  title="Remove split"
-                                  aria-label="Remove split"
+                                  title={t('lit.removeSplit')}
+                                  aria-label={t('lit.removeSplit')}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
@@ -11690,7 +11695,7 @@ export default function PlanningPage() {
 
                               {hoursPerDayModal.isParentTask && (
                                 <div>
-                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Subtasks</label>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('lit.subtasks')}</label>
                                   <SearchableMultiSelect
                                     values={Array.isArray(entry.selectedLeafTaskIds) ? entry.selectedLeafTaskIds : []}
                                     onChange={(values) => {
@@ -11732,7 +11737,7 @@ export default function PlanningPage() {
                                         label: leafTask.TaskName,
                                         subtitle: `${(leafTaskRemainingHoursById[leafTask.Id] ?? parseFloat(String(leafTask.EstimatedHours || 0))).toFixed(1)}h remaining`
                                       }))}
-                                    placeholder="Select subtasks"
+                                    placeholder={t('lit.selectSubtasks')}
                                     dropdownMode="portal"
                                   />
 
@@ -11757,7 +11762,7 @@ export default function PlanningPage() {
                                           })}
                                       </div>
                                     ) : (
-                                      <p className="text-[11px] text-gray-500 dark:text-gray-400">No subtasks selected.</p>
+                                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('lit.noSubtasksSelected')}</p>
                                     )}
                                   </div>
                                 </div>
@@ -11786,7 +11791,7 @@ export default function PlanningPage() {
                             }}
                             className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
                           >
-                            Add User Split
+                            {t('lit.addUserSplit')}
                           </button>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             Total split hours: {(hoursPerDayModal.splitEntries || []).reduce((sum, row) => sum + (Number(row.plannedHours) || 0), 0).toFixed(2)}h
@@ -11801,7 +11806,7 @@ export default function PlanningPage() {
                 <>
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      How many hours to plan?
+                      {t('lit.howManyHoursToPlan')}
                     </label>
                     <input
                       type="number"
@@ -11819,7 +11824,7 @@ export default function PlanningPage() {
 
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Hours per day
+                      {t('lit.hoursPerDay')}
                     </label>
                     <input
                       type="number"
@@ -11843,13 +11848,13 @@ export default function PlanningPage() {
                   onClick={() => setHoursPerDayModal(prev => ({ ...prev, show: false }))}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleHoursPerDayConfirm}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
-                  Plan Task
+                  {t('lit.planTask')}
                 </button>
               </div>
             </div>
@@ -11860,14 +11865,14 @@ export default function PlanningPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110] p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Move Allocation Slice</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.moveAllocationSlice')}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  You used Ctrl+drag. Select how many hours to move from this allocation.
+                  {t('lit.youUsedCtrlDragSelectHowManyHoursToMoveFromThisAllocation')}
                 </p>
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Hours to move</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.hoursToMove')}</label>
                   <input
                     type="number"
                     min="0.5"
@@ -11884,7 +11889,7 @@ export default function PlanningPage() {
 
                 {sliceTransferModal.availableChildTaskIds.length > 0 && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Subtasks to move</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.subtasksToMove')}</label>
                     <SearchableMultiSelect
                       values={sliceTransferModal.selectedChildTaskIds}
                       onChange={(values) => {
@@ -11924,11 +11929,11 @@ export default function PlanningPage() {
                           label: taskEntry.TaskName,
                           subtitle: `${parseFloat(String(taskEntry.EstimatedHours || 0)).toFixed(1)}h`,
                         }))}
-                      placeholder="Select subtasks"
+                      placeholder={t('lit.selectSubtasks')}
                       dropdownMode="portal"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Select only the subtasks that should move with this slice.
+                      {t('lit.selectOnlyTheSubtasksThatShouldMoveWithThisSlice')}
                     </p>
                   </div>
                 )}
@@ -11953,7 +11958,7 @@ export default function PlanningPage() {
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                   disabled={sliceTransferModal.isProcessing}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmSliceTransfer}
@@ -11966,7 +11971,7 @@ export default function PlanningPage() {
                   }
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
                 >
-                  {sliceTransferModal.isProcessing ? 'Moving...' : 'Move Slice'}
+                  {sliceTransferModal.isProcessing ? 'Moving...' : t('lit.moveSlice')}
                 </button>
               </div>
             </div>
@@ -11998,15 +12003,15 @@ export default function PlanningPage() {
               {/* Details */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Hours:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('lit.totalHours3')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{planningProgress.totalHours.toFixed(1)}h</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Allocated:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('lit.allocated2')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{planningProgress.allocatedHours.toFixed(1)}h</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Days Processed:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('lit.daysProcessed')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{planningProgress.daysProcessed}</span>
                 </div>
               </div>
@@ -12026,7 +12031,7 @@ export default function PlanningPage() {
           message={modalMessage?.message || ''}
           onClose={closeModal}
           onConfirm={handleModalConfirm}
-          confirmLabel="Confirm"
+          confirmLabel={t('common.confirm')}
           alertLabel="OK"
           confirmVariant="primary"
           preserveLineBreaks
@@ -12041,14 +12046,14 @@ export default function PlanningPage() {
                   Plan Subtasks for: {subtasksModal.parentTask.TaskName}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                  Drag subtasks to reorder by priority. Plan each subtask individually by dragging to the gantt chart.
+                  {t('lit.dragSubtasksToReorderByPriorityPlanEachSubtaskIndividuallyByDraggingToTheGanttCh')}
                 </p>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
                 {subtasksModal.subtasks.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    No subtasks found for this task.
+                    {t('lit.noSubtasksFoundForThisTask')}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -12109,7 +12114,7 @@ export default function PlanningPage() {
                                 {subtask.PlannedStartDate && subtask.PlannedEndDate && (
                                   <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                                     <span>✅</span>
-                                    <span>Planned</span>
+                                    <span>{t('lit.planned')}</span>
                                   </div>
                                 )}
                               </div>
@@ -12135,7 +12140,7 @@ export default function PlanningPage() {
                     onClick={closeSubtasksModal}
                     className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -12149,7 +12154,7 @@ export default function PlanningPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  {manualAllocationModal.mode === 'add' ? 'Add Manual Allocation' : 'Edit Manual Allocation'}
+                  {manualAllocationModal.mode === 'add' ? t('lit.addManualAllocation') : t('lit.editManualAllocation')}
                 </h3>
 
                 <div className="space-y-4">
@@ -12157,7 +12162,7 @@ export default function PlanningPage() {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Task
+                          {t('common.task')}
                         </label>
                         <SearchableSelect
                           value={manualAllocationModal.taskId ? manualAllocationModal.taskId.toString() : ''}
@@ -12169,21 +12174,21 @@ export default function PlanningPage() {
                               label: `${project?.ProjectName} - ${t.TaskName}`
                             };
                           })}
-                          placeholder="Select Task"
-                          emptyText="Select Task"
+                          placeholder={t('lit.selectTask')}
+                          emptyText={t('lit.selectTask')}
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          User
+                          {t('common.user')}
                         </label>
                         <select
                           value={manualAllocationModal.userId || ''}
                           onChange={(e) => setManualAllocationModal(prev => ({ ...prev, userId: parseInt(e.target.value) }))}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="">Select User</option>
+                          <option value="">{t('lit.selectUser2')}</option>
                           {users.map(u => (
                             <option key={u.Id} value={u.Id}>{u.Username}</option>
                           ))}
@@ -12194,7 +12199,7 @@ export default function PlanningPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Date
+                      {t('common.date')}
                     </label>
                     <input
                       type="date"
@@ -12207,7 +12212,7 @@ export default function PlanningPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Hours
+                      {t('common.hours')}
                     </label>
                     <input
                       type="number"
@@ -12217,14 +12222,14 @@ export default function PlanningPage() {
                       value={manualAllocationModal.allocatedHours}
                       onChange={(e) => setManualAllocationModal(prev => ({ ...prev, allocatedHours: String(roundToPlanningStep(parseFloat(e.target.value) || 0)) }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 4.5"
+                      placeholder={t('lit.eG45')}
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Start Time
+                        {t('lit.startTime')}
                       </label>
                       <input
                         type="time"
@@ -12236,7 +12241,7 @@ export default function PlanningPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        End Time
+                        {t('lit.endTime')}
                       </label>
                       <input
                         type="time"
@@ -12253,13 +12258,13 @@ export default function PlanningPage() {
                     onClick={() => setManualAllocationModal({ show: false, allocationDate: '', allocatedHours: '', startTime: '09:00', endTime: '17:00', mode: 'add' })}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSaveManualAllocation}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                   >
-                    {manualAllocationModal.mode === 'add' ? 'Add Allocation' : 'Save Changes'}
+                    {manualAllocationModal.mode === 'add' ? t('lit.addAllocation') : t('lit.saveChanges')}
                   </button>
                 </div>
               </div>
@@ -12274,13 +12279,13 @@ export default function PlanningPage() {
               {/* Header */}
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Allocation Snapshots</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Save and restore the complete state of all resource allocations</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.allocationSnapshots')}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('lit.saveAndRestoreTheCompleteStateOfAllResourceAllocations')}</p>
                 </div>
                 <button
                   onClick={() => setSnapshotModal(prev => ({ ...prev, show: false }))}
                   className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
-                  aria-label="Close snapshots modal"
+                  aria-label={t('lit.closeSnapshotsModal')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -12291,28 +12296,28 @@ export default function PlanningPage() {
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* Create new snapshot */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">Take New Snapshot</h3>
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">{t('lit.takeNewSnapshot')}</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.name')} <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         value={snapshotModal.newName}
                         onChange={(e) => setSnapshotModal(prev => ({ ...prev, newName: e.target.value, error: '' }))}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSnapshot(); }}
-                        placeholder="e.g. Before Sprint 5 replanning"
+                        placeholder={t('lit.eGBeforeSprint5Replanning')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                         disabled={snapshotModal.isSaving}
                         maxLength={255}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.descriptionOptional')}</label>
                       <input
                         type="text"
                         value={snapshotModal.newDescription}
                         onChange={(e) => setSnapshotModal(prev => ({ ...prev, newDescription: e.target.value }))}
-                        placeholder="Optional notes about this snapshot"
+                        placeholder={t('lit.optionalNotesAboutThisSnapshot')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                         disabled={snapshotModal.isSaving}
                         maxLength={500}
@@ -12332,7 +12337,7 @@ export default function PlanningPage() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
-                          Saving…
+                          {t('common.saving')}
                         </>
                       ) : (
                         <>
@@ -12340,7 +12345,7 @@ export default function PlanningPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
-                          Take Snapshot
+                          {t('lit.takeSnapshot')}
                         </>
                       )}
                     </button>
@@ -12349,7 +12354,7 @@ export default function PlanningPage() {
 
                 {/* Existing snapshots list */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Saved Snapshots</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('lit.savedSnapshots')}</h3>
                   {snapshotModal.isLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <svg className="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">
@@ -12359,14 +12364,14 @@ export default function PlanningPage() {
                     </div>
                   ) : snapshotModal.snapshots.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
-                      No snapshots yet. Take the first one above.
+                      {t('lit.noSnapshotsYetTakeTheFirstOneAbove')}
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {snapshotModal.snapshots.map((snapshot: any) => {
                         const createdBy = snapshot.FirstName && snapshot.LastName
                           ? `${snapshot.FirstName} ${snapshot.LastName}`
-                          : snapshot.Username || 'Unknown';
+                          : snapshot.Username || t('lit.unknown');
                         const createdAt = new Date(snapshot.CreatedAt).toLocaleString('en-GB', {
                           day: '2-digit', month: 'short', year: 'numeric',
                           hour: '2-digit', minute: '2-digit'
@@ -12406,8 +12411,8 @@ export default function PlanningPage() {
                                 <button
                                   onClick={() => handleRestoreSnapshot(snapshot)}
                                   className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 rounded transition-colors"
-                                  title="Restore this snapshot"
-                                  aria-label="Restore snapshot"
+                                  title={t('lit.restoreThisSnapshot')}
+                                  aria-label={t('lit.restoreSnapshot')}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -12416,8 +12421,8 @@ export default function PlanningPage() {
                                 <button
                                   onClick={() => handleDeleteSnapshot(snapshot)}
                                   className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                                  title="Delete this snapshot"
-                                  aria-label="Delete snapshot"
+                                  title={t('lit.deleteThisSnapshot')}
+                                  aria-label={t('lit.deleteSnapshot')}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -12467,7 +12472,7 @@ export default function PlanningPage() {
 
               <div className="space-y-3">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  What would you like to do?
+                  {t('lit.whatWouldYouLikeToDo')}
                 </p>
                 {selectedOutlookEvent.webLink && (
                   <button
@@ -12476,8 +12481,8 @@ export default function PlanningPage() {
                   >
                     <span className="text-2xl">🌐</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Open in Outlook</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">View the meeting in Office / Outlook</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.openInOutlook')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.viewTheMeetingInOfficeOutlook')}</p>
                     </div>
                   </button>
                 )}
@@ -12489,10 +12494,10 @@ export default function PlanningPage() {
                   <span className="text-2xl">📞</span>
                   <div className="text-left">
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {isStartingOutlookTimer ? 'Starting...' : 'Start Call Timer'}
+                      {isStartingOutlookTimer ? 'Starting...' : t('lit.startCallTimer')}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Start a call record timer with the meeting subject
+                      {t('lit.startACallRecordTimerWithTheMeetingSubject')}
                     </p>
                   </div>
                 </button>

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useEffect, useState } from 'react';
 import { Project, UpdateProjectData, projectsApi } from '@/lib/api/projects';
@@ -11,7 +12,7 @@ import { getApiUrl } from '@/lib/api/config';
 import { useToast } from '@/contexts/ToastContext';
 
 export function SettingsTab({
-  project,
+project,
   token,
   onSaved,
   canViewBudgetInfo,
@@ -25,6 +26,8 @@ export function SettingsTab({
   hideInlineSave?: boolean;
   onSavingChange?: (saving: boolean) => void;
 }) {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
     organizationId: project.OrganizationId,
@@ -160,7 +163,7 @@ export function SettingsTab({
     setIsLoading(true);
     try {
       if (formData.isGlobal && formData.customerId) {
-        throw new Error('Global projects cannot be associated with a customer');
+        throw new Error(t('lit.globalProjectsCannotBeAssociatedWithACustomer'));
       }
 
       // If organization changed, use transfer endpoint
@@ -194,12 +197,12 @@ export function SettingsTab({
 
       await projectsApi.update(project.Id, updateData, token);
       setSuccess(true);
-      showToast({ type: 'success', title: 'Project Updated', message: 'Project updated successfully!' });
+      showToast({ type: 'success', title: t('lit.projectUpdated'), message: t('lit.projectUpdatedSuccessfully') });
       setTimeout(() => {
         onSaved();
       }, 1000);
     } catch (err: any) {
-      setError(err.message || 'Failed to update project');
+      setError(err.message || t('lit.failedToUpdateProject'));
     } finally {
       setIsLoading(false);
       setShowTransferConfirm(false);
@@ -209,7 +212,7 @@ export function SettingsTab({
   return (
     <div>
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">General Settings</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('lit.generalSettings')}</h2>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
@@ -220,7 +223,7 @@ export function SettingsTab({
         {showTransferConfirm && (
           <div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-800 rounded">
             <h3 className="font-bold text-yellow-800 dark:text-yellow-400 mb-2">
-              Confirm Organization Transfer
+              {t('lit.confirmOrganizationTransfer')}
             </h3>
             <p className="text-yellow-700 dark:text-yellow-400 text-sm mb-4">
               You are about to transfer this project to a different organization. This action will affect access permissions.
@@ -231,7 +234,7 @@ export function SettingsTab({
                 onClick={() => setShowTransferConfirm(false)}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -239,7 +242,7 @@ export function SettingsTab({
                 disabled={isLoading}
                 className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white rounded-lg text-sm"
               >
-                {isLoading ? 'Transferring...' : 'Confirm Transfer'}
+                {isLoading ? 'Transferring...' : t('lit.confirmTransfer')}
               </button>
             </div>
           </div>
@@ -248,7 +251,7 @@ export function SettingsTab({
         <form id="project-settings-form" onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Organization *
+              {t('lit.organization')}
             </label>
             <select
               value={formData.organizationId}
@@ -263,13 +266,13 @@ export function SettingsTab({
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Only organizations where you have Admin or Owner role are shown
+              {t('lit.onlyOrganizationsWhereYouHaveAdminOrOwnerRoleAreShown')}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Customer
+              {t('common.customer')}
             </label>
             <select
               value={formData.customerId || ''}
@@ -277,21 +280,21 @@ export function SettingsTab({
               disabled={formData.isGlobal}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="">No customer</option>
+              <option value="">{t('lit.noCustomer')}</option>
               {customers.map((c) => (
                 <option key={c.Id} value={c.Id}>{c.Name}</option>
               ))}
             </select>
             {formData.isGlobal && (
               <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                Global projects cannot have a customer association
+                {t('lit.globalProjectsCannotHaveACustomerAssociation')}
               </p>
             )}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Project Name *
+              {t('lit.projectName2')}
             </label>
             <input
               type="text"
@@ -304,7 +307,7 @@ export function SettingsTab({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description
+              {t('common.description')}
             </label>
             <textarea
               value={formData.description}
@@ -318,21 +321,21 @@ export function SettingsTab({
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Budget Type
+                  {t('lit.budgetType')}
                 </label>
                 <select
                   value={formData.budgetType}
                   onChange={(e) => setFormData({ ...formData, budgetType: e.target.value === 'hours' ? 'hours' : 'monetary' })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="monetary">Monetary</option>
-                  <option value="hours">Total Hours</option>
+                  <option value="monetary">{t('lit.monetary')}</option>
+                  <option value="hours">{t('lit.totalHours2')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Budget
+                  {t('lit.budget')}
                 </label>
                 <div className="relative">
                   {formData.budgetType !== 'hours' && (
@@ -350,8 +353,8 @@ export function SettingsTab({
                 </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {formData.budgetType === 'hours'
-                    ? 'Optional project budget in total planned hours'
-                    : 'Optional project budget in currency units'}
+                    ? t('lit.optionalProjectBudgetInTotalPlannedHours')
+                    : t('lit.optionalProjectBudgetInCurrencyUnits')}
                 </p>
               </div>
             </>
@@ -359,7 +362,7 @@ export function SettingsTab({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Status
+              {t('common.status')}
             </label>
             <select
               value={formData.status || ''}
@@ -373,7 +376,7 @@ export function SettingsTab({
                   </option>
                 ))
               ) : (
-                <option value="">No statuses available</option>
+                <option value="">{t('lit.noStatusesAvailable')}</option>
               )}
             </select>
           </div>
@@ -381,7 +384,7 @@ export function SettingsTab({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Start Date
+                {t('lit.startDate')}
               </label>
               <input
                 type="date"
@@ -393,7 +396,7 @@ export function SettingsTab({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                End Date
+                {t('lit.endDate')}
               </label>
               <input
                 type="date"
@@ -423,7 +426,7 @@ export function SettingsTab({
                   🌐 Global Project
                 </label>
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Global projects are not associated with a specific customer
+                  {t('lit.globalProjectsAreNotAssociatedWithASpecificCustomer')}
                 </p>
               </div>
             </div>
@@ -437,7 +440,7 @@ export function SettingsTab({
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               />
               <label htmlFor="isHobby" className="block text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-medium">Hobby Project</span>
+                <span className="font-medium">{t('lit.hobbyProject')}</span>
                 <span className="text-gray-500 dark:text-gray-400 ml-2">
                   (Uses hobby time slots instead of work hours)
                 </span>
@@ -459,7 +462,7 @@ export function SettingsTab({
                   👁 Visible to Customer
                 </label>
                 <p className="text-xs text-green-600 dark:text-green-400">
-                  When enabled, the customer can see this project in their portal
+                  {t('lit.whenEnabledTheCustomerCanSeeThisProjectInTheirPortal')}
                 </p>
               </div>
             </div>
@@ -468,7 +471,7 @@ export function SettingsTab({
           {availableApplications.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Applications
+                {t('nav.applications')}
               </label>
               <SearchableMultiSelect
                 values={formData.applicationIds || []}
@@ -477,7 +480,7 @@ export function SettingsTab({
                   value: app.Id,
                   label: app.Name
                 }))}
-                placeholder="Select applications..."
+                placeholder={t('lit.selectApplications2')}
               />
             </div>
           )}
@@ -489,7 +492,7 @@ export function SettingsTab({
                   <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
                 </svg>
                 <label className="block text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Jira Board ID
+                  {t('lit.jiraBoardId')}
                 </label>
               </div>
               <input
@@ -497,10 +500,10 @@ export function SettingsTab({
                 value={formData.jiraBoardId}
                 onChange={(e) => setFormData({ ...formData, jiraBoardId: e.target.value })}
                 className="w-full px-4 py-2 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="e.g., 123 (from board URL)"
+                placeholder={t('lit.eG123FromBoardUrl')}
               />
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Associate this project with a Jira board. Find the Board ID in your Jira board URL: /boards/123
+                {t('lit.associateThisProjectWithAJiraBoardFindTheBoardIdInYourJiraBoardUrlBoards123')}
               </p>
               {formData.jiraBoardId && (
                 <div className="mt-2 flex gap-2">
@@ -509,7 +512,7 @@ export function SettingsTab({
                     onClick={() => setFormData({ ...formData, jiraBoardId: '' })}
                     className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                   >
-                    Clear Board ID
+                    {t('lit.clearBoardId')}
                   </button>
                 </div>
               )}
@@ -517,11 +520,11 @@ export function SettingsTab({
           )}
           <div className="p-4 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-300 dark:border-gray-700">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Git / VCS repositories
+              {t('lit.gitVcsRepositories')}
             </label>
             <p className="text-xs text-gray-600 dark:text-gray-400">
               Configure repository URL and GitHub / Gitea / Bitbucket credentials on each{' '}
-              <strong>Application</strong>, then link applications to this project. Issue import uses the
+              <strong>{t('lit.application')}</strong>, then link applications to this project. Issue import uses the
               selected application&apos;s repository.
             </p>
           </div>
@@ -539,7 +542,7 @@ export function SettingsTab({
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium mt-4"
             >
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading ? t('lit.saving') : t('lit.saveChanges')}
             </button>
           )}
         </form>

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authApi } from '@/lib/api/auth';
@@ -13,6 +15,8 @@ import AuthShell, {
 } from '@/components/AuthShell';
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -45,13 +49,16 @@ export default function ForgotPasswordPage() {
 
     try {
       const result = await authApi.forgotPassword(email);
-      const successMessage =
-        result.message || 'If an account with that email exists, a reset link has been sent.';
+      const successMessage = result.message || t('auth.forgotSent');
       setMessage(successMessage);
-      showToast({ type: 'success', title: 'Reset Link Sent', message: successMessage });
+      showToast({
+        type: 'success',
+        title: t('lit.resetLinkSent'),
+        message: successMessage,
+      });
       setEmail('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to request password reset');
+      setError(err instanceof Error ? err.message : t('lit.failedToRequestPasswordReset'));
     } finally {
       setIsLoading(false);
     }
@@ -59,13 +66,13 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      title="Recover Password"
-      description="Enter your email and we will send a temporary reset link."
+      title={t('auth.forgotTitle')}
+      description={t('auth.forgotHint')}
       companyName={companyName}
       companyLogoUrl={companyLogoUrl}
       footer={
         <Link href="/login" className={authLinkClass}>
-          Back to login
+          {t('auth.backSignIn')}
         </Link>
       }
     >
@@ -84,7 +91,7 @@ export default function ForgotPasswordPage() {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="email" className={authLabelClass}>
-            Email
+            {t('auth.email')}
           </label>
           <input
             id="email"
@@ -93,12 +100,12 @@ export default function ForgotPasswordPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             className={authFieldClass}
-            placeholder="Enter your email"
+            placeholder={t('lit.enterYourEmail')}
           />
         </div>
 
         <button type="submit" disabled={isLoading} className={authPrimaryButtonClass}>
-          {isLoading ? 'Sending…' : 'Send Reset Link'}
+          {isLoading ? t('auth.sending') : t('auth.sendReset')}
         </button>
       </form>
     </AuthShell>

@@ -1,10 +1,13 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
 /** Minimal chrome for frozen `/docs` (no AppShell, no legacy Navbar). */
 export default function DocsChrome() {
+  const { t } = useI18n();
+
   const { user, logout } = useAuth();
 
   return (
@@ -12,11 +15,11 @@ export default function DocsChrome() {
       <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
           <Link href="/docs" className="truncate text-sm font-semibold text-gray-900 no-underline dark:text-white">
-            User Manual
+            {t('chrome.userManual')}
           </Link>
           {user && (
             <Link href="/dashboard" className="text-sm text-gray-600 no-underline hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400">
-              Back to app
+              {t('lit.backToApp')}
             </Link>
           )}
         </div>
@@ -27,11 +30,11 @@ export default function DocsChrome() {
               onClick={() => logout()}
               className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
             >
-              Logout
+              {t('lit.logout')}
             </button>
           ) : (
             <Link href="/login" className="text-sm text-blue-600 no-underline dark:text-blue-400">
-              Login
+              {t('lit.login')}
             </Link>
           )}
         </div>

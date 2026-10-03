@@ -36,6 +36,8 @@ import { ColorVisionMode, getStoredColorVisionMode } from '@/lib/colorVision';
 import ColorVisionPicker from '@/components/navbar/ColorVisionPicker';
 import ThemePalettePicker from '@/components/navbar/ThemePalettePicker';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useI18n } from '@/lib/i18n/provider';
+import { LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n/config';
 import {
   BookOpen,
   Download,
@@ -111,6 +113,7 @@ export default function AppChromeTools({
   const { user, token, logout, isCustomerUser } = useAuth();
   const { permissions, isLoading: permissionsLoading } = usePermissions();
   const { showToast } = useToast();
+  const { t, locale, setLocale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
@@ -196,7 +199,7 @@ export default function AppChromeTools({
     organizationId: '',
     projectId: '',
     taskId: '',
-    callType: 'Teams',
+    callType: t('lit.teams'),
     participants: '',
     subject: '',
     notes: '',
@@ -263,12 +266,12 @@ export default function AppChromeTools({
 
   const setErrorWithToast = (message: string) => {
     setError(message);
-    showToast({ type: 'error', title: 'Quick Action Error', message });
+    showToast({ type: 'error', title: t('lit.quickActionError'), message });
   };
 
   const setTimerStartErrorWithToast = (message: string) => {
     setTimerStartError(message);
-    showToast({ type: 'error', title: 'Timer Error', message });
+    showToast({ type: 'error', title: t('lit.timerError'), message });
   };
   
   // Form state
@@ -659,7 +662,7 @@ export default function AppChromeTools({
       organizationId: '',
       projectId: '',
       taskId: '',
-      callType: 'Teams',
+      callType: t('lit.teams'),
       participants: '',
       subject: '',
       notes: '',
@@ -681,7 +684,7 @@ export default function AppChromeTools({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load projects');
+        throw new Error(t('lit.failedToLoadProjects'));
       }
 
       const data = await response.json();
@@ -704,7 +707,7 @@ export default function AppChromeTools({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load tasks');
+        throw new Error(t('lit.failedToLoadTasks'));
       }
 
       const data = await response.json();
@@ -730,7 +733,7 @@ export default function AppChromeTools({
       organizationId: '',
       projectId: '',
       taskId: '',
-      callType: 'Teams',
+      callType: t('lit.teams'),
       participants: '',
       subject: '',
       notes: '',
@@ -747,7 +750,7 @@ export default function AppChromeTools({
       ]);
 
       if (!response.ok) {
-        throw new Error('Failed to load tasks');
+        throw new Error(t('lit.failedToLoadTasks'));
       }
 
       const data = await response.json();
@@ -765,7 +768,7 @@ export default function AppChromeTools({
         setTimerStartTaskId(Number(tasks[0].Id));
       }
     } catch (err: any) {
-      setTimerStartErrorWithToast(err.message || 'Failed to load timer options');
+      setTimerStartErrorWithToast(err.message || t('lit.failedToLoadTimerOptions'));
     } finally {
       setIsLoadingTimerStartTasks(false);
     }
@@ -824,14 +827,14 @@ export default function AppChromeTools({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to start timer');
+        throw new Error(data.message || t('lit.failedToStartTimer'));
       }
 
       setNavTimer(data.timer || null);
       closeNavStartTimerModal();
       window.dispatchEvent(new CustomEvent('timer-changed'));
     } catch (err: any) {
-      setTimerStartErrorWithToast(err.message || 'Failed to start timer');
+      setTimerStartErrorWithToast(err.message || t('lit.failedToStartTimer'));
     } finally {
       setIsStartingTimer(false);
     }
@@ -866,11 +869,11 @@ export default function AppChromeTools({
   };
 
   const navTimerLabel = navTimer?.TimerType === 'callRecord'
-    ? (navTimer.Subject || navTimer.Participants || `${navTimer.CallType || 'Call'} record`)
-    : (navTimer?.TaskName || 'Running timer');
+    ? (navTimer.Subject || navTimer.Participants || `${navTimer.CallType || t('lit.call')} record`)
+    : (navTimer?.TaskName || t('lit.runningTimer'));
 
   const navTimerTitle = navTimer?.TimerType === 'callRecord'
-    ? `Timer running: ${navTimer.Subject || navTimer.Participants || navTimer.CallType || 'Call record'}${navTimer.ProjectName ? ` — ${navTimer.ProjectName}` : ''}`
+    ? `Timer running: ${navTimer.Subject || navTimer.Participants || navTimer.CallType || t('lit.callRecord')}${navTimer.ProjectName ? ` — ${navTimer.ProjectName}` : ''}`
     : `Timer running: ${navTimer?.TaskName || ''}${navTimer?.ProjectName ? ` — ${navTimer.ProjectName}` : ''}`;
 
   const openNavTaskDetail = async (projectId: number, taskId: number) => {
@@ -896,7 +899,7 @@ export default function AppChromeTools({
       ]);
 
       if (!projectRes.ok) {
-        throw new Error('Failed to load project for task detail');
+        throw new Error(t('lit.failedToLoadProjectForTaskDetail'));
       }
 
       const projectData = await projectRes.json();
@@ -906,7 +909,7 @@ export default function AppChromeTools({
       const activeTask = projectTasks.find((taskItem: any) => Number(taskItem.Id) === Number(taskId)) || null;
 
       if (!project || !activeTask) {
-        throw new Error('Task no longer exists in this project');
+        throw new Error(t('lit.taskNoLongerExistsInThisProject'));
       }
 
       setNavTaskModalState({
@@ -924,7 +927,7 @@ export default function AppChromeTools({
         project: null,
         task: null,
         tasks: [],
-        error: error?.message || 'Failed to open task detail',
+        error: error?.message || t('lit.failedToOpenTaskDetail'),
       });
     }
   };
@@ -1203,7 +1206,7 @@ export default function AppChromeTools({
         ]);
 
         if (!organizationsRes.ok) {
-          throw new Error('Failed to load organizations');
+          throw new Error(t('lit.failedToLoadOrganizations'));
         }
 
         const orgData = await organizationsRes.json();
@@ -1220,7 +1223,7 @@ export default function AppChromeTools({
 
         setCustomerForm(buildDefaultCustomerFormValues(loadedOrganizations));
       } catch (err: any) {
-        setErrorWithToast(err.message || 'Failed to load customer quick action data');
+        setErrorWithToast(err.message || t('lit.failedToLoadCustomerQuickActionData'));
       }
 
       return;
@@ -1290,7 +1293,7 @@ export default function AppChromeTools({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/organizations`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1302,14 +1305,14 @@ export default function AppChromeTools({
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to create organization');
+        throw new Error(data.message || t('lit.failedToCreateOrganization'));
       }
       closeAllModals();
       if (window.location.pathname.includes('/organizations')) {
         window.location.reload();
       }
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to create organization');
+      setErrorWithToast(err.message || t('lit.failedToCreateOrganization'));
     } finally {
       setIsSaving(false);
     }
@@ -1359,7 +1362,7 @@ export default function AppChromeTools({
         window.location.reload();
       }
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to create customer');
+      setErrorWithToast(err.message || t('lit.failedToCreateCustomer'));
     } finally {
       setIsSaving(false);
     }
@@ -1369,7 +1372,7 @@ export default function AppChromeTools({
   const handleSaveTimeEntry = async (timeEntryForm: TimeEntryFormValues) => {
     if (!timeEntryForm.taskId || !timeEntryForm.workDate) {
       setErrorWithToast('Task and Work Date are required');
-      throw new Error('Task and Work Date are required');
+      throw new Error(t('lit.taskAndWorkDateAreRequired'));
     }
     
     let hours = timeEntryForm.hours ? parseFloat(timeEntryForm.hours) : 0;
@@ -1382,14 +1385,14 @@ export default function AppChromeTools({
     }
     if (hours <= 0) {
       setErrorWithToast('Hours must be greater than 0');
-      throw new Error('Hours must be greater than 0');
+      throw new Error(t('lit.hoursMustBeGreaterThan02'));
     }
 
     setIsSaving(true);
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/time-entries`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1405,14 +1408,14 @@ export default function AppChromeTools({
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to create time entry');
+        throw new Error(data.message || t('lit.failedToCreateTimeEntry'));
       }
       closeAllModals();
       if (window.location.pathname.includes('/dashboard')) {
         window.location.reload();
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to create time entry';
+      const message = err.message || t('lit.failedToCreateTimeEntry');
       setErrorWithToast(message);
       throw new Error(message);
     } finally {
@@ -1426,7 +1429,7 @@ export default function AppChromeTools({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/call-records`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1446,14 +1449,14 @@ export default function AppChromeTools({
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to create call record');
+        throw new Error(data.message || t('lit.failedToCreateCallRecord'));
       }
       closeAllModals();
       if (window.location.pathname.includes('/call-records')) {
         window.location.reload();
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to create call record';
+      const message = err.message || t('lit.failedToCreateCallRecord');
       setErrorWithToast(message);
       throw new Error(message);
     } finally {
@@ -1492,12 +1495,12 @@ export default function AppChromeTools({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || 'Failed to load available downloads');
+        throw new Error(data?.message || t('lit.failedToLoadAvailableDownloads'));
       }
       setDownloadsCatalog(data.catalog);
     } catch (err: any) {
       setDownloadsCatalog(null);
-      setDownloadsCatalogError(err?.message || 'Failed to load available downloads');
+      setDownloadsCatalogError(err?.message || t('lit.failedToLoadAvailableDownloads'));
     } finally {
       setDownloadsCatalogLoading(false);
     }
@@ -1628,7 +1631,7 @@ export default function AppChromeTools({
 
     try {
       const res = await fetch(`${getApiUrl()}/api/tasks`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1649,7 +1652,7 @@ export default function AppChromeTools({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to create task');
+        throw new Error(data.message || t('lit.failedToCreateTask'));
       }
 
       // Reset form and close modal
@@ -1673,7 +1676,7 @@ export default function AppChromeTools({
         window.location.reload();
       }
     } catch (err: any) {
-      setErrorWithToast(err.message || 'Failed to create task');
+      setErrorWithToast(err.message || t('lit.failedToCreateTask'));
     } finally {
       setIsSaving(false);
     }
@@ -1709,7 +1712,7 @@ export default function AppChromeTools({
         isLoading: false,
         project: null,
         tasks: [],
-        error: err?.message || 'Failed to load project details',
+        error: err?.message || t('lit.failedToLoadProjectDetails'),
       });
     }
   };
@@ -1771,7 +1774,7 @@ export default function AppChromeTools({
     canShowVacationApprovalsOption ||
     canShowOutOfOfficeApprovalsOption ||
     canShowExpenseApprovalsOption;
-  const approvalsMenuLabel = expensesEnabled ? 'Approvals & Expenses' : 'Approvals';
+  const approvalsMenuLabel = expensesEnabled ? 'Approvals & Expenses' : t('lit.approvals');
   const approvalsMenuHref =
     canShowApprovalsOption
       ? '/approvals?tab=time'
@@ -1876,14 +1879,14 @@ export default function AppChromeTools({
             </button>
             <button
               onClick={handleNavStopTimer}
-              title="Stop timer and save time entry"
+              title={t('lit.stopTimerAndSaveTimeEntry')}
               className="text-xs px-2 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
             >
               ⏹
             </button>
             <button
               onClick={handleNavDiscardTimer}
-              title="Discard timer without saving"
+              title={t('lit.discardTimerWithoutSaving')}
               className="text-xs px-2 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
             >
               ✕
@@ -1894,13 +1897,13 @@ export default function AppChromeTools({
             type="button"
             onClick={openNavStartTimerModal}
             className="flex items-center gap-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 sm:px-2.5 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors animate-pulse ring-2 ring-red-300/70 dark:ring-red-900/70 shadow-[0_0_14px_rgba(239,68,68,0.45)] dark:shadow-[0_0_14px_rgba(248,113,113,0.35)] shrink-0"
-            title="No timer running. Click to start timer"
+            title={t('lit.noTimerRunningClickToStartTimer')}
           >
             <span>⏱</span>
             {centered ? (
-              <span>No timer running — click to start</span>
+              <span>{t('lit.noTimerRunningClickToStart')}</span>
             ) : (
-              <span className="hidden sm:inline">No timer running — click to start</span>
+              <span className="hidden sm:inline">{t('lit.noTimerRunningClickToStart')}</span>
             )}
           </button>
         )}
@@ -1996,7 +1999,7 @@ export default function AppChromeTools({
               {isSidebarEffectivelyCollapsed ? (
                 <span className="text-gray-700 dark:text-gray-300">☰</span>
               ) : (
-                <span className="font-semibold text-gray-900 dark:text-white">Navigation</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{t('lit.navigation')}</span>
               )}
             </div>
 
@@ -2005,7 +2008,7 @@ export default function AppChromeTools({
                 <div>
                   {canShowDashboardLink && (
                     <Link href="/dashboard" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📊</span>{!isSidebarEffectivelyCollapsed && <span>Dashboard</span>}
+                      <span className="w-5 text-center">📊</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.dashboard')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2016,12 +2019,12 @@ export default function AppChromeTools({
                   {renderSidebarSectionHeader('Delivery')}
                   {canShowProjectsLink && (
                     <Link href="/projects" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📁</span>{!isSidebarEffectivelyCollapsed && <span>Projects</span>}
+                      <span className="w-5 text-center">📁</span>{!isSidebarEffectivelyCollapsed && <span>{t('common.projects')}</span>}
                     </Link>
                   )}
                   {canShowPlanningLink && (
                     <Link href="/planning" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📅</span>{!isSidebarEffectivelyCollapsed && <span>Planning</span>}
+                      <span className="w-5 text-center">📅</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.planning')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2029,25 +2032,25 @@ export default function AppChromeTools({
 
               {showWorkLogsSection && (
                 <div className={`${showOverviewSection || showDeliverySection ? 'mt-1.5 pt-1.5' : ''}`}>
-                  {renderSidebarSectionHeader('Work Logs')}
+                  {renderSidebarSectionHeader(t('lit.workLogs2'))}
                   {canShowTimesheetLink && (
                     <Link href="/timesheet" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📝</span>{!isSidebarEffectivelyCollapsed && <span>Timesheet</span>}
+                      <span className="w-5 text-center">📝</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.timesheet')}</span>}
                     </Link>
                   )}
                   {canShowExpensesLink && (
                     <Link href="/expenses" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">💸</span>{!isSidebarEffectivelyCollapsed && <span>Expenses</span>}
+                      <span className="w-5 text-center">💸</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.expenses')}</span>}
                     </Link>
                   )}
                   {canShowCallRecordsLink && (
                     <Link href="/call-records" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📞</span>{!isSidebarEffectivelyCollapsed && <span>Call Records</span>}
+                      <span className="w-5 text-center">📞</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.callRecords')}</span>}
                     </Link>
                   )}
                   {canShowWorkSummaryLink && (
                     <Link href="/work-summary" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📚</span>{!isSidebarEffectivelyCollapsed && <span>Work Summary</span>}
+                      <span className="w-5 text-center">📚</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.workSummary')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2058,12 +2061,12 @@ export default function AppChromeTools({
                   {renderSidebarSectionHeader('Service')}
                   {canShowTicketsLink && (
                     <Link href="/tickets" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">🎫</span>{!isSidebarEffectivelyCollapsed && <span>Tickets</span>}
+                      <span className="w-5 text-center">🎫</span>{!isSidebarEffectivelyCollapsed && <span>{t('common.tickets')}</span>}
                     </Link>
                   )}
                   {canShowMemosLink && (
                     <Link href="/memos" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📝</span>{!isSidebarEffectivelyCollapsed && <span>Memos</span>}
+                      <span className="w-5 text-center">📝</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.memos')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2074,12 +2077,12 @@ export default function AppChromeTools({
                   {renderSidebarSectionHeader('Management')}
                   {canShowCustomersOption && (
                     <Link href="/customers" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">🏢</span>{!isSidebarEffectivelyCollapsed && <span>Customers</span>}
+                      <span className="w-5 text-center">🏢</span>{!isSidebarEffectivelyCollapsed && <span>{t('common.customers')}</span>}
                     </Link>
                   )}
                   {canShowApplicationsOption && (
                     <Link href="/applications" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">🧩</span>{!isSidebarEffectivelyCollapsed && <span>Applications</span>}
+                      <span className="w-5 text-center">🧩</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.applications')}</span>}
                     </Link>
                   )}
                   {canShowAnyApprovalsOption && (
@@ -2089,7 +2092,7 @@ export default function AppChromeTools({
                   )}
                   {canShowDevSupportManagementOption && (
                     <Link href="/dev-support" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">🛠️</span>{!isSidebarEffectivelyCollapsed && <span>Dev Support</span>}
+                      <span className="w-5 text-center">🛠️</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.devSupport')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2100,7 +2103,7 @@ export default function AppChromeTools({
                   {renderSidebarSectionHeader('Reporting')}
                   {canShowReportsLink && (
                     <Link href="/reporting" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
-                      <span className="w-5 text-center">📊</span>{!isSidebarEffectivelyCollapsed && <span>Reporting</span>}
+                      <span className="w-5 text-center">📊</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.sectionReporting')}</span>}
                     </Link>
                   )}
                 </div>
@@ -2115,19 +2118,19 @@ export default function AppChromeTools({
                     className={sidebarItemClass}
                     onClick={openDownloadsModal}
                   >
-                    <span className="w-5 text-center">⬇️</span>{!isSidebarEffectivelyCollapsed && <span>Downloads</span>}
+                    <span className="w-5 text-center">⬇️</span>{!isSidebarEffectivelyCollapsed && <span>{t('chrome.downloads')}</span>}
                   </button>
                   <Link
                     href="/docs"
                     className={`${sidebarItemClass} mb-2`}
                     onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}
                   >
-                    <span className="w-5 text-center">📘</span>{!isSidebarEffectivelyCollapsed && <span>User Manual</span>}
+                    <span className="w-5 text-center">📘</span>{!isSidebarEffectivelyCollapsed && <span>{t('chrome.userManual')}</span>}
                   </Link>
                 </>
               )}
               {!isSidebarEffectivelyCollapsed && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 px-1">Mode: {effectiveNavbarLeftMode === 'floating' ? 'Floating' : 'Fixed'}{isMobile && navbarLeftMode === 'fixed' ? ' (auto on mobile)' : ''}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 px-1">Mode: {effectiveNavbarLeftMode === 'floating' ? t('lit.floating') : t('lit.fixed')}{isMobile && navbarLeftMode === 'fixed' ? ' (auto on mobile)' : ''}</p>
               )}
             </div>
           </div>
@@ -2175,8 +2178,8 @@ export default function AppChromeTools({
                 <button
                   onClick={toggleLeftSidebar}
                   className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
-                  title={isFloatingMode ? (isFloatingSidebarOpen ? 'Hide menu' : 'Show menu') : (navbarLeftCollapsed ? 'Show menu' : 'Hide menu')}
-                  aria-label="Toggle navigation menu"
+                  title={isFloatingMode ? (isFloatingSidebarOpen ? t('lit.hideMenu') : t('lit.showMenu')) : (navbarLeftCollapsed ? t('lit.showMenu') : t('lit.hideMenu'))}
+                  aria-label={t('lit.toggleNavigationMenu')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -2188,8 +2191,8 @@ export default function AppChromeTools({
                   type="button"
                   onClick={() => setIsTopMobileNavOpen((open) => !open)}
                   className="md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
-                  title={isTopMobileNavOpen ? 'Hide menu' : 'Show menu'}
-                  aria-label="Toggle navigation menu"
+                  title={isTopMobileNavOpen ? t('lit.hideMenu') : t('lit.showMenu')}
+                  aria-label={t('lit.toggleNavigationMenu')}
                   aria-expanded={isTopMobileNavOpen}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2205,7 +2208,7 @@ export default function AppChromeTools({
                 {companyLogoUrl ? (
                   <img
                     src={companyLogoUrl}
-                    alt={companyName || 'Company logo'}
+                    alt={companyName || t('lit.companyLogo')}
                     className="w-8 h-8 rounded object-contain bg-white shrink-0"
                   />
                 ) : (
@@ -2225,9 +2228,9 @@ export default function AppChromeTools({
                 {isDemoMode && (
                   <span
                     className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0"
-                    title="Demo mode is enabled"
+                    title={t('lit.demoModeIsEnabled')}
                   >
-                    DEMO MODE
+                    {t('lit.demoMode')}
                   </span>
                 )}
               </div>
@@ -2248,7 +2251,7 @@ export default function AppChromeTools({
                   <NavDropdownMenu
                     menuRef={workMenuRef}
                     isOpen={workMenuOpen}
-                    title="🗂️ Work"
+                    title={t('lit.work')}
                     onToggle={() => setWorkMenuOpen(!workMenuOpen)}
                     onMouseEnter={handleWorkMenuMouseEnter}
                     onMouseLeave={handleWorkMenuMouseLeave}
@@ -2274,7 +2277,7 @@ export default function AppChromeTools({
                   <NavDropdownMenu
                     menuRef={workLogsMenuRef}
                     isOpen={workLogsMenuOpen}
-                    title="⏱️ Work Logs"
+                    title={t('lit.workLogs')}
                     onToggle={() => setWorkLogsMenuOpen(!workLogsMenuOpen)}
                     onMouseEnter={handleWorkLogsMenuMouseEnter}
                     onMouseLeave={handleWorkLogsMenuMouseLeave}
@@ -2332,7 +2335,7 @@ export default function AppChromeTools({
                   <NavDropdownMenu
                     menuRef={managementMenuRef}
                     isOpen={managementMenuOpen}
-                    title="⚙️ Management"
+                    title={t('lit.management')}
                     onToggle={() => setManagementMenuOpen(!managementMenuOpen)}
                     onMouseEnter={handleManagementMenuMouseEnter}
                     onMouseLeave={handleManagementMenuMouseLeave}
@@ -2395,7 +2398,7 @@ export default function AppChromeTools({
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     onFocus={() => searchQuery.length >= 2 && setSearchOpen(true)}
-                    placeholder="Search..."
+                    placeholder={t('lit.search')}
                     className="w-40 md:w-48 lg:w-64 px-4 py-2 pl-10 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <svg 
@@ -2432,13 +2435,13 @@ export default function AppChromeTools({
               <div className="relative" ref={quickActionsRef}>
                 <button
                   onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-                  title="Quick Actions (Ctrl+Q)"
+                  title={t('lit.quickActionsCtrlQ')}
                   className="flex items-center space-x-1 px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shrink-0"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="hidden sm:inline">Quick Actions</span>
+                  <span className="hidden sm:inline">{t('lit.quickActions')}</span>
                   <svg 
                     className={`hidden sm:block w-4 h-4 transition-transform ${quickActionsOpen ? 'rotate-180' : ''}`}
                     fill="none" 
@@ -2456,40 +2459,40 @@ export default function AppChromeTools({
                         onClick={() => openQuickAction('organization')}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <span className="mr-3">🏢</span> New Organization
+                        <span className="mr-3">🏢</span> {t('lit.newOrganization')}
                       </button>
                     )*/}
                     {(permissions?.canManageProjects || permissions?.canCreateProjects) && (
                       <button
                         onClick={() => openQuickAction('project')}
-                        title="Shortcut: Ctrl+1"
+                        title={t('lit.shortcutCtrl1')}
                         className="flex items-center w-full gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <span>📁</span>
-                        <span>New Project</span>
-                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+1</span>
+                        <span>{t('lit.newProject')}</span>
+                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{t('lit.ctrl1')}</span>
                       </button>
                     )}
                     {permissions?.canCreateCustomers && (
                       <button
                         onClick={() => openQuickAction('customer')}
-                        title="Shortcut: Ctrl+5"
+                        title={t('lit.shortcutCtrl5')}
                         className="flex items-center w-full gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <span>🏢</span>
-                        <span>Add Customer</span>
-                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+5</span>
+                        <span>{t('lit.addCustomer')}</span>
+                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{t('lit.ctrl5')}</span>
                       </button>
                     )}
                     {(permissions?.canManageTasks || permissions?.canCreateTasks) && (
                       <button
                         onClick={() => openQuickAction('task')}
-                        title="Shortcut: Ctrl+2"
+                        title={t('lit.shortcutCtrl2')}
                         className="flex items-center w-full gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <span>✅</span>
-                        <span>New Task</span>
-                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+2</span>
+                        <span>{t('lit.newTask')}</span>
+                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{t('lit.ctrl2')}</span>
                       </button>
                     )}
                     {(permissions?.canManageTasks || permissions?.canCreateTasks || permissions?.canManageTimeEntries) && (
@@ -2497,24 +2500,24 @@ export default function AppChromeTools({
                         <hr className="my-1 border-gray-200 dark:border-gray-700" />
                         <button
                           onClick={() => openQuickAction('timeEntry')}
-                          title="Shortcut: Ctrl+3"
+                          title={t('lit.shortcutCtrl3')}
                           className="flex items-center w-full gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                           <span>⏱️</span>
-                          <span>New Time Entry</span>
-                          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+3</span>
+                          <span>{t('lit.newTimeEntry')}</span>
+                          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{t('lit.ctrl3')}</span>
                         </button>
                       </>
                     )}
                     {(user?.isSupport || permissions?.canManageTickets) && (
                       <button
                         onClick={() => openQuickAction('callRecord')}
-                        title="Shortcut: Ctrl+4"
+                        title={t('lit.shortcutCtrl4')}
                         className="flex items-center w-full gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <span>📞</span>
-                        <span>New Call Record</span>
-                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+4</span>
+                        <span>{t('lit.newCallRecord2')}</span>
+                        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{t('lit.ctrl4')}</span>
                       </button>
                     )}
                   </div>
@@ -2532,7 +2535,7 @@ export default function AppChromeTools({
                 <button
                   onClick={handleNotificationsClick}
                   className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  title="Notifications"
+                  title={t('nav.notifications')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -2547,23 +2550,23 @@ export default function AppChromeTools({
                 {notificationsOpen && (
                   <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden">
                     <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('nav.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
                           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          Mark all as read
+                          {t('lit.markAllAsRead')}
                         </button>
                       )}
                     </div>
                     <div className="overflow-y-auto max-h-72">
                       {loadingNotifications ? (
-                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
                       ) : notifications.length === 0 ? (
                         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                           <span className="text-2xl">🔔</span>
-                          <p className="mt-2">No notifications yet</p>
+                          <p className="mt-2">{t('lit.noNotificationsYet')}</p>
                         </div>
                       ) : (
                         notifications.map(notification => (
@@ -2635,7 +2638,7 @@ export default function AppChromeTools({
                           className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline"
                           onClick={() => setNotificationsOpen(false)}
                         >
-                          View all notifications
+                          {t('lit.viewAllNotifications')}
                         </Link>
                       </div>
                     )}
@@ -2653,7 +2656,7 @@ export default function AppChromeTools({
                       : 'flex items-center space-x-1 sm:space-x-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-1.5 sm:px-3 py-2 rounded-md text-sm font-medium'
                   }
                   title={user.firstName || user.username}
-                  aria-label="User menu"
+                  aria-label={t('chrome.userMenu')}
                 >
                   <span className="hidden sm:inline">{user.firstName || user.username}</span>
                   <span
@@ -2683,7 +2686,7 @@ export default function AppChromeTools({
                       onClick={() => setDropdownOpen(false)}
                     >
                       <User size={16} className="shrink-0 text-[var(--pm-muted)]" />
-                      My Profile
+                      {t('chrome.myProfile')}
                     </Link>
                     {!isCustomerUser && (
                       <>
@@ -2693,7 +2696,7 @@ export default function AppChromeTools({
                           onClick={openDownloadsModal}
                         >
                           <Download size={16} className="shrink-0 text-[var(--pm-muted)]" />
-                          Downloads
+                          {t('chrome.downloads')}
                         </button>
                         <Link
                           href="/docs"
@@ -2701,7 +2704,7 @@ export default function AppChromeTools({
                           onClick={() => setDropdownOpen(false)}
                         >
                           <BookOpen size={16} className="shrink-0 text-[var(--pm-muted)]" />
-                          User Manual
+                          {t('chrome.userManual')}
                         </Link>
                       </>
                     )}
@@ -2714,14 +2717,29 @@ export default function AppChromeTools({
                           onClick={() => setDropdownOpen(false)}
                         >
                           <Settings size={16} className="shrink-0 text-[var(--pm-muted)]" />
-                          Administration
+                          {t('nav.administration')}
                         </Link>
                       </>
                     )}
                     <hr className="my-1 border-[var(--pm-border)]" />
                     <div className="px-4 py-2">
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
+                        {t('chrome.language')}
+                      </p>
+                      <select
+                        className="mb-3 w-full rounded border border-[var(--pm-border)] bg-[var(--pm-surface)] px-2 py-1 text-xs text-[var(--pm-text)]"
+                        value={locale}
+                        onChange={(e) => setLocale(e.target.value as Locale)}
+                        aria-label={t('chrome.language')}
+                      >
+                        {LOCALES.map((l) => (
+                          <option key={l} value={l}>
+                            {LOCALE_LABELS[l]}
+                          </option>
+                        ))}
+                      </select>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
-                        Theme
+                        {t('chrome.theme')}
                       </p>
                       <div className="grid grid-cols-3 gap-1">
                         {(['light', 'dark', 'system'] as ThemeMode[]).map((mode) => (
@@ -2764,7 +2782,7 @@ export default function AppChromeTools({
                       className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--pm-danger)] hover:bg-[var(--pm-surface-2)]"
                     >
                       <LogOut size={16} className="shrink-0" />
-                      Logout
+                      {t('auth.logOut')}
                     </button>
                   </div>
                 )}
@@ -2776,7 +2794,7 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      👤 My Profile
+                      👤 {t('chrome.myProfile')}
                     </Link>
                     {!isCustomerUser && !shouldUseLeftSidebar && (
                       <>
@@ -2785,14 +2803,14 @@ export default function AppChromeTools({
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           onClick={openDownloadsModal}
                         >
-                          ⬇️ Downloads
+                          ⬇️ {t('chrome.downloads')}
                         </button>
                         <Link
                           href="/docs"
                           className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           onClick={() => setDropdownOpen(false)}
                         >
-                          📘 User Manual
+                          📘 {t('chrome.userManual')}
                         </Link>
                       </>
                     )}
@@ -2803,7 +2821,7 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      📝 Timesheet
+                      📝 {t('nav.timesheet')}
                     </Link>
                     {canShowExpensesLink && (
                     <Link
@@ -2811,7 +2829,7 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      💸 Expenses
+                      💸 {t('nav.expenses')}
                     </Link>
                     )}
                     <Link
@@ -2819,14 +2837,14 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      📞 Call Records
+                      📞 {t('nav.callRecords')}
                     </Link>
                     <Link
                       href="/work-summary"
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      📚 Work Summary
+                      📚 {t('nav.workSummary')}
                     </Link>
                     </>
                     )}
@@ -2838,7 +2856,7 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      🏠 Overview
+                      🏠 {t('pages.dashboard.overview')}
                     </Link>
                     </>
                     )}
@@ -2850,14 +2868,29 @@ export default function AppChromeTools({
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      ⚙️ Administration
+                      ⚙️ {t('nav.administration')}
                     </Link>
                     </>
                     )}
                     <hr className="my-1 border-gray-200 dark:border-gray-700" />
                     <div className="px-4 py-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+                        {t('chrome.language')}
+                      </p>
+                      <select
+                        className="mb-3 w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300"
+                        value={locale}
+                        onChange={(e) => setLocale(e.target.value as Locale)}
+                        aria-label={t('chrome.language')}
+                      >
+                        {LOCALES.map((l) => (
+                          <option key={l} value={l}>
+                            {LOCALE_LABELS[l]}
+                          </option>
+                        ))}
+                      </select>
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                        Theme
+                        {t('chrome.theme')}
                       </p>
                       <div className="grid grid-cols-3 gap-1">
                         {(['light', 'dark', 'system'] as ThemeMode[]).map((mode) => (
@@ -2895,7 +2928,7 @@ export default function AppChromeTools({
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      🚪 Logout
+                      🚪 {t('auth.logOut')}
                     </button>
                   </div>
                 )}
@@ -2913,60 +2946,60 @@ export default function AppChromeTools({
             aria-hidden="true"
           />
           <div className="md:hidden sticky top-16 z-[75] w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg max-h-[calc(100dvh-4rem)] overflow-y-auto">
-            <nav className="px-3 py-3 space-y-1" aria-label="Mobile primary">
+            <nav className="px-3 py-3 space-y-1" aria-label={t('lit.mobilePrimary')}>
               {canShowDashboardLink && (
                 <Link href="/dashboard" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📊</span><span>Dashboard</span>
+                  <span>📊</span><span>{t('nav.dashboard')}</span>
                 </Link>
               )}
               {canShowProjectsLink && (
                 <Link href="/projects" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📁</span><span>Projects</span>
+                  <span>📁</span><span>{t('common.projects')}</span>
                 </Link>
               )}
               {canShowPlanningLink && (
                 <Link href="/planning" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📅</span><span>Planning</span>
+                  <span>📅</span><span>{t('nav.planning')}</span>
                 </Link>
               )}
               {canShowTimesheetLink && (
                 <Link href="/timesheet" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📝</span><span>Timesheet</span>
+                  <span>📝</span><span>{t('nav.timesheet')}</span>
                 </Link>
               )}
               {canShowExpensesLink && (
                 <Link href="/expenses" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>💸</span><span>Expenses</span>
+                  <span>💸</span><span>{t('nav.expenses')}</span>
                 </Link>
               )}
               {canShowCallRecordsLink && (
                 <Link href="/call-records" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📞</span><span>Call Records</span>
+                  <span>📞</span><span>{t('nav.callRecords')}</span>
                 </Link>
               )}
               {canShowWorkSummaryLink && (
                 <Link href="/work-summary" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📚</span><span>Work Summary</span>
+                  <span>📚</span><span>{t('nav.workSummary')}</span>
                 </Link>
               )}
               {canShowTicketsLink && (
                 <Link href="/tickets" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>🎫</span><span>Tickets</span>
+                  <span>🎫</span><span>{t('common.tickets')}</span>
                 </Link>
               )}
               {canShowMemosLink && (
                 <Link href="/memos" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📝</span><span>Memos</span>
+                  <span>📝</span><span>{t('nav.memos')}</span>
                 </Link>
               )}
               {canShowCustomersOption && (
                 <Link href="/customers" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>🏢</span><span>Customers</span>
+                  <span>🏢</span><span>{t('common.customers')}</span>
                 </Link>
               )}
               {canShowApplicationsOption && (
                 <Link href="/applications" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>🧩</span><span>Applications</span>
+                  <span>🧩</span><span>{t('nav.applications')}</span>
                 </Link>
               )}
               {canShowAnyApprovalsOption && (
@@ -2980,17 +3013,17 @@ export default function AppChromeTools({
               )}
               {canShowDevSupportManagementOption && (
                 <Link href="/dev-support" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>🛠️</span><span>Dev Support</span>
+                  <span>🛠️</span><span>{t('nav.devSupport')}</span>
                 </Link>
               )}
               {canShowReportsLink && (
                 <Link href="/reporting" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📊</span><span>Reporting</span>
+                  <span>📊</span><span>{t('nav.sectionReporting')}</span>
                 </Link>
               )}
               {canShowDocsLink && (
                 <Link href="/docs" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
-                  <span>📘</span><span>User Manual</span>
+                  <span>📘</span><span>{t('chrome.userManual')}</span>
                 </Link>
               )}
             </nav>
@@ -3004,7 +3037,7 @@ export default function AppChromeTools({
           {navTaskModalState.isLoading && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 text-gray-700 dark:text-gray-300">
-                Loading task details...
+                {t('lit.loadingTaskDetails')}
               </div>
             </div>
           )}
@@ -3018,7 +3051,7 @@ export default function AppChromeTools({
                     onClick={handleCloseNavTaskModal}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -3108,7 +3141,7 @@ export default function AppChromeTools({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Select Project for New Task
+                  {t('lit.selectProjectForNewTask')}
                 </h2>
                 <button
                   onClick={closeQuickTaskModal}
@@ -3128,19 +3161,19 @@ export default function AppChromeTools({
 
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Choose the organization and project first. The task details will open in the standard task modal.
+                  {t('lit.chooseTheOrganizationAndProjectFirstTheTaskDetailsWillOpenInTheStandardTaskModal')}
                 </p>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Organization <span className="text-red-500">*</span>
+                    {t('common.organization')} <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
                     value={selectedOrgId?.toString() || ''}
                     onChange={(value) => handleOrgChange(parseInt(value) || 0)}
                     options={organizations.map(org => ({ value: org.Id, label: org.Name }))}
-                    placeholder="Select Organization"
-                    emptyText="Select Organization"
+                    placeholder={t('lit.selectOrganization2')}
+                    emptyText={t('lit.selectOrganization2')}
                     disabled={isLoadingData}
                     autoSelectSingleOption
                   />
@@ -3149,7 +3182,7 @@ export default function AppChromeTools({
                 {/* Project */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Project <span className="text-red-500">*</span>
+                    {t('common.project')} <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
                     value={taskForm.projectId}
@@ -3161,8 +3194,8 @@ export default function AppChromeTools({
                       }
                     }}
                     options={projects.map(project => ({ value: project.Id, label: project.ProjectName }))}
-                    placeholder="Select Project"
-                    emptyText="Select Project"
+                    placeholder={t('lit.selectProject')}
+                    emptyText={t('lit.selectProject')}
                     disabled={!selectedOrgId || isLoadingData}
                     autoSelectSingleOption
                   />
@@ -3174,7 +3207,7 @@ export default function AppChromeTools({
                   onClick={closeQuickTaskModal}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -3187,7 +3220,7 @@ export default function AppChromeTools({
           {quickTaskCreateModalState.isLoading && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 text-gray-700 dark:text-gray-300">
-                Loading task details...
+                {t('lit.loadingTaskDetails')}
               </div>
             </div>
           )}
@@ -3201,7 +3234,7 @@ export default function AppChromeTools({
                     onClick={handleCloseQuickTaskCreateDetails}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -3230,7 +3263,7 @@ export default function AppChromeTools({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  New Organization
+                  {t('lit.newOrganization')}
                 </h2>
                 <button
                   onClick={closeAllModals}
@@ -3251,24 +3284,24 @@ export default function AppChromeTools({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Organization Name <span className="text-red-500">*</span>
+                    {t('lit.organizationName')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={orgForm.name}
                     onChange={(e) => setOrgForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter organization name"
+                    placeholder={t('lit.enterOrganizationName')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
+                    {t('common.description')}
                   </label>
                   <RichTextEditor
                     content={orgForm.description}
                     onChange={(html) => setOrgForm(prev => ({ ...prev, description: html }))}
-                    placeholder="Enter description"
+                    placeholder={t('lit.enterDescription')}
                   />
                 </div>
               </div>
@@ -3278,14 +3311,14 @@ export default function AppChromeTools({
                   onClick={closeAllModals}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveOrganization}
                   disabled={isSaving || !orgForm.name.trim()}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  {isSaving ? 'Creating...' : 'Create Organization'}
+                  {isSaving ? 'Creating...' : t('lit.createOrganization')}
                 </button>
               </div>
             </div>
@@ -3326,8 +3359,8 @@ export default function AppChromeTools({
       <TimeEntryFormModal
         isOpen={activeModal === 'timeEntry'}
         token={token || ''}
-        title="New Time Entry"
-        submitLabel="Create Time Entry"
+        title={t('lit.newTimeEntry')}
+        submitLabel={t('lit.createTimeEntry')}
         isSubmitting={isSaving}
         useOrganizationProjectTaskFlow
         onClose={closeAllModals}
@@ -3337,8 +3370,8 @@ export default function AppChromeTools({
       <CallRecordFormModal
         isOpen={activeModal === 'callRecord'}
         token={token || ''}
-        title="📞 New Call Record"
-        submitLabel="Create Call Record"
+        title={t('lit.newCallRecord')}
+        submitLabel={t('lit.createCallRecord')}
         isSubmitting={isSaving}
         onClose={closeAllModals}
         onSubmit={handleSaveCallRecord}
@@ -3349,19 +3382,19 @@ export default function AppChromeTools({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Downloads</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('chrome.downloads')}</h3>
                 <button
                   type="button"
                   onClick={() => setShowDownloadsModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   ✕
                 </button>
               </div>
 
               {downloadsCatalogLoading && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Checking available packages…</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('lit.checkingAvailablePackages')}</p>
               )}
               {downloadsCatalogError && (
                 <p className="text-sm text-red-600 dark:text-red-400 mb-4">{downloadsCatalogError}</p>
@@ -3369,7 +3402,7 @@ export default function AppChromeTools({
 
               <section className="mb-6">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-                  Desktop App
+                  {t('lit.desktopApp')}
                 </h4>
                 <div className="space-y-2">
                   <button
@@ -3380,9 +3413,9 @@ export default function AppChromeTools({
                   >
                     <span className="text-xl">🪟</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Windows</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.windows')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {downloadsCatalog?.desktop.win ? 'Installer (.exe)' : 'Not available'}
+                        {downloadsCatalog?.desktop.win ? 'Installer (.exe)' : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3394,11 +3427,11 @@ export default function AppChromeTools({
                   >
                     <span className="text-xl">🐧</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Linux</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.linux')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.desktop.linux
                           ? 'AppImage (CachyOS, Ubuntu, etc.)'
-                          : 'Not available'}
+                          : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3407,7 +3440,7 @@ export default function AppChromeTools({
 
               <section className="mb-6">
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-                  IDE Extensions
+                  {t('lit.ideExtensions')}
                 </h4>
                 <div className="space-y-2">
                   <button
@@ -3418,7 +3451,7 @@ export default function AppChromeTools({
                   >
                     <span className="text-xl">🧩</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">VS Code / Cursor</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.vsCodeCursor')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.ide.vscode ? 'Extension (.vsix)' : 'Not available — place .vsix in extras/release'}
                       </p>
@@ -3432,7 +3465,7 @@ export default function AppChromeTools({
                   >
                     <span className="text-xl">🧠</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">JetBrains Rider</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.jetbrainsRider')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.ide.rider ? 'Plugin package (.zip)' : 'Not available — place plugin zip in extras/release'}
                       </p>
@@ -3446,7 +3479,7 @@ export default function AppChromeTools({
                   >
                     <span className="text-xl">🟦</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Visual Studio</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.visualStudio')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.ide.visualstudio
                           ? 'Extension (.vsix)'
@@ -3459,7 +3492,7 @@ export default function AppChromeTools({
 
               <section>
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">
-                  Browser
+                  {t('lit.browser')}
                 </h4>
                 <button
                   type="button"
@@ -3469,11 +3502,11 @@ export default function AppChromeTools({
                 >
                   <span className="text-xl">🐒</span>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Tampermonkey script</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{t('lit.tampermonkeyScript')}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {downloadsCatalog?.tampermonkey
                         ? 'Opens in the browser — Tampermonkey will offer to install'
-                        : 'Not available'}
+                        : t('lit.notAvailable')}
                     </p>
                   </div>
                 </button>

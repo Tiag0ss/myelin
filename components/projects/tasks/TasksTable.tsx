@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React from 'react';
 import { Task } from '@/lib/api/tasks';
@@ -269,6 +270,8 @@ export function TasksTable({
   tagFilterOptions: Array<{ value: number; label: string; subtitle?: string }>;
   handleApplyBulkEdit: () => void | Promise<void>;
 }) {
+  const { t } = useI18n();
+
   const { pillStyle } = useColorVision();
   const getStatusStyle = (task: Task) => pillStyle(task.StatusColor, { alpha: '20' }) ?? {};
   const getPriorityStyle = (task: Task) => pillStyle(task.PriorityColor, { alpha: '20' }) ?? {};
@@ -316,7 +319,7 @@ export function TasksTable({
       >
         <td className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2 text-center" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-center gap-1">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity" title="Drag to reorder or change parent">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity" title={t('lit.dragToReorderOrChangeParent')}>
               <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm4-8h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2z" />
               </svg>
@@ -341,7 +344,7 @@ export function TasksTable({
                 }));
               }}
               options={taskTypeOptions.map((taskType) => ({ id: taskType.id, label: taskType.name }))}
-              placeholder="Task Type"
+              placeholder={t('lit.taskType')}
               className="w-full"
             />
           ) : task.TaskTypeName ? (
@@ -358,7 +361,7 @@ export function TasksTable({
                     event.stopPropagation();
                     startInlineSubtaskCreate(task.Id);
                   }}
-                  title="Add subtask"
+                  title={t('lit.addSubtask')}
                   className="ml-auto opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-semibold transition-opacity"
                 >
                   +
@@ -442,7 +445,7 @@ export function TasksTable({
                 }));
               }}
               options={assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name }))}
-              placeholder="Unassigned"
+              placeholder={t('lit.unassigned')}
               className="w-full"
             />
           ) : task.AssigneeName ? (
@@ -451,7 +454,7 @@ export function TasksTable({
               <span>{task.AssigneeName}</span>
             </div>
           ) : (
-            <span className="text-gray-400 dark:text-gray-500 italic">Unassigned</span>
+            <span className="text-gray-400 dark:text-gray-500 italic">{t('lit.unassigned')}</span>
           )}
         </td>
         <td className="px-2 py-2 whitespace-nowrap">
@@ -465,12 +468,12 @@ export function TasksTable({
                 }));
               }}
               options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
-              placeholder="Status"
+              placeholder={t('common.status')}
               className="w-full"
             />
           ) : (
             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style={getStatusStyle(task)}>
-              {task.StatusName || 'Unknown'}
+              {task.StatusName || t('lit.unknown')}
             </span>
           )}
         </td>
@@ -485,12 +488,12 @@ export function TasksTable({
                 }));
               }}
               options={priorityOptions.map((priority) => ({ id: priority.id, label: priority.name }))}
-              placeholder="Priority"
+              placeholder={t('common.priority')}
               className="w-full"
             />
           ) : (
             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style={getPriorityStyle(task)}>
-              {task.PriorityName || 'No Priority'}
+              {task.PriorityName || t('lit.noPriority')}
             </span>
           )}
         </td>
@@ -517,8 +520,8 @@ export function TasksTable({
               <button
                 onClick={() => void saveInlineEdit(task)}
                 disabled={isRowSaveDisabled}
-                title={isSavingInline ? 'Saving task' : 'Save task'}
-                aria-label={isSavingInline ? 'Saving task' : 'Save task'}
+                title={isSavingInline ? t('lit.savingTask') : t('lit.saveTask')}
+                aria-label={isSavingInline ? t('lit.savingTask') : t('lit.saveTask')}
                 className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
               >
                 {isSavingInline ? (
@@ -534,8 +537,8 @@ export function TasksTable({
               </button>
               <button
                 onClick={cancelInlineEdit}
-                title="Cancel edit"
-                aria-label="Cancel edit"
+                title={t('lit.cancelEdit')}
+                aria-label={t('lit.cancelEdit')}
                 className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -546,8 +549,8 @@ export function TasksTable({
           ) : canManage ? (
             <button
               onClick={() => onEditTask(task)}
-              title="Edit task"
-              aria-label="Edit task"
+              title={t('lit.editTask')}
+              aria-label={t('lit.editTask')}
               className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -558,8 +561,8 @@ export function TasksTable({
           {canDelete && !isEditingRow && (
             <button
               onClick={() => onDeleteTask(task.Id)}
-              title="Delete task"
-              aria-label="Delete task"
+              title={t('lit.deleteTask')}
+              aria-label={t('lit.deleteTask')}
               className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,7 +605,7 @@ export function TasksTable({
                 }));
               }}
               options={taskTypeOptions.map((taskType) => ({ id: taskType.id, label: taskType.name }))}
-              placeholder="Task Type"
+              placeholder={t('lit.taskType')}
               className="w-full"
             />
           </td>
@@ -618,7 +621,7 @@ export function TasksTable({
                 inputRef={newSubtaskInputRef}
                 autoFocus
                 className="w-full"
-                placeholder="New subtask name"
+                placeholder={t('lit.newSubtaskName')}
               />
             </div>
           </td>
@@ -632,7 +635,7 @@ export function TasksTable({
                 }));
               }}
               options={assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name }))}
-              placeholder="Unassigned"
+              placeholder={t('lit.unassigned')}
               className="w-full"
             />
           </td>
@@ -646,7 +649,7 @@ export function TasksTable({
                 }));
               }}
               options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
-              placeholder="Status"
+              placeholder={t('common.status')}
               className="w-full"
             />
           </td>
@@ -660,7 +663,7 @@ export function TasksTable({
                 }));
               }}
               options={priorityOptions.map((priority) => ({ id: priority.id, label: priority.name }))}
-              placeholder="Priority"
+              placeholder={t('common.priority')}
               className="w-full"
             />
           </td>
@@ -683,8 +686,8 @@ export function TasksTable({
                 type="button"
                 onClick={() => void saveInlineSubtaskCreate(false)}
                 disabled={isSubtaskSaveDisabled}
-                title={isSavingSubtaskInline ? 'Saving subtask' : 'Save subtask'}
-                aria-label={isSavingSubtaskInline ? 'Saving subtask' : 'Save subtask'}
+                title={isSavingSubtaskInline ? t('lit.savingSubtask') : t('lit.saveSubtask')}
+                aria-label={isSavingSubtaskInline ? t('lit.savingSubtask') : t('lit.saveSubtask')}
                 className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
               >
                 {isSavingSubtaskInline ? (
@@ -701,8 +704,8 @@ export function TasksTable({
               <button
                 type="button"
                 onClick={cancelInlineSubtaskCreate}
-                title="Cancel subtask"
-                aria-label="Cancel subtask"
+                title={t('lit.cancelSubtask')}
+                aria-label={t('lit.cancelSubtask')}
                 className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -735,14 +738,14 @@ export function TasksTable({
                   onClick={() => setSelectedTaskIds(new Set())}
                   className="h-8 px-3 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  Clear Selection
+                  {t('lit.clearSelection')}
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenBulkEditModal}
                   className="h-8 px-3 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Bulk Edit
+                  {t('lit.bulkEdit')}
                 </button>
               </div>
             </div>
@@ -757,14 +760,14 @@ export function TasksTable({
                   onClick={() => setTaskRowDensity('comfortable')}
                   className={`h-7 px-2.5 text-xs rounded-md transition-colors ${taskRowDensity === 'comfortable' ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
                 >
-                  Comfy
+                  {t('lit.comfy')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskRowDensity('compact')}
                   className={`h-7 px-2.5 text-xs rounded-md transition-colors ${taskRowDensity === 'compact' ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
                 >
-                  Compact
+                  {t('lit.compact')}
                 </button>
               </div>
               <button
@@ -781,7 +784,7 @@ export function TasksTable({
                 }}
                 className="h-8 px-2.5 rounded-lg text-xs font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 transition-colors"
               >
-                Columns
+                {t('lit.columns')}
               </button>
             </div>
             {showTaskColumnsPanel && (
@@ -791,11 +794,11 @@ export function TasksTable({
                   className="fixed z-[2147483647] w-[28rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3"
                   style={{ top: `${taskColumnsPanelPosition.top}px`, left: `${taskColumnsPanelPosition.left}px` }}
                 >
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Table Columns</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('lit.tableColumns')}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                     {taskSelectableColumnIds.filter((columnId) => taskColumnSizeMode[columnId] === 'fixed').length > 0
                       ? `${taskSelectableColumnIds.filter((columnId) => taskColumnSizeMode[columnId] === 'fixed').length} fixed column${taskSelectableColumnIds.filter((columnId) => taskColumnSizeMode[columnId] === 'fixed').length > 1 ? 's' : ''}`
-                      : 'No fixed columns'}
+                      : t('lit.noFixedColumns')}
                   </div>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {(taskColumnOrder.length > 0 ? taskColumnOrder : taskSelectableColumnIds).map((columnId, index) => {
@@ -867,8 +870,8 @@ export function TasksTable({
                               }}
                               className="px-2 py-1 rounded text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100"
                             >
-                              <option value="grow">Grow</option>
-                              <option value="fixed">Fixed</option>
+                              <option value="grow">{t('lit.grow')}</option>
+                              <option value="fixed">{t('lit.fixed')}</option>
                             </select>
                             <input
                               type="number"
@@ -905,7 +908,7 @@ export function TasksTable({
                       }}
                       className="mt-3 h-9 px-3 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 transition-colors"
                     >
-                      Reset
+                      {t('common.reset')}
                     </button>
                   </div>
                 </>
@@ -929,7 +932,7 @@ export function TasksTable({
                     checked={allVisibleTasksSelected}
                     onChange={toggleSelectAllVisibleTasks}
                     className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    aria-label="Select all visible tasks"
+                    aria-label={t('lit.selectAllVisibleTasks')}
                   />
                 </th>
                 <th
@@ -949,8 +952,8 @@ export function TasksTable({
                           event.stopPropagation();
                           startInlineRootTaskCreate();
                         }}
-                        title="Add level 0 task"
-                        aria-label="Add level 0 task"
+                        title={t('lit.addLevel0Task')}
+                        aria-label={t('lit.addLevel0Task')}
                         className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-semibold"
                       >
                         +
@@ -1025,7 +1028,7 @@ export function TasksTable({
                   </th>
                 ))}
                 <th data-column-key="actions" scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('common.actions')}</span>
                 </th>
               </tr>
             </thead>
@@ -1046,7 +1049,7 @@ export function TasksTable({
                             }));
                           }}
                           options={taskTypeOptions.map((taskType) => ({ id: taskType.id, label: taskType.name }))}
-                          placeholder="Task Type"
+                          placeholder={t('lit.taskType')}
                           className="w-full"
                         />
                       </td>
@@ -1059,7 +1062,7 @@ export function TasksTable({
                           inputRef={newRootTaskInputRef}
                           autoFocus
                           className="w-full"
-                          placeholder="New task name"
+                          placeholder={t('lit.newTaskName')}
                         />
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -1072,7 +1075,7 @@ export function TasksTable({
                             }));
                           }}
                           options={assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name }))}
-                          placeholder="Unassigned"
+                          placeholder={t('lit.unassigned')}
                           className="w-full"
                         />
                       </td>
@@ -1086,7 +1089,7 @@ export function TasksTable({
                             }));
                           }}
                           options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
-                          placeholder="Status"
+                          placeholder={t('common.status')}
                           className="w-full"
                         />
                       </td>
@@ -1100,7 +1103,7 @@ export function TasksTable({
                             }));
                           }}
                           options={priorityOptions.map((priority) => ({ id: priority.id, label: priority.name }))}
-                          placeholder="Priority"
+                          placeholder={t('common.priority')}
                           className="w-full"
                         />
                       </td>
@@ -1123,8 +1126,8 @@ export function TasksTable({
                             type="button"
                             onClick={() => void saveInlineRootTaskCreate(false)}
                             disabled={isSavingRootInline || !newRootTaskData.taskName.trim() || !newRootTaskData.status || !newRootTaskData.priority}
-                            title={isSavingRootInline ? 'Saving task' : 'Save task'}
-                            aria-label={isSavingRootInline ? 'Saving task' : 'Save task'}
+                            title={isSavingRootInline ? t('lit.savingTask') : t('lit.saveTask')}
+                            aria-label={isSavingRootInline ? t('lit.savingTask') : t('lit.saveTask')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
                           >
                             {isSavingRootInline ? (
@@ -1141,8 +1144,8 @@ export function TasksTable({
                           <button
                             type="button"
                             onClick={cancelInlineRootTaskCreate}
-                            title="Cancel task"
-                            aria-label="Cancel task"
+                            title={t('lit.cancelTask')}
+                            aria-label={t('lit.cancelTask')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1157,7 +1160,7 @@ export function TasksTable({
               ) : (
                 <tr>
                   <td colSpan={8 + additionalTaskColumnKeys.length} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No tasks match the current filters.
+                    {t('lit.noTasksMatchTheCurrentFilters')}
                   </td>
                 </tr>
               )}
@@ -1172,13 +1175,13 @@ export function TasksTable({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Edit Tasks</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.bulkEditTasks')}</h3>
                 <button
                   type="button"
                   onClick={handleCloseBulkEditModal}
                   disabled={isApplyingBulkEdit}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1187,7 +1190,7 @@ export function TasksTable({
               </div>
 
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Updates will be applied to {selectedTaskIds.size} selected task{selectedTaskIds.size !== 1 ? 's' : ''}. Leave fields as "Do not change" to keep current values.
+                Updates will be applied to {selectedTaskIds.size} selected task{selectedTaskIds.size !== 1 ? 's' : ''}. Leave fields as t('lit.doNotChange') to keep current values.
               </p>
 
               {bulkEditError && (
@@ -1198,29 +1201,29 @@ export function TasksTable({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.status')}</label>
                   <SearchableSelect
                     value={bulkEditData.statusId}
                     onChange={(value) => setBulkEditData((prev) => ({ ...prev, statusId: value }))}
                     options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
-                    placeholder="Do not change"
+                    placeholder={t('lit.doNotChange')}
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.assignee')}</label>
                   <SearchableSelect
                     value={bulkEditData.assignedToId}
                     onChange={(value) => setBulkEditData((prev) => ({ ...prev, assignedToId: value }))}
                     options={assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name }))}
-                    placeholder="Do not change"
+                    placeholder={t('lit.doNotChange')}
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Application</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.application')}</label>
                   <SearchableSelect
                     value={bulkEditData.applicationId}
                     onChange={(value) => setBulkEditData((prev) => ({
@@ -1229,13 +1232,13 @@ export function TasksTable({
                       releaseVersionId: undefined,
                     }))}
                     options={availableApplications.map((application) => ({ id: application.Id, label: application.Name }))}
-                    placeholder="Do not change"
+                    placeholder={t('lit.doNotChange')}
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.version')}</label>
                   <SearchableSelect
                     value={bulkEditData.releaseVersionId}
                     onChange={(value) => setBulkEditData((prev) => ({ ...prev, releaseVersionId: value }))}
@@ -1243,32 +1246,32 @@ export function TasksTable({
                       id: version.Id,
                       label: `${version.VersionNumber}${version.VersionName ? ` - ${version.VersionName}` : ''} (${version.Status})`,
                     }))}
-                    placeholder={bulkEditData.applicationId ? 'Do not change' : 'Select application first'}
+                    placeholder={bulkEditData.applicationId ? t('lit.doNotChange') : t('lit.selectApplicationFirst')}
                     className="w-full"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parent Task</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.parentTask')}</label>
                   <SearchableSelect
                     value={bulkEditData.parentTaskId}
                     onChange={(value) => setBulkEditData((prev) => ({ ...prev, parentTaskId: value }))}
                     options={bulkParentTaskOptions}
-                    placeholder="Do not change"
+                    placeholder={t('lit.doNotChange')}
                     className="w-full"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.tags')}</label>
                   <SearchableMultiSelect
                     values={bulkTagIds}
                     onChange={(values) => setBulkTagIds(values.map((value) => Number(value)).filter((value) => Number.isFinite(value)))}
                     options={tagFilterOptions}
-                    placeholder="Do not change"
+                    placeholder={t('lit.doNotChange')}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    If you select tags here, selected tasks will have their tags replaced by this set.
+                    {t('lit.ifYouSelectTagsHereSelectedTasksWillHaveTheirTagsReplacedByThisSet')}
                   </p>
                 </div>
               </div>
@@ -1280,7 +1283,7 @@ export function TasksTable({
                   disabled={isApplyingBulkEdit}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1288,7 +1291,7 @@ export function TasksTable({
                   disabled={isApplyingBulkEdit}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  {isApplyingBulkEdit ? 'Updating...' : 'Update Selected Tasks'}
+                  {isApplyingBulkEdit ? 'Updating...' : t('lit.updateSelectedTasks')}
                 </button>
               </div>
             </div>

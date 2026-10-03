@@ -1,4 +1,6 @@
 'use client';
+
+import { useI18n } from '@/lib/i18n/provider';
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 
@@ -158,6 +160,8 @@ function mergeTicketsListFilters(
 }
 
 export default function TicketsPage() {
+  const { t } = useI18n();
+
   const { pillStyle } = useColorVision();
   const { user, token, isLoading, isCustomerUser } = useAuth();
   const { permissions } = usePermissions();
@@ -425,7 +429,7 @@ export default function TicketsPage() {
       }
     } catch (err) {
       console.error('Failed to load data:', err);
-      setError('Failed to load tickets');
+      setError(t('lit.failedToLoadTickets'));
     } finally {
       setLoading(false);
     }
@@ -577,7 +581,7 @@ export default function TicketsPage() {
       );
 
       if (!res.ok) {
-        const message = await getApiErrorMessage(res, 'Failed to search Jira issues');
+        const message = await getApiErrorMessage(res, t('lit.failedToSearchJiraIssues'));
         setJiraIssues([]);
         setJiraSearchError(message);
         return;
@@ -589,7 +593,7 @@ export default function TicketsPage() {
     } catch (err) {
       console.error('Failed to search Jira issues:', err);
       setJiraIssues([]);
-      setJiraSearchError(err instanceof Error ? err.message : 'Failed to search Jira issues');
+      setJiraSearchError(err instanceof Error ? err.message : t('lit.failedToSearchJiraIssues'));
     } finally {
       setSearchingJira(false);
     }
@@ -598,7 +602,7 @@ export default function TicketsPage() {
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.title.trim()) {
-      setError('Title is required');
+      setError(t('lit.titleIsRequired'));
       return;
     }
     
@@ -609,18 +613,18 @@ export default function TicketsPage() {
     }
     
     if (!orgId) {
-      setError('Organization is required');
+      setError(t('lit.organizationIsRequired'));
       return;
     }
 
     if (!createForm.priority) {
-      setError('Priority is required');
+      setError(t('lit.priorityIsRequired'));
       return;
     }
 
     // Customer is required for non-customer users
     if (!isCustomerUser && !createForm.customerId) {
-      setError('Customer is required');
+      setError(t('lit.customerIsRequired'));
       return;
     }
 
@@ -631,7 +635,7 @@ export default function TicketsPage() {
       const res = await fetch(
         `${getApiUrl()}/api/tickets`,
         {
-          method: 'POST',
+          method: t('lit.post'),
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -652,7 +656,7 @@ export default function TicketsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to create ticket');
+        throw new Error(data.message || t('lit.failedToCreateTicket'));
       }
 
       const data = await res.json();
@@ -718,7 +722,7 @@ export default function TicketsPage() {
       // Navigate to the new ticket
       router.push(`/tickets/${ticketId}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create ticket');
+      setError(err.message || t('lit.failedToCreateTicket'));
     } finally {
       setCreating(false);
     }
@@ -748,9 +752,9 @@ export default function TicketsPage() {
   };
 
   const getSlaIcon = (status: 'ok' | 'warning' | 'breached') => {
-    if (status === 'breached') return <span title="SLA Breached" className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium" onClick={e => e.stopPropagation()}>🔴 SLA</span>;
-    if (status === 'warning') return <span title="SLA Warning" className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 font-medium" onClick={e => e.stopPropagation()}>🟡 SLA</span>;
-    return <span title="Within SLA" className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-medium" onClick={e => e.stopPropagation()}>🟢 SLA</span>;
+    if (status === 'breached') return <span title={t('lit.slaBreached')} className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium" onClick={e => e.stopPropagation()}>🔴 SLA</span>;
+    if (status === 'warning') return <span title={t('lit.slaWarning')} className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 font-medium" onClick={e => e.stopPropagation()}>🟡 SLA</span>;
+    return <span title={t('lit.withinSla')} className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 font-medium" onClick={e => e.stopPropagation()}>🟢 SLA</span>;
   };
 
   const createModalProjects = projects.filter((project) => {
@@ -815,8 +819,8 @@ export default function TicketsPage() {
             <div className="mb-3 flex justify-center text-[var(--pm-muted)] opacity-70">
               <NavModuleIcon href="/tickets" size={40} />
             </div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Internal Ticket System Disabled</h1>
-            <p className="text-gray-600 dark:text-gray-400">This module is currently disabled by system settings.</p>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('lit.internalTicketSystemDisabled')}</h1>
+            <p className="text-gray-600 dark:text-gray-400">{t('lit.thisModuleIsCurrentlyDisabledBySystemSettings')}</p>
           </div>
         </main>
       </div>
@@ -830,12 +834,12 @@ export default function TicketsPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">
-              {isCustomerUser ? 'Customer Tickets' : 'Support Tickets'}
+              {isCustomerUser ? t('lit.customerTickets') : t('lit.supportTickets')}
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {isCustomerUser
-                ? 'Tickets for your customer account — yours and your team’s'
-                : 'Manage support tickets across organizations'}
+                ? t('lit.ticketsForYourCustomerAccountYoursAndYourTeams')
+                : t('lit.manageSupportTicketsAcrossOrganizations')}
             </p>
           </div>
           {canCreateTicket && (
@@ -846,14 +850,14 @@ export default function TicketsPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              New Ticket
+              {t('pages.tickets.newTicket')}
             </button>
           )}
         </div>
 
         <CollapsibleFilterPanel
           className="mb-2"
-          title="Ticket filters"
+          title={t('lit.ticketFilters')}
           activeCount={[
             searchQuery.trim() ? 1 : 0,
             filterOrg ? 1 : 0,
@@ -871,28 +875,28 @@ export default function TicketsPage() {
             showClosed ? 1 : 0,
           ].reduce((a, b) => a + b, 0)}
           onClear={resetListFilters}
-          clearLabel="Clear all"
+          clearLabel={t('lit.clearAll')}
           headerMiddle={
             stats ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-gray-900 dark:text-white">{stats.total}</span> total
+                  <span className="font-semibold text-gray-900 dark:text-white">{stats.total}</span> {t('lit.total')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.open}</span> open
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.open}</span> {t('lit.open')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">{stats.inProgress}</span> in progress
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{stats.inProgress}</span> {t('lit.inProgress')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">{stats.waiting}</span> waiting
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">{stats.waiting}</span> {t('lit.waiting')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-green-600 dark:text-green-400">{stats.resolved}</span> resolved
+                  <span className="font-semibold text-green-600 dark:text-green-400">{stats.resolved}</span> {t('lit.resolved')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
@@ -908,13 +912,13 @@ export default function TicketsPage() {
           <div className="space-y-3">
             {/* Search Row */}
             <div className="w-full">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Search</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('common.search')}</label>
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by ticket number, title, or description..."
+                  placeholder={t('lit.searchByTicketNumberTitleOrDescription')}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 />
                 <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -925,7 +929,7 @@ export default function TicketsPage() {
 
             {/* Main Filters Row */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Filters</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('common.filters')}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
 
               {/* Organization Filter (not for customer users) */}
@@ -935,7 +939,7 @@ export default function TicketsPage() {
                   onChange={(e) => setFilterOrg(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 >
-                  <option value="">All Organizations</option>
+                  <option value="">{t('lit.allOrganizations2')}</option>
                   {organizations.map(org => (
                     <option key={org.Id} value={org.Id}>{org.Name}</option>
                   ))}
@@ -948,7 +952,7 @@ export default function TicketsPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
               >
-                <option value="">All Statuses</option>
+                <option value="">{t('lit.allStatuses2')}</option>
                 {ticketStatuses.map(s => (
                   <option key={s.Id} value={s.StatusName}>{s.StatusName}</option>
                 ))}
@@ -960,7 +964,7 @@ export default function TicketsPage() {
                 onChange={(e) => setFilterPriority(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
               >
-                <option value="">All Priorities</option>
+                <option value="">{t('lit.allPriorities2')}</option>
                 {ticketPriorities.map(p => (
                   <option key={p.Id} value={p.PriorityName}>{p.PriorityName}</option>
                 ))}
@@ -972,7 +976,7 @@ export default function TicketsPage() {
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
               >
-                <option value="">All Categories</option>
+                <option value="">{t('lit.allCategories2')}</option>
                 {CATEGORIES.map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -983,13 +987,13 @@ export default function TicketsPage() {
             {/* People & Customer Filters Row */}
             {!isCustomerUser && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">People & Customers</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{t('lit.peopleCustomers')}</label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {/* Assignee Filter */}
                   <div>
                     <SearchableSelect
                       options={[
-                        { value: '', label: 'All Assignees' },
+                        { value: '', label: t('lit.allAssignees2') },
                         ...users.map(u => ({
                           value: u.Id.toString(),
                           label: u.FirstName && u.LastName ? `${u.FirstName} ${u.LastName}` : u.Username
@@ -997,7 +1001,7 @@ export default function TicketsPage() {
                       ]}
                       value={filterAssignee}
                       onChange={setFilterAssignee}
-                      placeholder="All Assignees"
+                      placeholder={t('lit.allAssignees2')}
                     />
                   </div>
 
@@ -1005,7 +1009,7 @@ export default function TicketsPage() {
                   <div>
                     <SearchableSelect
                       options={[
-                        { value: '', label: 'All Developers' },
+                        { value: '', label: t('lit.allDevelopers') },
                         ...users.map(u => ({
                           value: u.Id.toString(),
                           label: u.FirstName && u.LastName ? `${u.FirstName} ${u.LastName}` : u.Username
@@ -1013,7 +1017,7 @@ export default function TicketsPage() {
                       ]}
                       value={filterDeveloper}
                       onChange={setFilterDeveloper}
-                      placeholder="All Developers"
+                      placeholder={t('lit.allDevelopers')}
                     />
                   </div>
 
@@ -1021,7 +1025,7 @@ export default function TicketsPage() {
                   <div>
                     <SearchableSelect
                       options={[
-                        { value: '', label: 'All Customers' },
+                        { value: '', label: t('lit.allCustomers2') },
                         ...customers.map(c => ({
                           value: c.Id.toString(),
                           label: c.Name
@@ -1029,7 +1033,7 @@ export default function TicketsPage() {
                       ]}
                       value={filterCustomer}
                       onChange={setFilterCustomer}
-                      placeholder="All Customers"
+                      placeholder={t('lit.allCustomers2')}
                     />
                   </div>
                 </div>
@@ -1038,17 +1042,17 @@ export default function TicketsPage() {
 
             {/* Date Filters Row */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Date Ranges</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{t('lit.dateRanges')}</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[80px]">Created:</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[80px]">{t('lit.created2')}</label>
                   <input
                     type="date"
                     value={filterCreatedFrom}
                     onChange={(e) => setFilterCreatedFrom(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
-                  <span className="text-gray-400 text-sm">to</span>
+                  <span className="text-gray-400 text-sm">{t('lit.to')}</span>
                   <input
                     type="date"
                     value={filterCreatedTo}
@@ -1058,14 +1062,14 @@ export default function TicketsPage() {
                 </div>
 
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[80px]">Scheduled:</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[80px]">{t('lit.scheduled')}</label>
                   <input
                     type="date"
                     value={filterScheduledFrom}
                     onChange={(e) => setFilterScheduledFrom(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
-                  <span className="text-gray-400 text-sm">to</span>
+                  <span className="text-gray-400 text-sm">{t('lit.to')}</span>
                   <input
                     type="date"
                     value={filterScheduledTo}
@@ -1087,7 +1091,7 @@ export default function TicketsPage() {
                     onChange={(e) => setShowMyTicketsOnly(e.target.checked)}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                   />
-                  <span className="text-sm font-medium">My Tickets</span>
+                  <span className="text-sm font-medium">{t('lit.myTickets')}</span>
                 </label>
 
                 {/* Show Closed Filter */}
@@ -1098,7 +1102,7 @@ export default function TicketsPage() {
                     onChange={(e) => setShowClosed(e.target.checked)}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                   />
-                  <span className="text-sm font-medium">Show Closed</span>
+                  <span className="text-sm font-medium">{t('lit.showClosed')}</span>
                 </label>
               </div>
 
@@ -1111,7 +1115,7 @@ export default function TicketsPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Clear All Filters
+                  {t('lit.clearAllFilters2')}
                 </button>
               )}
             </div>
@@ -1130,7 +1134,7 @@ export default function TicketsPage() {
           {loading ? (
             <div className="p-8 text-center text-gray-500 dark:text-gray-400">
               <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-              Loading tickets...
+              {t('lit.loadingTickets')}
             </div>
           ) : (() => {
             // Filter tickets for "My Tickets" logic
@@ -1165,11 +1169,11 @@ export default function TicketsPage() {
               <div className="mb-4 flex justify-center text-[var(--pm-muted)] opacity-70">
                 <NavModuleIcon href="/tickets" size={40} />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tickets found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('pages.tickets.noTickets')}</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {searchQuery || filterStatus || filterPriority || filterCategory
-                  ? 'Try adjusting your filters'
-                  : 'Create your first support ticket'}
+                  ? t('lit.tryAdjustingYourFilters')
+                  : t('lit.createYourFirstSupportTicket')}
               </p>
               {canCreateTicket && (
                 <button
@@ -1179,7 +1183,7 @@ export default function TicketsPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  New Ticket
+                  {t('pages.tickets.newTicket')}
                 </button>
               )}
             </div>
@@ -1306,7 +1310,7 @@ export default function TicketsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Create New Ticket
+                    {t('lit.createNewTicket')}
                   </h2>
                   <button
                     type="button"
@@ -1330,7 +1334,7 @@ export default function TicketsPage() {
                   {!isCustomerUser && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Organization <span className="text-red-500">*</span>
+                        {t('common.organization')} <span className="text-red-500">*</span>
                       </label>
                       <SearchableSelect
                         value={createForm.organizationId}
@@ -1341,8 +1345,8 @@ export default function TicketsPage() {
                           loadJiraIntegration(value);
                         }}
                         options={organizations.map(org => ({ value: org.Id, label: org.Name }))}
-                        placeholder="Select Organization"
-                        emptyText="Select Organization"
+                        placeholder={t('lit.selectOrganization2')}
+                        emptyText={t('lit.selectOrganization2')}
                         autoSelectSingleOption
                       />
                     </div>
@@ -1352,14 +1356,14 @@ export default function TicketsPage() {
                   {!isCustomerUser && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Customer <span className="text-red-500">*</span>
+                        {t('common.customer')} <span className="text-red-500">*</span>
                       </label>
                       <SearchableSelect
                         value={createForm.customerId}
                         onChange={(value) => setCreateForm(prev => ({ ...prev, customerId: value, projectId: '' }))}
                         options={customers.map(c => ({ value: c.Id.toString(), label: c.Name }))}
-                        placeholder="Select Customer"
-                        emptyText="Select Customer"
+                        placeholder={t('lit.selectCustomer')}
+                        emptyText={t('lit.selectCustomer')}
                         autoSelectSingleOption
                       />
                     </div>
@@ -1374,11 +1378,11 @@ export default function TicketsPage() {
 
                       {!createForm.organizationId ? (
                         <div className="text-sm text-blue-700 dark:text-blue-300">
-                          Select an organization first to load Jira integration.
+                          {t('lit.selectAnOrganizationFirstToLoadJiraIntegration')}
                         </div>
                       ) : !jiraIntegration ? (
                         <div className="text-sm text-blue-700 dark:text-blue-300">
-                          Jira integration is not enabled for the selected organization.
+                          {t('lit.jiraIntegrationIsNotEnabledForTheSelectedOrganization')}
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -1397,7 +1401,7 @@ export default function TicketsPage() {
                                   setJiraSearchError('');
                                 }
                               }}
-                              placeholder="Search by Jira ticket number or summary..."
+                              placeholder={t('lit.searchByJiraTicketNumberOrSummary')}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                             />
                             {searchingJira && (
@@ -1512,14 +1516,14 @@ export default function TicketsPage() {
                   {!isCustomerUser && createForm.organizationId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Project (optional)
+                        {t('lit.projectOptional')}
                       </label>
                       <SearchableSelect
                         value={createForm.projectId}
                         onChange={(value) => setCreateForm(prev => ({ ...prev, projectId: value }))}
                         options={createModalProjects.map(project => ({ value: project.Id.toString(), label: project.ProjectName }))}
-                        placeholder="Select Project"
-                        emptyText={createForm.customerId ? "No Project for selected customer" : "No Project"}
+                        placeholder={t('lit.selectProject')}
+                        emptyText={createForm.customerId ? t('lit.noProjectForSelectedCustomer') : t('lit.noProject')}
                         autoSelectSingleOption
                       />
                     </div>
@@ -1528,13 +1532,13 @@ export default function TicketsPage() {
                   {/* Title */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Title <span className="text-red-500">*</span>
+                      {t('lit.title')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={createForm.title}
                       onChange={(e) => setCreateForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Brief summary of the issue"
+                      placeholder={t('lit.briefSummaryOfTheIssue')}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -1543,12 +1547,12 @@ export default function TicketsPage() {
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Description
+                      {t('common.description')}
                     </label>
                     <RichTextEditor
                       content={createForm.description}
                       onChange={(html) => setCreateForm(prev => ({ ...prev, description: html }))}
-                      placeholder="Provide more details about the issue..."
+                      placeholder={t('lit.provideMoreDetailsAboutTheIssue')}
                     />
                   </div>
 
@@ -1556,7 +1560,7 @@ export default function TicketsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Category
+                        {t('lit.category')}
                       </label>
                       <select
                         value={createForm.category}
@@ -1570,7 +1574,7 @@ export default function TicketsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Priority <span className="text-red-500">*</span>
+                        {t('common.priority')} <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={createForm.priority}
@@ -1578,7 +1582,7 @@ export default function TicketsPage() {
                         required
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="">Select priority...</option>
+                        <option value="">{t('lit.selectPriority')}</option>
                         {ticketPriorities.map(p => (
                           <option key={p.Id} value={p.Id}>{p.PriorityName}</option>
                         ))}
@@ -1589,7 +1593,7 @@ export default function TicketsPage() {
                   {/* Attachments */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Attachments (optional)
+                      {t('lit.attachmentsOptional')}
                     </label>
                     <input
                       type="file"
@@ -1638,7 +1642,7 @@ export default function TicketsPage() {
                     onClick={() => setShowCreateModal(false)}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
@@ -1648,10 +1652,10 @@ export default function TicketsPage() {
                     {creating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Creating...
+                        {t('lit.creating')}
                       </>
                     ) : (
-                      'Create Ticket'
+                      t('lit.createTicket')
                     )}
                   </button>
                 </div>

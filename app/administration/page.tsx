@@ -1,7 +1,8 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
-import { useEffect, useRef, useState, Suspense } from 'react';
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
+import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
@@ -55,18 +56,18 @@ const ADMIN_TABS = [
   'api-tokens',
 ] as const;
 
-const ADMIN_TAB_LABELS: { id: AdminTab; label: string }[] = [
-  { id: 'users', label: 'Users' },
-  { id: 'organizations', label: 'Organizations' },
-  { id: 'permissions', label: 'Role Permissions' },
-  { id: 'settings', label: 'System Settings' },
-  { id: 'task-form', label: 'Task Form' },
-  { id: 'custom-fields', label: 'Custom Fields' },
-  { id: 'custom-tables', label: 'Custom Tables' },
-  { id: 'holidays', label: 'Holidays' },
-  { id: 'logs', label: 'Activity Logs' },
-  { id: 'frontpage', label: 'Frontpage' },
-  { id: 'api-tokens', label: 'API Tokens' },
+const ADMIN_TAB_LABELS: { id: AdminTab; labelKey: string }[] = [
+  { id: 'users', labelKey: 'nav.users' },
+  { id: 'organizations', labelKey: 'nav.organizations' },
+  { id: 'permissions', labelKey: 'lit.rolePermissions' },
+  { id: 'settings', labelKey: 'lit.systemSettings' },
+  { id: 'task-form', labelKey: 'lit.taskForm' },
+  { id: 'custom-fields', labelKey: 'lit.customFields' },
+  { id: 'custom-tables', labelKey: 'lit.customTables' },
+  { id: 'holidays', labelKey: 'lit.holidays' },
+  { id: 'logs', labelKey: 'lit.activityLogs' },
+  { id: 'frontpage', labelKey: 'lit.frontpage' },
+  { id: 'api-tokens', labelKey: 'lit.apiTokens' },
 ];
 
 export default function AdministrationPage() {
@@ -78,6 +79,11 @@ export default function AdministrationPage() {
 }
 
 function AdministrationPageContent() {
+  const { t } = useI18n();
+  const adminTabLabels = useMemo(
+    () => ADMIN_TAB_LABELS.map(({ id, labelKey }) => ({ id, label: t(labelKey) })),
+    [t]
+  );
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useUrlTab<AdminTab>(ADMIN_TABS, 'users');
   const [taskFormActions, setTaskFormActions] = useState<TaskFormVisibilityActionsState | null>(null);
@@ -106,12 +112,12 @@ function AdministrationPageContent() {
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       <PageStickyChrome>
         <div>
-          <h1 className="text-xl font-semibold text-[var(--pm-text)]">Administration</h1>
-          <p className="text-sm text-[var(--pm-muted)]">Manage system settings and configurations</p>
+          <h1 className="text-xl font-semibold text-[var(--pm-text)]">{t('pages.administration.title')}</h1>
+          <p className="text-sm text-[var(--pm-muted)]">{t('lit.manageSystemSettingsAndConfigurations')}</p>
         </div>
 
         <PageTabs
-          tabs={ADMIN_TAB_LABELS}
+          tabs={adminTabLabels}
           activeId={activeTab}
           onChange={(id) => setActiveTab(id as AdminTab)}
         />
@@ -161,7 +167,7 @@ function AdministrationPageContent() {
             disabled={rolePermissionsActions.saving}
             className={pageActionButtonClass.primary}
           >
-            {rolePermissionsActions.saving ? 'Saving…' : 'Save Changes'}
+            {rolePermissionsActions.saving ? t('common.saving') : t('lit.saveChanges')}
           </button>
         </PageStickyActions>
       )}
@@ -175,7 +181,7 @@ function AdministrationPageContent() {
               disabled={systemSettingsActions.syncingAiViews || systemSettingsActions.saving}
               className={pageActionButtonClass.secondary}
             >
-              {systemSettingsActions.syncingAiViews ? 'Syncing…' : 'Sync AI Views Now'}
+              {systemSettingsActions.syncingAiViews ? t('lit.syncing') : t('lit.syncAiViewsNow')}
             </button>
           )}
           <button
@@ -184,7 +190,7 @@ function AdministrationPageContent() {
             disabled={systemSettingsActions.saving}
             className={pageActionButtonClass.primary}
           >
-            {systemSettingsActions.saving ? 'Saving…' : 'Save Settings'}
+            {systemSettingsActions.saving ? t('common.saving') : t('lit.saveSettings')}
           </button>
         </PageStickyActions>
       )}
@@ -197,7 +203,7 @@ function AdministrationPageContent() {
             disabled={taskFormActions.saving || taskFormActions.syncing}
             className={pageActionButtonClass.primary}
           >
-            {taskFormActions.saving ? 'Saving…' : 'Save'}
+            {taskFormActions.saving ? t('common.saving') : t('common.save')}
           </button>
         </PageStickyActions>
       )}

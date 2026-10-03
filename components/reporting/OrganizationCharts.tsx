@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import Link from 'next/link';
 
 export type ChartSlice = { key: string; label: string; value: number; color: string };
@@ -19,11 +21,13 @@ function ChartCard({
   children: React.ReactNode;
   hint?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
       <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{title}</h3>
       {empty ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">No data for this period.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">{t('lit.noDataForThisPeriod')}</p>
       ) : (
         children
       )}
@@ -105,6 +109,8 @@ function Donut({ slices, centerLabel }: { slices: ChartSlice[]; centerLabel: str
 }
 
 function CompareBars({ rows, valueSuffix = '' }: { rows: CompareRow[]; valueSuffix?: string }) {
+  const { t } = useI18n();
+
   const max = Math.max(1, ...rows.flatMap((row) => [row.current, row.previous]));
   return (
     <div className="space-y-4">
@@ -136,10 +142,10 @@ function CompareBars({ rows, valueSuffix = '' }: { rows: CompareRow[]; valueSuff
       ))}
       <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-blue-600" /> This period
+          <span className="w-2.5 h-2.5 rounded bg-blue-600" /> {t('lit.thisPeriod')}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-gray-400" /> Previous
+          <span className="w-2.5 h-2.5 rounded bg-gray-400" /> {t('common.previous')}
         </span>
       </div>
     </div>
@@ -203,6 +209,8 @@ function VBars({ rows }: { rows: SimpleBar[] }) {
 }
 
 function TrendLines({ points }: { points: TrendPoint[] }) {
+  const { t } = useI18n();
+
   const width = 320;
   const height = 140;
   const pad = { top: 10, right: 8, bottom: 24, left: 8 };
@@ -235,13 +243,13 @@ function TrendLines({ points }: { points: TrendPoint[] }) {
       </svg>
       <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-green-600" /> Green
+          <span className="w-2 h-2 rounded-full bg-green-600" /> {t('lit.green')}
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-amber-600" /> Amber
+          <span className="w-2 h-2 rounded-full bg-amber-600" /> {t('lit.amber')}
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-red-600" /> Red
+          <span className="w-2 h-2 rounded-full bg-red-600" /> {t('lit.red')}
         </span>
       </div>
     </div>
@@ -266,6 +274,7 @@ export function OrganizationCharts({
   charts: OrganizationChartsData | null | undefined;
   formatHours: (n: number) => string;
 }) {
+  const { t } = useI18n();
   if (!charts) return null;
 
   const rag = charts.rag || [];
@@ -279,21 +288,21 @@ export function OrganizationCharts({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Charts</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.charts')}</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Project health (RAG)" empty={rag.every((s) => s.value === 0)}>
+        <ChartCard title={t('lit.projectHealthRag')} empty={rag.every((s) => s.value === 0)}>
           <Donut slices={rag} centerLabel="projects" />
         </ChartCard>
         <ChartCard
-          title="Planned vs logged hours"
+          title={t('lit.plannedVsLoggedHours')}
           empty={hoursCompare.every((r) => r.current === 0 && r.previous === 0)}
         >
           <CompareBars rows={hoursCompare} valueSuffix="h" />
         </ChartCard>
-        <ChartCard title="Top projects by logged hours" empty={topProjects.length === 0}>
+        <ChartCard title={t('lit.topProjectsByLoggedHours')} empty={topProjects.length === 0}>
           <HBars rows={topProjects} formatValue={formatHours} />
         </ChartCard>
-        <ChartCard title="Throughput (tasks closed)" empty={throughput.every((r) => r.value === 0)}>
+        <ChartCard title={t('lit.throughputTasksClosed')} empty={throughput.every((r) => r.value === 0)}>
           <VBars
             rows={throughput.map((row, index) => ({
               ...row,
@@ -301,17 +310,17 @@ export function OrganizationCharts({
             }))}
           />
         </ChartCard>
-        <ChartCard title="Open vs overdue tasks" empty={openVsOverdue.every((r) => r.value === 0)}>
+        <ChartCard title={t('lit.openVsOverdueTasks')} empty={openVsOverdue.every((r) => r.value === 0)}>
           <VBars rows={openVsOverdue} />
         </ChartCard>
-        <ChartCard title="Leaf tasks with / without estimate" empty={taskHours.every((s) => s.value === 0)}>
+        <ChartCard title={t('lit.leafTasksWithWithoutEstimate')} empty={taskHours.every((s) => s.value === 0)}>
           <Donut slices={taskHours} centerLabel="leaf" />
         </ChartCard>
-        <ChartCard title="Scheduled vs unscheduled leaf tasks" empty={schedule.every((s) => s.value === 0)}>
+        <ChartCard title={t('lit.scheduledVsUnscheduledLeafTasks')} empty={schedule.every((s) => s.value === 0)}>
           <Donut slices={schedule} centerLabel="leaf" />
         </ChartCard>
         <ChartCard
-          title="RAG trend (health snapshots)"
+          title={t('lit.ragTrendHealthSnapshots')}
           empty={ragTrend.length === 0}
           hint={
             ragTrend.length === 0

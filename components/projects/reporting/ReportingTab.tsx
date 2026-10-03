@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
@@ -26,6 +27,7 @@ export function ReportingTab({
   token: string;
   onOpenTask?: (task: any) => void;
 }) {
+  const { t } = useI18n();
   const decimalHoursToHMS = useFormatHours();
   const { pillStyle } = useColorVision();
   const [reportTab, setReportTab] = useState<
@@ -78,13 +80,13 @@ export function ReportingTab({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load allocations');
+        throw new Error(t('lit.failedToLoadAllocations'));
       }
 
       const data = await response.json();
       setAllocations(data.allocations || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load allocations');
+      setError(err.message || t('lit.failedToLoadAllocations'));
       setAllocations([]);
     } finally {
       setIsLoading(false);
@@ -103,13 +105,13 @@ export function ReportingTab({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load time entries');
+        throw new Error(t('lit.failedToLoadTimeEntries'));
       }
 
       const data = await response.json();
       setTimeEntries(data.entries || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load time entries');
+      setError(err.message || t('lit.failedToLoadTimeEntries'));
       setTimeEntries([]);
     } finally {
       setIsLoading(false);
@@ -151,7 +153,7 @@ export function ReportingTab({
         if (!userMap.has(a.UserId)) {
           userMap.set(a.UserId, {
             UserId: a.UserId,
-            Username: a.Username || 'Unknown',
+            Username: a.Username || t('lit.unknown'),
             TotalAllocated: 0,
             TotalWorked: 0,
             TasksAssigned: new Set(),
@@ -171,7 +173,7 @@ export function ReportingTab({
         if (!userMap.has(e.UserId)) {
           userMap.set(e.UserId, {
             UserId: e.UserId,
-            Username: e.Username || 'Unknown',
+            Username: e.Username || t('lit.unknown'),
             TotalAllocated: 0,
             TotalWorked: 0,
             TasksAssigned: new Set(),
@@ -193,18 +195,18 @@ export function ReportingTab({
         TasksWorked: user.TasksWorked.size,
         Allocations: user.Allocations.map((a: any) => ({
           ...a,
-          TaskName: taskMap.get(a.TaskId)?.TaskName || 'Unknown Task',
+          TaskName: taskMap.get(a.TaskId)?.TaskName || t('lit.unknownTask'),
         })),
         TimeEntries: user.TimeEntries.map((e: any) => ({
           ...e,
-          TaskName: taskMap.get(e.TaskId)?.TaskName || 'Unknown Task',
+          TaskName: taskMap.get(e.TaskId)?.TaskName || t('lit.unknownTask'),
         })),
       }));
 
       stats.sort((a, b) => b.TotalWorked - a.TotalWorked);
       setUserStats(stats);
     } catch (err: any) {
-      setError(err.message || 'Failed to load user stats');
+      setError(err.message || t('lit.failedToLoadUserStats'));
       setUserStats([]);
     } finally {
       setIsLoading(false);
@@ -223,13 +225,13 @@ export function ReportingTab({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load tasks summary');
+        throw new Error(t('lit.failedToLoadTasksSummary'));
       }
 
       const data = await response.json();
       setTasks(data.tasks || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load tasks summary');
+      setError(err.message || t('lit.failedToLoadTasksSummary'));
       setTasks([]);
     } finally {
       setIsLoading(false);
@@ -277,7 +279,7 @@ export function ReportingTab({
 
   const exportToPDF = async (data: any[], filename: string, headers: string[], title: string) => {
     if (!token) {
-      setError('You must be logged in to export PDF');
+      setError(t('lit.youMustBeLoggedInToExportPdf'));
       return;
     }
 
@@ -295,20 +297,20 @@ export function ReportingTab({
       );
     } catch (err) {
       console.error('Error exporting PDF:', err);
-      setError(err instanceof Error ? err.message : 'Failed to export PDF');
+      setError(err instanceof Error ? err.message : t('lit.failedToExportPdf'));
     }
   };
 
   const handleExportSummary = () => {
-    const data = tasks.map((t) => ({
-      TaskName: t.TaskName,
-      Status: t.Status || '',
-      Priority: t.Priority || '',
-      AssignedTo: t.AssigneeName || 'Unassigned',
-      EstimatedHours: parseFloat(t.EstimatedHours || 0).toFixed(2),
-      AllocatedHours: parseFloat(t.TotalAllocated || 0).toFixed(2),
-      WorkedHours: parseFloat(t.TotalWorked || 0).toFixed(2),
-      Progress: `${Math.round((parseFloat(t.TotalWorked || 0) / parseFloat(t.EstimatedHours || 1)) * 100)}%`,
+    const data = tasks.map((task) => ({
+      TaskName: task.TaskName,
+      Status: task.Status || '',
+      Priority: task.Priority || '',
+      AssignedTo: task.AssigneeName || t('lit.unassigned'),
+      EstimatedHours: parseFloat(task.EstimatedHours || 0).toFixed(2),
+      AllocatedHours: parseFloat(task.TotalAllocated || 0).toFixed(2),
+      WorkedHours: parseFloat(task.TotalWorked || 0).toFixed(2),
+      Progress: `${Math.round((parseFloat(task.TotalWorked || 0) / parseFloat(task.EstimatedHours || 1)) * 100)}%`,
     }));
     exportToCSV(data, 'project_summary', [
       'TaskName',
@@ -323,15 +325,15 @@ export function ReportingTab({
   };
 
   const handleExportSummaryPDF = async () => {
-    const data = tasks.map((t) => ({
-      TaskName: t.TaskName,
-      Status: t.Status || '',
-      Priority: t.Priority || '',
-      AssignedTo: t.AssigneeName || 'Unassigned',
-      EstimatedHours: parseFloat(t.EstimatedHours || 0).toFixed(2),
-      AllocatedHours: parseFloat(t.TotalAllocated || 0).toFixed(2),
-      WorkedHours: parseFloat(t.TotalWorked || 0).toFixed(2),
-      Progress: `${Math.round((parseFloat(t.TotalWorked || 0) / parseFloat(t.EstimatedHours || 1)) * 100)}%`,
+    const data = tasks.map((task) => ({
+      TaskName: task.TaskName,
+      Status: task.Status || '',
+      Priority: task.Priority || '',
+      AssignedTo: task.AssigneeName || t('lit.unassigned'),
+      EstimatedHours: parseFloat(task.EstimatedHours || 0).toFixed(2),
+      AllocatedHours: parseFloat(task.TotalAllocated || 0).toFixed(2),
+      WorkedHours: parseFloat(task.TotalWorked || 0).toFixed(2),
+      Progress: `${Math.round((parseFloat(task.TotalWorked || 0) / parseFloat(task.EstimatedHours || 1)) * 100)}%`,
     }));
     await exportToPDF(
       data,
@@ -468,12 +470,12 @@ export function ReportingTab({
         <div className="min-w-0 flex-1">
           <PageTabs
             tabs={[
-              { id: 'summary', label: 'Summary' },
-              { id: 'byUser', label: 'By User' },
-              { id: 'allocations', label: 'Allocated Hours' },
-              { id: 'timeEntries', label: 'Time Entries' },
-              { id: 'flowMetrics', label: 'Flow Metrics' },
-              { id: 'schedules', label: 'Schedules' },
+              { id: 'summary', label: t('lit.summary') },
+              { id: 'byUser', label: t('lit.byUser') },
+              { id: 'allocations', label: t('lit.allocatedHours') },
+              { id: 'timeEntries', label: t('lit.timeEntries') },
+              { id: 'flowMetrics', label: t('lit.flowMetrics') },
+              { id: 'schedules', label: t('lit.schedules') },
             ]}
             activeId={reportTab}
             onChange={(id) =>
@@ -582,7 +584,7 @@ export function ReportingTab({
                   onClick={closeAlert}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
-                  OK
+                  {t('common.ok')}
                 </button>
               </div>
             </div>

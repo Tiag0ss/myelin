@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -112,6 +113,8 @@ const buildDefaultCustomerFormValues = (organizations: Organization[]): Customer
 });
 
 export default function CustomersPage() {
+  const { t } = useI18n();
+
   const { user, token, isLoading: authLoading } = useAuth();
   const { pinnedIds, isPinned, togglePinned } = usePinnedListItems('customers', user?.id);
   const { permissions, isLoading: isLoadingPermissions } = usePermissions();
@@ -329,7 +332,7 @@ export default function CustomersPage() {
       }
     }
 
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'boolean') return value ? t('lit.yes') : t('lit.no');
     if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
     const text = String(value).trim();
     if (!text) return '-';
@@ -491,7 +494,7 @@ export default function CustomersPage() {
       }
 
     } catch (err: any) {
-      const message = err.message || 'Failed to load data';
+      const message = err.message || t('lit.failedToLoadData');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -557,11 +560,11 @@ export default function CustomersPage() {
 
     try {
       if (!submittedData.Name.trim()) {
-        throw new Error('Customer name is required');
+        throw new Error(t('lit.customerNameIsRequired'));
       }
 
       if (submittedData.OrganizationIds.length === 0) {
-        throw new Error('At least one organization must be selected');
+        throw new Error(t('lit.atLeastOneOrganizationMustBeSelected'));
       }
 
       if (editingCustomer) {
@@ -598,9 +601,9 @@ export default function CustomersPage() {
 
       closeModal();
       loadData();
-      showToast({ type: 'success', message: editingCustomer ? 'Customer updated successfully' : 'Customer created successfully' });
+      showToast({ type: 'success', message: editingCustomer ? t('lit.customerUpdatedSuccessfully') : t('lit.customerCreatedSuccessfully') });
     } catch (err: any) {
-      const message = err.message || 'Failed to save customer';
+      const message = err.message || t('lit.failedToSaveCustomer');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -611,16 +614,18 @@ export default function CustomersPage() {
   const handleDelete = (customer: Customer) => {
     setConfirmModal({
       show: true,
-      title: 'Delete Customer',
-      message: `Are you sure you want to delete "${customer.Name}"? This action cannot be undone.`,
+      title: t('lit.deleteCustomer2'),
+      message: t('lit.areYouSureYouWantToDeleteNameThisActionCannotBeUndone', {
+        name: customer.Name,
+      }),
       onConfirm: async () => {
         try {
           await deleteCustomer(token!, customer.Id);
           setConfirmModal(null);
           loadData();
-          showToast({ type: 'success', message: 'Customer deleted successfully' });
+          showToast({ type: 'success', message: t('lit.customerDeletedSuccessfully') });
         } catch (err: any) {
-          const message = err.message || 'Failed to delete customer';
+          const message = err.message || t('lit.failedToDeleteCustomer');
           setError(message);
           showToast({ type: 'error', message });
           setConfirmModal(null);
@@ -673,7 +678,7 @@ export default function CustomersPage() {
       const rows = parseCsv(text);
 
       if (!rows.length) {
-        throw new Error('CSV is empty or has no data rows');
+        throw new Error(t('lit.csvIsEmptyOrHasNoDataRows'));
       }
 
       let successCount = 0;
@@ -686,7 +691,7 @@ export default function CustomersPage() {
         try {
           const name = (row.Name || '').trim();
           if (!name) {
-            throw new Error('Name is required');
+            throw new Error(t('lit.nameIsRequired'));
           }
 
           const organizationNames = (row.OrganizationNames || '')
@@ -695,7 +700,7 @@ export default function CustomersPage() {
             .filter(Boolean);
 
           if (!organizationNames.length) {
-            throw new Error('OrganizationNames is required (use | for multiple values)');
+            throw new Error(t('lit.organizationnamesIsRequiredUseForMultipleValues'));
           }
 
           const organizationIds = organizationNames.map((organizationName) => {
@@ -736,7 +741,7 @@ export default function CustomersPage() {
           await createCustomer(token, createData);
           successCount += 1;
         } catch (importError: any) {
-          failures.push(`Row ${rowNumber}: ${importError.message || 'Failed to import customer'}`);
+          failures.push(`Row ${rowNumber}: ${importError.message || t('lit.failedToImportCustomer')}`);
         }
       }
 
@@ -751,7 +756,7 @@ export default function CustomersPage() {
         showToast({ type: 'success', message: `Imported ${successCount} customers successfully` });
       }
     } catch (err: any) {
-      const message = err.message || 'Failed to import customers CSV';
+      const message = err.message || t('lit.failedToImportCustomersCsv');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -789,8 +794,8 @@ export default function CustomersPage() {
         <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="text-5xl mb-4">🔒</div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-            <p className="text-gray-600 dark:text-gray-400">You don&apos;t have permission to view customers.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.accessDenied2')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('lit.youDontHavePermissionToViewCustomers')}</p>
           </div>
         </main>
       </div>
@@ -803,14 +808,14 @@ export default function CustomersPage() {
       <div className="w-full mx-auto px-4 py-4 sm:py-6 space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">Customers</h1>
+            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('pages.customers.title')}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="hidden sm:flex items-center rounded-md border border-gray-300 bg-gray-100 p-0.5 dark:border-gray-600 dark:bg-gray-700">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="Grid view"
+                title={t('lit.gridView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -819,7 +824,7 @@ export default function CustomersPage() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`rounded p-1.5 transition-colors ${viewMode === 'list' ? 'bg-white shadow dark:bg-gray-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="List view"
+                title={t('lit.listView')}
               >
                 <svg className="h-4 w-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -832,14 +837,14 @@ export default function CustomersPage() {
                 disabled={isImportingCsv}
                 className="h-10 px-3 sm:px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
               >
-                {isImportingCsv ? 'Importing...' : 'Import CSV'}
+                {isImportingCsv ? t('lit.importing') : t('lit.importCsv')}
               </button>
             )}
             <button
               onClick={handleExportCustomersCsv}
               className="h-10 px-3 sm:px-4 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Export CSV
+              {t('lit.exportCsv')}
             </button>
             {permissions?.canCreateCustomers && (
               <button
@@ -849,7 +854,7 @@ export default function CustomersPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Customer
+                {t('lit.addCustomer')}
               </button>
             )}
           </div>
@@ -858,7 +863,7 @@ export default function CustomersPage() {
         {/* Filters */}
         <CollapsibleFilterPanel
           className="mb-2"
-          title="Customer filters"
+          title={t('lit.customerFilters')}
           activeCount={[
             searchQuery.trim() ? 1 : 0,
             statusFilter !== 'all' ? 1 : 0,
@@ -871,15 +876,15 @@ export default function CustomersPage() {
             customers.length > 0 ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">{customerIndicators.total}</span> total
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{customerIndicators.total}</span> {t('lit.total')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{customerIndicators.inView}</span> in view
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{customerIndicators.inView}</span> {t('lit.inView')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-green-600 dark:text-green-400">{customerIndicators.activeInView}</span> active
+                  <span className="font-semibold text-green-600 dark:text-green-400">{customerIndicators.activeInView}</span> {t('lit.active')}
                 </span>
                 <span className="text-gray-300 dark:text-gray-600">·</span>
                 <span className="tabular-nums text-gray-600 dark:text-gray-300">
@@ -903,13 +908,13 @@ export default function CustomersPage() {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Search</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.search')}</label>
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search customers..."
+                  placeholder={t('lit.searchCustomers')}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
                 <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -918,41 +923,41 @@ export default function CustomersPage() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Status</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as CustomerStatusFilter)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="all">{t('lit.allStatuses')}</option>
+                <option value="active">{t('common.active')}</option>
+                <option value="inactive">{t('common.inactive')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Organization</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.organization')}</label>
               <select
                 value={organizationFilterId}
                 onChange={(e) => setOrganizationFilterId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All organizations</option>
+                <option value="all">{t('lit.allOrganizations')}</option>
                 {organizations.map((organization) => (
                   <option key={organization.Id} value={String(organization.Id)}>{organization.Name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Open Tickets</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.openTickets')}</label>
               <select
                 value={ticketFilter}
                 onChange={(e) => setTicketFilter(e.target.value as CustomerTicketFilter)}
                 disabled={!internalTicketsEnabled}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All</option>
-                <option value="with-open">With open tickets</option>
-                <option value="without-open">Without open tickets</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="with-open">{t('lit.withOpenTickets')}</option>
+                <option value="without-open">{t('lit.withoutOpenTickets')}</option>
               </select>
             </div>
           </div>
@@ -963,7 +968,7 @@ export default function CustomersPage() {
                 onClick={() => resetListFilters()}
                 className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
-                Clear filters
+                {t('lit.clearFilters')}
               </button>
             </div>
           )}
@@ -976,7 +981,7 @@ export default function CustomersPage() {
               onClick={loadData}
               className="px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded text-sm font-medium"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -984,12 +989,12 @@ export default function CustomersPage() {
         {customers.length === 0 ? (
           <EmptyState
             icon={<NavModuleIcon href="/customers" size={40} className="text-[var(--pm-muted)] opacity-70" />}
-            title="No customers yet"
-            message="Get started by adding your first customer."
+            title={t('lit.noCustomersYet')}
+            message={t('lit.getStartedByAddingYourFirstCustomer')}
             primaryAction={
               permissions?.canCreateCustomers
                 ? {
-                    label: 'Add Customer',
+                    label: t('lit.addCustomer'),
                     onClick: openCreateModal,
                   }
                 : undefined
@@ -998,13 +1003,13 @@ export default function CustomersPage() {
         ) : filteredCustomers.length === 0 ? (
           <EmptyState
             icon={<Search size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
-            title="No customers match your search"
-            message="Try a different search term or clear current filters."
+            title={t('lit.noCustomersMatchYourSearch')}
+            message={t('lit.tryADifferentSearchTermOrClearCurrentFilters')}
             primaryAction={{
-              label: 'Clear filters',
+              label: t('lit.clearFilters'),
               onClick: () => resetListFilters(),
             }}
-            secondaryAction={{ label: 'Reload', onClick: loadData }}
+            secondaryAction={{ label: t('lit.reload'), onClick: loadData }}
           />
         ) : effectiveViewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1028,7 +1033,7 @@ export default function CustomersPage() {
                             size={14}
                             strokeWidth={2}
                             className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                            aria-label="Pinned"
+                            aria-label={t('nav.pinned')}
                           />
                         )}
                         <span>{customer.Name}</span>
@@ -1042,8 +1047,8 @@ export default function CustomersPage() {
                           e.stopPropagation();
                           togglePinned(customer.Id);
                         }}
-                        title={isPinned(customer.Id) ? 'Unpin customer' : 'Pin customer to top'}
-                        aria-label={isPinned(customer.Id) ? 'Unpin customer' : 'Pin customer to top'}
+                        title={isPinned(customer.Id) ? t('lit.unpinCustomer') : t('lit.pinCustomerToTop')}
+                        aria-label={isPinned(customer.Id) ? t('lit.unpinCustomer') : t('lit.pinCustomerToTop')}
                         className={`rounded p-1.5 transition-colors ${
                           isPinned(customer.Id)
                             ? 'text-[var(--pm-accent)] hover:text-[var(--pm-accent-soft)]'
@@ -1066,11 +1071,11 @@ export default function CustomersPage() {
 
                   <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
                     <div>
-                      <p className="text-gray-500 dark:text-gray-400">Projects</p>
+                      <p className="text-gray-500 dark:text-gray-400">{t('common.projects')}</p>
                       <p className="font-medium text-gray-900 dark:text-white">{stats.projectCount}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 dark:text-gray-400">Task Progress</p>
+                      <p className="text-gray-500 dark:text-gray-400">{t('lit.taskProgress2')}</p>
                       <p className="font-medium text-gray-900 dark:text-white">{progress}%</p>
                     </div>
                   </div>
@@ -1104,8 +1109,8 @@ export default function CustomersPage() {
                     {permissions?.canManageCustomers && (
                       <button
                         onClick={(e) => { e.stopPropagation(); router.push(`/customers/${customer.Id}`); }}
-                        title="Manage customer"
-                        aria-label="Manage customer"
+                        title={t('lit.manageCustomer')}
+                        aria-label={t('lit.manageCustomer')}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                       >
                         ⚙️
@@ -1114,8 +1119,8 @@ export default function CustomersPage() {
                     {permissions?.canManageCustomers && (
                       <button
                         onClick={(e) => { e.stopPropagation(); openEditModal(customer); }}
-                        title="Edit customer"
-                        aria-label="Edit customer"
+                        title={t('lit.editCustomer')}
+                        aria-label={t('lit.editCustomer')}
                         className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 font-medium"
                       >
                         ✏️
@@ -1124,8 +1129,8 @@ export default function CustomersPage() {
                     {permissions?.canDeleteCustomers && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(customer); }}
-                        title="Delete customer"
-                        aria-label="Delete customer"
+                        title={t('lit.deleteCustomer')}
+                        aria-label={t('lit.deleteCustomer')}
                         className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
                       >
                         🗑️
@@ -1146,24 +1151,24 @@ export default function CustomersPage() {
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                     onClick={() => handleSort('name')}
                   >
-                    <div className="flex items-center">Name</div>
+                    <div className="flex items-center">{t('common.name')}</div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    External Name
+                    {t('lit.externalName')}
                   </th>
                   <th 
                     aria-sort={getAriaSort('email')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                     onClick={() => handleSort('email')}
                   >
-                    <div className="flex items-center">Email</div>
+                    <div className="flex items-center">{t('auth.email')}</div>
                   </th>
                   <th 
                     aria-sort={getAriaSort('phone')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                     onClick={() => handleSort('phone')}
                   >
-                    <div className="flex items-center">Phone</div>
+                    <div className="flex items-center">{t('lit.phone')}</div>
                   </th>
                   {internalTicketsEnabled && (
                     <th 
@@ -1171,17 +1176,17 @@ export default function CustomersPage() {
                       className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 select-none"
                       onClick={() => handleSort('tickets')}
                     >
-                      <div className="flex items-center justify-center">Open Tickets</div>
+                      <div className="flex items-center justify-center">{t('lit.openTickets')}</div>
                     </th>
                   )}
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Projects
+                    {t('nav.projects')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Task Progress
+                    {t('lit.taskProgress2')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Organizations
+                    {t('nav.organizations')}
                   </th>
                   {additionalCustomerColumnKeys.map((columnKey) => (
                     <th
@@ -1194,7 +1199,7 @@ export default function CustomersPage() {
                     </th>
                   ))}
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -1219,7 +1224,7 @@ export default function CustomersPage() {
                             size={14}
                             strokeWidth={2}
                             className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                            aria-label="Pinned"
+                            aria-label={t('nav.pinned')}
                           />
                         )}
                         {customer.Name}
@@ -1278,8 +1283,8 @@ export default function CustomersPage() {
                             e.stopPropagation();
                             togglePinned(customer.Id);
                           }}
-                          title={isPinned(customer.Id) ? 'Unpin customer' : 'Pin customer to top'}
-                          aria-label={isPinned(customer.Id) ? 'Unpin customer' : 'Pin customer to top'}
+                          title={isPinned(customer.Id) ? t('lit.unpinCustomer') : t('lit.pinCustomerToTop')}
+                          aria-label={isPinned(customer.Id) ? t('lit.unpinCustomer') : t('lit.pinCustomerToTop')}
                           className={`rounded p-1.5 transition-colors ${
                             isPinned(customer.Id)
                               ? 'text-[var(--pm-accent)] hover:text-[var(--pm-accent-soft)]'
@@ -1295,8 +1300,8 @@ export default function CustomersPage() {
                         {permissions?.canManageCustomers && (
                         <button
                           onClick={(e) => { e.stopPropagation(); router.push(`/customers/${customer.Id}`); }}
-                          title="Manage customer"
-                          aria-label="Manage customer"
+                          title={t('lit.manageCustomer')}
+                          aria-label={t('lit.manageCustomer')}
                           className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1308,8 +1313,8 @@ export default function CustomersPage() {
                         {permissions?.canManageCustomers && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditModal(customer); }}
-                          title="Edit customer"
-                          aria-label="Edit customer"
+                          title={t('lit.editCustomer')}
+                          aria-label={t('lit.editCustomer')}
                           className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1320,8 +1325,8 @@ export default function CustomersPage() {
                         {permissions?.canDeleteCustomers && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(customer); }}
-                          title="Delete customer"
-                          aria-label="Delete customer"
+                          title={t('lit.deleteCustomer')}
+                          aria-label={t('lit.deleteCustomer')}
                           className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1360,7 +1365,7 @@ export default function CustomersPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-xl w-full mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Import Customers from CSV</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.importCustomersFromCsv')}</h2>
                 <button
                   onClick={() => setShowImportModal(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1377,11 +1382,11 @@ export default function CustomersPage() {
                   Name,ExternalName,Email,Phone,Address,Notes,OrganizationNames,DefaultSupportUsername,CreateDefaultProject,DefaultProjectName
                 </code>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                  <a href="/templates/customers_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                  <a href="/templates/customers_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                 </p>
               </div>
 
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -1394,7 +1399,7 @@ export default function CustomersPage() {
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>
@@ -1418,13 +1423,13 @@ export default function CustomersPage() {
                   onClick={() => setConfirmModal(null)}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={confirmModal.onConfirm}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>

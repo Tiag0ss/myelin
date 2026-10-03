@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useMemo, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -109,6 +111,8 @@ export default function TimeEntryFormModal({
   taskOptions = [],
   useOrganizationProjectTaskFlow = false,
 }: TimeEntryFormModalProps) {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [formData, setFormData] = useState<TimeEntryFormValues>(mergeFormData(initialData));
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -118,7 +122,7 @@ export default function TimeEntryFormModal({
 
   const setErrorWithToast = (message: string) => {
     setError(message);
-    showToast({ type: 'error', title: 'Time Entry Error', message });
+    showToast({ type: 'error', title: t('lit.timeEntryError'), message });
   };
 
   const shouldUseOrgProjectFlow = useOrganizationProjectTaskFlow && !!token;
@@ -140,7 +144,7 @@ export default function TimeEntryFormModal({
     });
 
     if (!response.ok) {
-      throw new Error('Failed to load organizations');
+      throw new Error(t('lit.failedToLoadOrganizations'));
     }
 
     const data = await response.json();
@@ -160,7 +164,7 @@ export default function TimeEntryFormModal({
     });
 
     if (!response.ok) {
-      throw new Error('Failed to load projects');
+      throw new Error(t('lit.failedToLoadProjects'));
     }
 
     const data = await response.json();
@@ -179,7 +183,7 @@ export default function TimeEntryFormModal({
     });
 
     if (!response.ok) {
-      throw new Error('Failed to load tasks');
+      throw new Error(t('lit.failedToLoadTasks'));
     }
 
     const data = await response.json();
@@ -210,7 +214,7 @@ export default function TimeEntryFormModal({
         }
       } catch (err) {
         console.error('Error preparing time entry form:', err);
-        setErrorWithToast(err instanceof Error ? err.message : 'Failed to load form data');
+        setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadFormData'));
       }
     })();
   }, [isOpen, shouldUseOrgProjectFlow, initialData]);
@@ -238,7 +242,7 @@ export default function TimeEntryFormModal({
       await loadProjectsForOrg(value);
     } catch (err) {
       console.error('Error loading projects:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to load projects');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadProjects'));
     }
   };
 
@@ -259,18 +263,18 @@ export default function TimeEntryFormModal({
       await loadTasksForProject(value);
     } catch (err) {
       console.error('Error loading tasks:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to load tasks');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadTasks'));
     }
   };
 
   const handleSubmit = async () => {
     if (!formData.taskId) {
-      setErrorWithToast('Task is required.');
+      setErrorWithToast(t('lit.taskIsRequired'));
       return;
     }
 
     if (!formData.workDate) {
-      setErrorWithToast('Work date is required.');
+      setErrorWithToast(t('lit.workDateIsRequired'));
       return;
     }
 
@@ -280,7 +284,7 @@ export default function TimeEntryFormModal({
     }
 
     if (hours <= 0) {
-      setErrorWithToast('Hours must be greater than 0.');
+      setErrorWithToast(t('lit.hoursMustBeGreaterThan0'));
       return;
     }
 
@@ -293,7 +297,7 @@ export default function TimeEntryFormModal({
       });
     } catch (err) {
       console.error('Error saving time entry:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to save time entry');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToSaveTimeEntry'));
     }
   };
 
@@ -308,8 +312,8 @@ export default function TimeEntryFormModal({
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              aria-label="Close"
-              title="Close"
+              aria-label={t('common.close')}
+              title={t('common.close')}
             >
               ✕
             </button>
@@ -329,7 +333,7 @@ export default function TimeEntryFormModal({
               onClick={onBack}
               className="text-sm text-blue-600 hover:text-blue-700 mb-4"
             >
-              ← Back to options
+              ← {t('lit.backToOptions')}
             </button>
           )}
 
@@ -344,28 +348,28 @@ export default function TimeEntryFormModal({
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Organization <span className="text-red-500">*</span>
+                    {t('common.organization')} <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
                     value={formData.organizationId}
                     onChange={handleOrganizationChange}
                     options={organizations.map((organization) => ({ value: String(organization.Id), label: organization.Name }))}
-                    placeholder="Select Organization"
-                    emptyText="Select Organization"
+                    placeholder={t('lit.selectOrganization2')}
+                    emptyText={t('lit.selectOrganization2')}
                     autoSelectSingleOption
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Project <span className="text-red-500">*</span>
+                    {t('common.project')} <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
                     value={formData.projectId}
                     onChange={handleProjectChange}
                     options={projects.map((project) => ({ value: String(project.Id), label: project.ProjectName }))}
-                    placeholder="Select Project"
-                    emptyText="Select Project"
+                    placeholder={t('lit.selectProject')}
+                    emptyText={t('lit.selectProject')}
                     disabled={!formData.organizationId}
                     autoSelectSingleOption
                   />
@@ -375,7 +379,7 @@ export default function TimeEntryFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Task <span className="text-red-500">*</span>
+                {t('common.task')} <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 value={formData.taskId}
@@ -384,8 +388,8 @@ export default function TimeEntryFormModal({
                   value: String(taskOption.value),
                   label: taskOption.label,
                 }))}
-                placeholder="Select Task"
-                emptyText="Select Task"
+                placeholder={t('lit.selectTask')}
+                emptyText={t('lit.selectTask')}
                 disabled={shouldUseOrgProjectFlow ? !formData.projectId : false}
                 autoSelectSingleOption
               />
@@ -394,7 +398,7 @@ export default function TimeEntryFormModal({
             {showDateField && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Work Date <span className="text-red-500">*</span>
+                  {t('lit.workDate')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -408,7 +412,7 @@ export default function TimeEntryFormModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Start Time
+                  {t('lit.startTime')}
                 </label>
                 <input
                   type="time"
@@ -427,7 +431,7 @@ export default function TimeEntryFormModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  End Time
+                  {t('lit.endTime')}
                 </label>
                 <input
                   type="time"
@@ -473,12 +477,12 @@ export default function TimeEntryFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Description
+                {t('common.description')}
               </label>
               <RichTextEditor
                 content={formData.description}
                 onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
-                placeholder="What did you work on?"
+                placeholder={t('lit.whatDidYouWorkOn')}
               />
             </div>
           </div>
@@ -494,14 +498,14 @@ export default function TimeEntryFormModal({
               onClick={onClose}
               className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
             >
-              {isSubmitting ? 'Saving...' : submitLabel}
+              {isSubmitting ? t('common.loading') : submitLabel}
             </button>
           </div>
         </div>

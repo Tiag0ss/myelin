@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 import { useState, useEffect } from 'react';
 
@@ -71,6 +73,8 @@ const getDynamicFieldKey = (field: SelectedField): string => {
 };
 
 export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig }: DynamicQueryBuilderProps) {
+  const { t } = useI18n();
+
   const [schema, setSchema] = useState<DatabaseSchema | null>(null);
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [joins, setJoins] = useState<JoinDefinition[]>([]);
@@ -129,7 +133,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
     const fieldName = rel.fromField.toLowerCase();
     
     if (fieldName.includes('assigned') || fieldName === 'assignedto') {
-      return 'Assigned User';
+      return t('lit.assignedUser');
     } else if (fieldName.includes('created') || fieldName === 'createdby') {
       return 'Creator';
     } else if (fieldName.includes('manager') || fieldName === 'managerid') {
@@ -222,17 +226,17 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
         console.log(`✓ Schema relationships built for ${Object.keys(relationshipsMap).length} tables`);
         setAvailableRelationships(relationshipsMap);
       } else {
-        setError('Failed to load database schema');
+        setError(t('lit.failedToLoadDatabaseSchema'));
       }
     } catch (err) {
       console.error('Failed to load schema:', err);
-      setError('Failed to load database schema');
+      setError(t('lit.failedToLoadDatabaseSchema'));
     }
   };
 
   // Handle selecting table as base table (FROM clause)
   const handleBaseTableSelect = (tableName: string) => {
-    console.log(`📈 ${selectedTables.includes(tableName) ? 'Removing' : 'Adding'} table: ${tableName}`);
+    console.log(`📈 ${selectedTables.includes(tableName) ? t('lit.removing') : t('lit.adding2')} table: ${tableName}`);
     
     if (selectedTables.includes(tableName)) {
       console.log('Removing table:', tableName);
@@ -440,7 +444,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
 
   const handleExecuteQuery = async () => {
     if (selectedTables.length === 0) {
-      setError('Please select at least one table');
+      setError(t('lit.pleaseSelectAtLeastOneTable'));
       return;
     }
 
@@ -563,7 +567,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
       }
     } catch (err: any) {
       console.error('Failed to execute query:', err);
-      let errorMessage = 'Failed to execute query';
+      let errorMessage = t('lit.failedToExecuteQuery');
       
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
         errorMessage = 'Network error: Unable to connect to server. Please check your connection and try again.';
@@ -574,7 +578,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
         if (err.message.includes('JSON')) {
           errorMessage += '\n\nThis may be due to invalid server response format.';
         }
-        if (err.message.includes('Unexpected token')) {
+        if (err.message.includes(t('lit.unexpectedToken'))) {
           errorMessage += '\n\nThe server returned an invalid response. Check server logs for more details.';
         }
       }
@@ -592,7 +596,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
   if (!schema) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500 dark:text-gray-400">Loading database schema...</div>
+        <div className="text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
       </div>
     );
   }
@@ -609,7 +613,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Query Execution Error
+                {t('lit.queryExecutionError')}
               </h3>
               <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                 <pre className="whitespace-pre-wrap font-mono text-xs bg-red-100 dark:bg-red-900/30 p-2 rounded border overflow-x-auto">
@@ -623,12 +627,12 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
 
       {/* Toggle Diagram View */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Database Schema</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.databaseSchema')}</h3>
         <button
           onClick={() => setShowDiagram(!showDiagram)}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
-          {showDiagram ? 'Hide Diagram' : 'Show Diagram'}
+          {showDiagram ? t('lit.hideDiagram') : t('lit.showDiagram')}
         </button>
       </div>
 
@@ -636,7 +640,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
         <div className="space-y-4">
           {/* Add Table Section */}
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-700">
-            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Add Tables</h4>
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">{t('lit.addTables')}</h4>
             
             {/* Add Table Dropdown */}
             <div className="flex gap-2 mb-4">
@@ -649,7 +653,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                   }
                 }}
               >
-                <option value="">Select a table to add...</option>
+                <option value="">{t('lit.selectATableToAdd')}</option>
                 {filteredTables
                   .filter(table => !selectedTables.includes(table.tableName))
                   .map(table => (
@@ -661,7 +665,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
               </select>
               <input
                 type="text"
-                placeholder="Search tables..."
+                placeholder={t('lit.searchTables')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -674,11 +678,11 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">Table</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">Type</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">Relationship</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">{t('lit.table')}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">{t('common.type')}</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white">{t('lit.relationship')}</th>
                       <th scope="col" className="relative px-4 py-2">
-                        <span className="sr-only">Actions</span>
+                        <span className="sr-only">{t('common.actions')}</span>
                       </th>
                     </tr>
                   </thead>
@@ -711,7 +715,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                           </td>
                           <td className="px-4 py-3">
                             {isBaseTable ? (
-                              <span className="text-sm text-gray-500 dark:text-gray-400">Primary table - no joins needed</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">{t('lit.primaryTableNoJoinsNeeded')}</span>
                             ) : tableJoin ? (
                               <div className="flex items-center gap-2">
                                 <div className="text-sm text-gray-900 dark:text-white">
@@ -782,7 +786,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                                     setDropdownValues(prev => ({ ...prev, [`change-${tableName}`]: 'current' }));
                                   }}
                                 >
-                                  <option value="current">Change...</option>
+                                  <option value="current">{t('lit.change')}</option>
                                   {availableRels
                                     .filter(rel => {
                                       // Don't show current relationship again
@@ -865,7 +869,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                                   }
                                 }}
                               >
-                                <option value="">Choose a relationship...</option>
+                                <option value="">{t('lit.chooseARelationship')}</option>
                                 {availableRels.map((rel, relIndex) => (
                                   <option key={`${tableName}-${rel.alias}-${relIndex}`} value={rel.alias}>
                                     {rel.relation.fromTable}.{rel.relation.fromField} → {rel.relation.toTable}.{rel.relation.toField}
@@ -873,14 +877,14 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                                 ))}
                               </select>
                             ) : (
-                              <span className="text-sm text-gray-500 dark:text-gray-400">No relationships available</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noRelationshipsAvailable')}</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleBaseTableSelect(tableName)}
-                              title="Remove table"
-                              aria-label="Remove table"
+                              title={t('lit.removeTable')}
+                              aria-label={t('lit.removeTable')}
                               className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1049,12 +1053,12 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
                       onChange={(e) => handleUpdateAggregation(idx, e.target.value)}
                       className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="SUM">SUM</option>
-                      <option value="COUNT">COUNT</option>
-                      <option value="AVG">AVG</option>
-                      <option value="MIN">MIN</option>
-                      <option value="MAX">MAX</option>
-                      <option value="DISTINCTCOUNT">DISTINCT COUNT</option>
+                      <option value="SUM">{t('lit.sum2')}</option>
+                      <option value="COUNT">{t('lit.count2')}</option>
+                      <option value="AVG">{t('lit.avg')}</option>
+                      <option value="MIN">{t('lit.min2')}</option>
+                      <option value="MAX">{t('lit.max2')}</option>
+                      <option value="DISTINCTCOUNT">{t('lit.distinctCount2')}</option>
                     </select>
                   </div>
                 ))}
@@ -1120,7 +1124,7 @@ export default function DynamicQueryBuilder({ token, onDataLoaded, initialConfig
               disabled={isLoading || (rowFields.length === 0 && columnFields.length === 0 && valueFields.length === 0)}
               className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors font-semibold"
             >
-              {isLoading ? 'Executing...' : 'Execute Query'}
+              {isLoading ? 'Executing...' : t('lit.executeQuery')}
             </button>
           </div>
         </div>

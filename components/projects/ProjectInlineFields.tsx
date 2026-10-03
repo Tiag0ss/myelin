@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -62,8 +63,8 @@ export function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select...',
-  emptyMessage = 'No options available',
+  placeholder,
+  emptyMessage,
   className = '',
 }: {
   value: number | undefined;
@@ -73,6 +74,9 @@ export function SearchableSelect({
   emptyMessage?: string;
   className?: string;
 }) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t('lit.select');
+  const resolvedEmptyMessage = emptyMessage ?? t('lit.noOptionsAvailable');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -104,7 +108,7 @@ export function SearchableSelect({
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={!selectedOption ? 'text-gray-400 dark:text-gray-500' : ''}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : resolvedPlaceholder}
         </span>
         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -118,7 +122,7 @@ export function SearchableSelect({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search..."
+              placeholder={t('lit.search')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               onClick={(e) => e.stopPropagation()}
               autoFocus
@@ -133,7 +137,7 @@ export function SearchableSelect({
                 setSearchTerm('');
               }}
             >
-              {placeholder}
+              {resolvedPlaceholder}
             </div>
             {filteredOptions.length > 0 ? (
               filteredOptions.map(opt => (
@@ -155,7 +159,7 @@ export function SearchableSelect({
               ))
             ) : (
               <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">
-                {emptyMessage}
+                {resolvedEmptyMessage}
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { sanitizeRichTextHtml } from '@/lib/sanitizeHtml';
 
@@ -14,7 +15,7 @@ type PillStyle = (
 ) => React.CSSProperties | undefined;
 
 export function ReportingTaskDetailModal({
-  selectedTask,
+selectedTask,
   organizationId,
   token,
   decimalHoursToHMS,
@@ -30,6 +31,8 @@ export function ReportingTaskDetailModal({
   onClose: () => void;
   onAlert: (title: string, message: string) => void;
 }) {
+  const { t } = useI18n();
+
   const [taskAllocations, setTaskAllocations] = useState<any[]>([]);
   const [taskTimeEntries, setTaskTimeEntries] = useState<any[]>([]);
   const [taskComments, setTaskComments] = useState<any[]>([]);
@@ -268,7 +271,7 @@ export function ReportingTaskDetailModal({
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
-      onAlert('Download Failed', err.message || 'Failed to download attachment');
+      onAlert('Download Failed', err.message || t('lit.failedToDownloadAttachment'));
     }
   };
 
@@ -291,7 +294,7 @@ export function ReportingTaskDetailModal({
 
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err: any) {
-      onAlert('Preview Failed', err.message || 'Failed to preview attachment');
+      onAlert('Preview Failed', err.message || t('lit.failedToPreviewAttachment'));
     }
   };
 
@@ -369,11 +372,11 @@ export function ReportingTaskDetailModal({
             }
           } else {
             const error = await response.json();
-            onAlert('Upload Error', error.message || 'Failed to upload file');
+            onAlert('Upload Error', error.message || t('lit.failedToUploadFile'));
           }
         } catch (err) {
           console.error('Failed to upload file:', err);
-          onAlert('Upload Error', 'Failed to upload file');
+          onAlert(t('lit.uploadError'), 'Failed to upload file');
         } finally {
           setUploadingFile(false);
           e.target.value = '';
@@ -482,7 +485,7 @@ export function ReportingTaskDetailModal({
             <span className="px-2 py-1 text-xs font-semibold rounded-full"
               style={pillStyle(selectedTask.StatusColor, { alpha: '20' })}
             >
-              {selectedTask.StatusName || 'Unknown'}
+              {selectedTask.StatusName || t('lit.unknown')}
             </span>
             {selectedTask.PriorityName && (
               <span className="px-2 py-1 text-xs font-semibold rounded-full"
@@ -504,7 +507,7 @@ export function ReportingTaskDetailModal({
                 <button
                   onClick={() => handleRemoveTag(tag.Id)}
                   className="ml-1 hover:opacity-70"
-                  title="Remove tag"
+                  title={t('lit.removeTag')}
                 >
                   ×
                 </button>
@@ -526,7 +529,7 @@ export function ReportingTaskDetailModal({
                 <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-10">
                   <div className="p-2 max-h-48 overflow-y-auto">
                     {availableTags.filter(t => !taskTags.find((tt: any) => tt.Id === t.Id)).length === 0 ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">No more tags available</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">{t('lit.noMoreTagsAvailable')}</p>
                     ) : (
                       availableTags
                         .filter(t => !taskTags.find((tt: any) => tt.Id === t.Id))
@@ -561,19 +564,19 @@ export function ReportingTaskDetailModal({
       {/* Task Info */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Estimated Hours</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('lit.estimatedHours')}</div>
           <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
             {decimalHoursToHMS(parseFloat(selectedTask.EstimatedHours || 0))}
           </div>
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Allocated Hours</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('lit.allocatedHours')}</div>
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             {decimalHoursToHMS(parseFloat(selectedTask.TotalAllocated || 0))}
           </div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Worked Hours</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('lit.workedHours')}</div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {decimalHoursToHMS(parseFloat(selectedTask.TotalWorked || 0))}
           </div>
@@ -583,7 +586,7 @@ export function ReportingTaskDetailModal({
       {/* Description */}
       {selectedTask.Description && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Description</h3>
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('common.description')}</h3>
           <div 
             className="text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
             dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(selectedTask.Description) }}
@@ -593,27 +596,27 @@ export function ReportingTaskDetailModal({
 
       {/* Allocations */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Planned Allocations</h3>
+        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('lit.plannedAllocations')}</h3>
         {loadingTaskDetails ? (
-          <p className="text-gray-500 dark:text-gray-400">Loading allocations...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingAllocations')}</p>
         ) : taskAllocations.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">No allocations found.</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.noAllocationsFound2')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Date
+                    {t('common.date')}
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    User
+                    {t('common.user')}
                   </th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Time
+                    {t('lit.time')}
                   </th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Hours
+                    {t('common.hours')}
                   </th>
                 </tr>
               </thead>
@@ -629,7 +632,7 @@ export function ReportingTaskDetailModal({
                         {dayName}, {dateStr}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {allocation.Username || 'Unknown'}
+                        {allocation.Username || t('lit.unknown')}
                       </td>
                       <td className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-300">
                         {allocation.StartTime || '-'} - {allocation.EndTime || '-'}
@@ -648,30 +651,30 @@ export function ReportingTaskDetailModal({
 
       {/* Time Entries */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Time Entries</h3>
+        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{t('lit.timeEntries')}</h3>
         {loadingTaskDetails ? (
-          <p className="text-gray-500 dark:text-gray-400">Loading time entries...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingTimeEntries')}</p>
         ) : taskTimeEntries.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">No time entries recorded yet.</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.noTimeEntriesRecordedYet')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Date
+                    {t('common.date')}
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    User
+                    {t('common.user')}
                   </th>
                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Time
+                    {t('lit.time')}
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Description
+                    {t('common.description')}
                   </th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Hours
+                    {t('common.hours')}
                   </th>
                 </tr>
               </thead>
@@ -687,7 +690,7 @@ export function ReportingTaskDetailModal({
                         {dayName}, {dateStr}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {entry.Username || 'Unknown'}
+                        {entry.Username || t('lit.unknown')}
                       </td>
                       <td className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-300">
                         {entry.StartTime || '-'} - {entry.EndTime || '-'}
@@ -722,7 +725,7 @@ export function ReportingTaskDetailModal({
             type="text"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
+            placeholder={t('lit.addAComment')}
             className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -736,15 +739,15 @@ export function ReportingTaskDetailModal({
             disabled={submittingComment || !newComment.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submittingComment ? '...' : 'Send'}
+            {submittingComment ? '...' : t('lit.send')}
           </button>
         </div>
 
         {/* Comments List */}
         {loadingTaskDetails ? (
-          <p className="text-gray-500 dark:text-gray-400">Loading comments...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingComments')}</p>
         ) : taskComments.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No comments yet. Be the first to comment!</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t('lit.noCommentsYetBeTheFirstToComment')}</p>
         ) : (
           <div className="space-y-4 max-h-60 overflow-y-auto">
             {taskComments.map((comment: any) => (
@@ -772,7 +775,7 @@ export function ReportingTaskDetailModal({
                     <button
                       onClick={() => handleDeleteComment(comment.Id)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
-                      title="Delete comment"
+                      title={t('lit.deleteComment')}
                     >
                       🗑️
                     </button>
@@ -813,15 +816,15 @@ export function ReportingTaskDetailModal({
             />
           </label>
           <span className="ml-3 text-xs text-gray-500 dark:text-gray-400">
-            Max 10MB. Allowed: images, PDF, Word, Excel, text, CSV, ZIP
+            {t('lit.max10mbAllowedImagesPdfWordExcelTextCsvZip')}
           </span>
         </div>
 
         {/* Attachments List */}
         {loadingTaskDetails ? (
-          <p className="text-gray-500 dark:text-gray-400">Loading attachments...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingAttachments')}</p>
         ) : taskAttachments.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No attachments yet.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t('lit.noAttachmentsYet2')}</p>
         ) : (
           <div className="space-y-2">
             {taskAttachments.map((attachment: any) => {
@@ -844,7 +847,7 @@ export function ReportingTaskDetailModal({
                     <button
                       onClick={() => handlePreviewAttachment(attachment.Id)}
                       className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                      title="Preview"
+                      title={t('lit.preview')}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -855,7 +858,7 @@ export function ReportingTaskDetailModal({
                   <button
                     onClick={() => handleDownloadAttachment(attachment.Id)}
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                    title="Download"
+                    title={t('common.download')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -864,7 +867,7 @@ export function ReportingTaskDetailModal({
                   <button
                     onClick={() => handleDeleteAttachment(attachment.Id)}
                     className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -888,9 +891,9 @@ export function ReportingTaskDetailModal({
         </h3>
         
         {loadingTaskDetails ? (
-          <p className="text-gray-500 dark:text-gray-400">Loading history...</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingHistory')}</p>
         ) : taskHistory.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No history recorded yet.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t('lit.noHistoryRecordedYet')}</p>
         ) : (
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {taskHistory.map((entry: any) => {
@@ -926,7 +929,7 @@ export function ReportingTaskDetailModal({
                   actionIcon = '✏️';
                   break;
                 case 'status_changed':
-                  actionText = `changed status from "${entry.OldValue || 'None'}" to "${entry.NewValue}"`;
+                  actionText = `changed status from "${entry.OldValue || t('common.none')}" to "${entry.NewValue}"`;
                   actionIcon = '🔄';
                   break;
                 case 'assigned':
@@ -954,7 +957,7 @@ export function ReportingTaskDetailModal({
                   <span className="text-xl">{actionIcon}</span>
                   <div className="flex-1">
                     <p className="text-sm text-gray-900 dark:text-gray-100">
-                      <span className="font-medium">{entry.FirstName || entry.Username || 'Unknown'}</span>
+                      <span className="font-medium">{entry.FirstName || entry.Username || t('lit.unknown')}</span>
                       {' '}{actionText}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -974,7 +977,7 @@ export function ReportingTaskDetailModal({
           onClick={onClose}
           className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
-          Close
+          {t('common.close')}
         </button>
       </div>
     </div>

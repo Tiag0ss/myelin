@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -24,13 +26,17 @@ export default function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select...',
-  emptyText = 'None',
+  placeholder,
+  emptyText,
   className = '',
   disabled = false,
   autoSelectSingleOption = false,
   dropdownMode = 'portal',
 }: SearchableSelectProps) {
+  const { t } = useI18n();
+  const placeholderResolved = placeholder ?? t('lit.select');
+  const emptyTextResolved = emptyText ?? t('common.none');
+
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
@@ -46,7 +52,7 @@ export default function SearchableSelect({
   // Get selected option label
   const selectedOption = options.find(opt => String(opt.value) === String(value));
   const hasSelectedValue = value !== '' && value !== null && value !== undefined && String(value) !== '0' && !!selectedOption;
-  const displayValue = selectedOption?.label || emptyText;
+  const displayValue = selectedOption?.label || emptyTextResolved;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -148,7 +154,7 @@ export default function SearchableSelect({
             <span
               onClick={handleClear}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
-              title="Clear"
+              title={t('common.clear')}
             >
               ✕
             </span>
@@ -176,7 +182,7 @@ export default function SearchableSelect({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${placeholder.toLowerCase()}...`}
+                placeholder={t('lit.searchEllipsis', { term: placeholderResolved.toLowerCase() })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onClick={(e) => e.stopPropagation()}
               />
@@ -184,17 +190,17 @@ export default function SearchableSelect({
 
             {/* Options list */}
             <div className="overflow-y-auto max-h-48">
-              {emptyText && (
+              {emptyTextResolved && (
                 <div
                   onClick={() => handleSelect('')}
                   className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-gray-500 dark:text-gray-400 italic"
                 >
-                  {emptyText}
+                  {emptyTextResolved}
                 </div>
               )}
               {filteredOptions.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
-                  {search ? 'No results found' : 'No options available'}
+                  {search ? t('lit.noResultsFound') : t('lit.noOptionsAvailable')}
                 </div>
               ) : (
                 filteredOptions.map((option) => (
@@ -223,7 +229,7 @@ export default function SearchableSelect({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              placeholder={t('lit.searchEllipsis', { term: placeholderResolved.toLowerCase() })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               onClick={(e) => e.stopPropagation()}
             />
@@ -231,17 +237,17 @@ export default function SearchableSelect({
 
           {/* Options list */}
           <div className="overflow-y-auto max-h-48">
-            {emptyText && (
+            {emptyTextResolved && (
               <div
                 onClick={() => handleSelect('')}
                 className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-gray-500 dark:text-gray-400 italic"
               >
-                {emptyText}
+                {emptyTextResolved}
               </div>
             )}
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
-                {search ? 'No results found' : 'No options available'}
+                {search ? t('lit.noResultsFound') : t('lit.noOptionsAvailable')}
               </div>
             ) : (
               filteredOptions.map((option) => (

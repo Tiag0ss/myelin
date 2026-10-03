@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useRef } from 'react';
@@ -15,6 +17,8 @@ import AuthShell, {
 const API_URL = getApiUrl();
 
 export default function InstallPage() {
+  const { t } = useI18n();
+
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,30 +59,30 @@ export default function InstallPage() {
 
   const validateStep1 = (): boolean => {
     if (!username.trim()) {
-      setError('Username is required');
+      setError(t('lit.usernameIsRequired'));
       return false;
     }
     if (!email.trim()) {
-      setError('Email is required');
+      setError(t('lit.emailIsRequired'));
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Invalid email format');
+      setError(t('lit.invalidEmailFormat'));
       return false;
     }
     const password = readPasswordInput(passwordRef);
     const confirmPassword = readPasswordInput(confirmPasswordRef);
     if (!password) {
-      setError('Password is required');
+      setError(t('lit.passwordIsRequired'));
       return false;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('lit.passwordMustBeAtLeast6Characters'));
       return false;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsMismatch'));
       return false;
     }
     return true;
@@ -86,11 +90,11 @@ export default function InstallPage() {
 
   const validateStep2 = (): boolean => {
     if (!organizationName.trim()) {
-      setError('Organization name is required');
+      setError(t('lit.organizationNameIsRequired'));
       return false;
     }
     if (organizationAbbreviation && organizationAbbreviation.length > 10) {
-      setError('Abbreviation must be 10 characters or less');
+      setError(t('lit.abbreviationMustBe10CharactersOrLess'));
       return false;
     }
     return true;
@@ -133,11 +137,11 @@ export default function InstallPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        let errorMessage = data.message || 'Setup failed';
+        let errorMessage = data.message || t('lit.setupFailed');
         if (data.error?.sqlMessage) {
-          errorMessage += `\nDatabase Error: ${data.error.sqlMessage}`;
+          errorMessage += `\n${t('lit.databaseError')}: ${data.error.sqlMessage}`;
         } else if (data.error?.details) {
-          errorMessage += `\nDetails: ${data.error.details}`;
+          errorMessage += `\n${t('common.details')}: ${data.error.details}`;
         }
         throw new Error(errorMessage);
       }
@@ -151,7 +155,7 @@ export default function InstallPage() {
 
       window.location.href = '/dashboard';
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred during setup');
+      setError(err instanceof Error ? err.message : t('lit.anErrorOccurredDuringSetup'));
     } finally {
       setIsSubmitting(false);
     }
@@ -160,19 +164,19 @@ export default function InstallPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
-        <div className="text-sm text-[var(--pm-muted)]">Checking system status…</div>
+        <div className="text-sm text-[var(--pm-muted)]">{t('lit.checkingSystemStatus')}</div>
       </div>
     );
   }
 
   return (
     <AuthShell
-      title="System Setup"
-      description="Welcome. Configure the administrator account and primary organization."
+      title={t('lit.systemSetup')}
+      description={t('lit.welcomeConfigureTheAdministratorAccountAndPrimaryOrganization')}
       companyName="Myelin"
       maxWidthClassName="max-w-lg"
       footer={
-        <p>This setup wizard only appears when no users exist in the system.</p>
+        <p>{t('lit.thisSetupWizardOnlyAppearsWhenNoUsersExistInTheSystem')}</p>
       }
     >
       <div className="mb-4 flex items-center justify-center gap-2 text-xs">
@@ -185,7 +189,9 @@ export default function InstallPage() {
         >
           {step > 1 ? '✓' : '1'}
         </span>
-        <span className={step >= 1 ? 'text-[var(--pm-text)]' : 'text-[var(--pm-muted)]'}>Admin</span>
+        <span className={step >= 1 ? 'text-[var(--pm-text)]' : 'text-[var(--pm-muted)]'}>
+          {t('nav.sectionAdmin')}
+        </span>
         <span className={`h-px w-8 ${step >= 2 ? 'bg-[var(--pm-accent)]' : 'bg-[var(--pm-border)]'}`} />
         <span
           className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-medium ${
@@ -196,7 +202,9 @@ export default function InstallPage() {
         >
           2
         </span>
-        <span className={step >= 2 ? 'text-[var(--pm-text)]' : 'text-[var(--pm-muted)]'}>Organization</span>
+        <span className={step >= 2 ? 'text-[var(--pm-text)]' : 'text-[var(--pm-muted)]'}>
+          {t('common.organization')}
+        </span>
       </div>
 
       {error && (
@@ -208,26 +216,26 @@ export default function InstallPage() {
       {step === 1 && (
         <div className="space-y-3">
           <p className="text-xs text-[var(--pm-muted)]">
-            Create the main administrator account with full system access.
+            {t('lit.createTheMainAdministratorAccountWithFullSystemAccess')}
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className={authLabelClass}>First Name</label>
+              <label className={authLabelClass}>{t('lit.firstName')}</label>
               <input
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="John"
+                placeholder={t('lit.john')}
                 className={authFieldClass}
               />
             </div>
             <div>
-              <label className={authLabelClass}>Last Name</label>
+              <label className={authLabelClass}>{t('lit.lastName')}</label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Doe"
+                placeholder={t('lit.doe')}
                 className={authFieldClass}
               />
             </div>
@@ -235,13 +243,13 @@ export default function InstallPage() {
 
           <div>
             <label className={authLabelClass}>
-              Username <span className="text-red-500">*</span>
+              {t('auth.username')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder={t('lit.admin')}
               className={authFieldClass}
               required
             />
@@ -249,13 +257,13 @@ export default function InstallPage() {
 
           <div>
             <label className={authLabelClass}>
-              Email <span className="text-red-500">*</span>
+              {t('auth.email')} <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
+              placeholder={t('lit.adminExampleCom')}
               className={authFieldClass}
               required
             />
@@ -263,12 +271,12 @@ export default function InstallPage() {
 
           <div>
             <label className={authLabelClass}>
-              Password <span className="text-red-500">*</span>
+              {t('auth.password')} <span className="text-red-500">*</span>
             </label>
             <PasswordInput
               ref={passwordRef}
               name="password"
-              placeholder="Min. 6 characters"
+              placeholder={t('lit.min6Characters')}
               required
               autoComplete="new-password"
               preventAutofill
@@ -277,12 +285,12 @@ export default function InstallPage() {
 
           <div>
             <label className={authLabelClass}>
-              Confirm Password <span className="text-red-500">*</span>
+              {t('auth.confirmPassword')} <span className="text-red-500">*</span>
             </label>
             <PasswordInput
               ref={confirmPasswordRef}
               name="confirmPassword"
-              placeholder="Repeat password"
+              placeholder={t('lit.repeatPassword')}
               required
               autoComplete="new-password"
               preventAutofill
@@ -290,7 +298,7 @@ export default function InstallPage() {
           </div>
 
           <button type="button" onClick={handleNextStep} className={authPrimaryButtonClass}>
-            Next: Organization
+            {t('lit.nextOrganization')}
           </button>
         </div>
       )}
@@ -298,43 +306,43 @@ export default function InstallPage() {
       {step === 2 && (
         <div className="space-y-3">
           <p className="text-xs text-[var(--pm-muted)]">
-            Create the primary organization. You can add more organizations later.
+            {t('lit.createThePrimaryOrganizationYouCanAddMoreOrganizationsLater')}
           </p>
           <div>
             <label className={authLabelClass}>
-              Organization Name <span className="text-red-500">*</span>
+              {t('lit.organizationName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={organizationName}
               onChange={(e) => setOrganizationName(e.target.value)}
-              placeholder="My Company"
+              placeholder={t('lit.myCompany')}
               className={authFieldClass}
               required
             />
           </div>
 
           <div>
-            <label className={authLabelClass}>Abbreviation</label>
+            <label className={authLabelClass}>{t('lit.abbreviation')}</label>
             <input
               type="text"
               value={organizationAbbreviation}
               onChange={(e) => setOrganizationAbbreviation(e.target.value.toUpperCase())}
-              placeholder="e.g., ACME"
+              placeholder={t('lit.eGAcme')}
               maxLength={10}
               className={authFieldClass}
             />
             <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-              Used in ticket numbers (e.g., TKT-ACME-1). Max 10 characters.
+              {t('lit.usedInTicketNumbersEGTktAcme1Max10Characters')}
             </p>
           </div>
 
           <div>
-            <label className={authLabelClass}>Description</label>
+            <label className={authLabelClass}>{t('common.description')}</label>
             <textarea
               value={organizationDescription}
               onChange={(e) => setOrganizationDescription(e.target.value)}
-              placeholder="Brief description of the organization…"
+              placeholder={t('lit.briefDescriptionOfTheOrganization')}
               rows={3}
               className={`${authFieldClass} resize-none`}
             />
@@ -342,7 +350,7 @@ export default function InstallPage() {
 
           <div className="flex gap-2">
             <button type="button" onClick={handlePrevStep} className={authSecondaryButtonClass}>
-              Back
+              {t('common.back')}
             </button>
             <button
               type="button"
@@ -350,7 +358,7 @@ export default function InstallPage() {
               disabled={isSubmitting}
               className={authPrimaryButtonClass}
             >
-              {isSubmitting ? 'Installing…' : 'Complete Setup'}
+              {isSubmitting ? t('lit.installing') : t('lit.completeSetup')}
             </button>
           </div>
         </div>

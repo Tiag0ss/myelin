@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { type ReactNode } from 'react';
 import CollapsibleFilterPanel from '@/components/CollapsibleFilterPanel';
@@ -6,7 +7,7 @@ import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import { SearchableSelect } from '@/components/projects/ProjectInlineFields';
 
 export function TasksFilterPanel({
-  filterText,
+filterText,
   setFilterText,
   filterTaskType,
   setFilterTaskType,
@@ -56,9 +57,11 @@ export function TasksFilterPanel({
   tagFilterOptions: Array<{ value: number; label: string; subtitle?: string }>;
   headerExtra?: ReactNode;
 }) {
+  const { t } = useI18n();
+
   return (
           <CollapsibleFilterPanel
-            title="Task filters"
+            title={t('lit.taskFilters')}
             activeCount={[
               filterText.trim() ? 1 : 0,
               filterTaskType != null ? 1 : 0,
@@ -79,7 +82,7 @@ export function TasksFilterPanel({
                   type="text"
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
-                  placeholder="Search task, description, assignee..."
+                  placeholder={t('lit.searchTaskDescriptionAssignee')}
                   className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
@@ -88,7 +91,7 @@ export function TasksFilterPanel({
                   value={filterTaskType}
                   onChange={(value) => setFilterTaskType(value)}
                   options={taskTypeOptions.map((taskType) => ({ id: taskType.id, label: taskType.name }))}
-                  placeholder="All task types"
+                  placeholder={t('lit.allTaskTypes')}
                   className="w-full"
                 />
               </div>
@@ -97,7 +100,7 @@ export function TasksFilterPanel({
                   value={filterStatus}
                   onChange={(value) => setFilterStatus(value)}
                   options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
-                  placeholder="All statuses"
+                  placeholder={t('lit.allStatuses')}
                   className="w-full"
                 />
               </div>
@@ -106,7 +109,7 @@ export function TasksFilterPanel({
                   value={filterPriority}
                   onChange={(value) => setFilterPriority(value)}
                   options={priorityOptions.map((priority) => ({ id: priority.id, label: priority.name }))}
-                  placeholder="All priorities"
+                  placeholder={t('lit.allPriorities')}
                   className="w-full"
                 />
               </div>
@@ -115,7 +118,7 @@ export function TasksFilterPanel({
                   value={filterAssignee}
                   onChange={(value) => setFilterAssignee(value)}
                   options={assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name }))}
-                  placeholder="All assignees"
+                  placeholder={t('lit.allAssignees')}
                   className="w-full"
                 />
               </div>
@@ -124,7 +127,7 @@ export function TasksFilterPanel({
                   values={filterTagIds}
                   onChange={(values) => setFilterTagIds(values.map(value => Number(value)))}
                   options={tagFilterOptions}
-                  placeholder="All tags"
+                  placeholder={t('lit.allTags')}
                 />
               </div>
             </div>
@@ -138,7 +141,7 @@ export function TasksFilterPanel({
                     onChange={(e) => setHideClosed(e.target.checked)}
                     className="rounded"
                   />
-                  Hide closed tasks
+                  {t('lit.hideClosedTasks')}
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <input
@@ -147,7 +150,7 @@ export function TasksFilterPanel({
                     onChange={(e) => setUnplannedOnly(e.target.checked)}
                     className="rounded"
                   />
-                  Unplanned only
+                  {t('lit.unplannedOnly')}
                 </label>
               </div>
               {isFilterActive && (
@@ -158,7 +161,7 @@ export function TasksFilterPanel({
                   }}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  Clear filters
+                  {t('lit.clearFilters')}
                 </button>
               )}
             </div>

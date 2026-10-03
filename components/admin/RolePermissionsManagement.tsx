@@ -1,15 +1,21 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRolePermissions, updateRolePermission, RolePermission } from '@/lib/api/rolePermissions';
 import { useToast } from '@/contexts/ToastContext';
 
 const ROLE_NAMES = ['Developer', 'Support', 'Manager'] as const;
+const ROLE_NAME_KEYS: Record<(typeof ROLE_NAMES)[number], string> = {
+  Developer: 'lit.developer',
+  Support: 'lit.support',
+  Manager: 'lit.manager',
+};
 
 const PERMISSION_CATEGORIES = [
   {
-    name: 'View Permissions',
+    nameKey: 'lit.viewPermissions',
     permissions: [
       'CanViewDashboard',
       'CanViewPlanning',
@@ -20,11 +26,11 @@ const PERMISSION_CATEGORIES = [
     ],
   },
   {
-    name: 'Myelin',
+    nameKey: 'lit.projects',
     permissions: ['CanManageProjects', 'CanCreateProjects', 'CanDeleteProjects'],
   },
   {
-    name: 'Task Management',
+    nameKey: 'lit.taskManagement',
     permissions: [
       'CanManageTasks',
       'CanCreateTasks',
@@ -35,15 +41,15 @@ const PERMISSION_CATEGORIES = [
     ],
   },
   {
-    name: 'Time Tracking',
+    nameKey: 'lit.timeTracking',
     permissions: ['CanManageTimeEntries'],
   },
   {
-    name: 'Administration',
+    nameKey: 'lit.administration',
     permissions: ['CanManageOrganizations', 'CanManageUsers'],
   },
   {
-    name: 'Customer Management',
+    nameKey: 'lit.customerManagement',
     permissions: [
       'CanViewCustomers',
       'CanManageCustomers',
@@ -52,7 +58,7 @@ const PERMISSION_CATEGORIES = [
     ],
   },
   {
-    name: 'Ticket Management',
+    nameKey: 'lit.ticketManagement',
     permissions: [
       'CanManageTickets',
       'CanCreateTickets',
@@ -62,7 +68,7 @@ const PERMISSION_CATEGORIES = [
     ],
   },
   {
-    name: 'Expense Management',
+    nameKey: 'lit.expenseManagement',
     permissions: [
       'CanViewExpenses',
       'CanCreateExpenses',
@@ -72,38 +78,38 @@ const PERMISSION_CATEGORIES = [
   },
 ] as const;
 
-const PERMISSION_LABELS: Record<string, string> = {
-  CanViewDashboard: 'View Dashboard',
-  CanViewPlanning: 'View Planning',
-  CanViewProjects: 'View Projects',
-  CanManageProjects: 'Manage Projects',
-  CanCreateProjects: 'Create Projects',
-  CanDeleteProjects: 'Delete Projects',
-  CanViewTasks: 'View Tasks',
-  CanManageTasks: 'Manage Tasks',
-  CanCreateTasks: 'Create Tasks',
-  CanDeleteTasks: 'Delete Tasks',
-  CanAssignTasks: 'Assign Tasks',
-  CanManageTimeEntries: 'Manage Time Entries',
-  CanViewReports: 'View Reports',
-  CanViewBudgetInfo: 'View Budget Info',
-  CanManageOrganizations: 'Manage Organizations',
-  CanViewCustomers: 'View Customers',
-  CanManageCustomers: 'Manage Customers',
-  CanCreateCustomers: 'Create Customers',
-  CanDeleteCustomers: 'Delete Customers',
-  CanManageUsers: 'Manage Users',
-  CanManageTickets: 'Manage Tickets',
-  CanCreateTickets: 'Create Tickets',
-  CanDeleteTickets: 'Delete Tickets',
-  CanAssignTickets: 'Assign Tickets',
-  CanCreateTaskFromTicket: 'Create Task from Ticket',
-  CanPlanTasks: 'Plan Tasks',
-  CanViewOthersPlanning: "View Others' Planning",
-  CanViewExpenses: 'View Expenses',
-  CanCreateExpenses: 'Create Expenses',
-  CanManageExpenses: 'Manage Expenses',
-  CanApproveExpenses: 'Approve Expenses',
+const PERMISSION_LABEL_KEYS: Record<string, string> = {
+  CanViewDashboard: 'lit.viewDashboard',
+  CanViewPlanning: 'lit.viewPlanning',
+  CanViewProjects: 'lit.viewProjects',
+  CanManageProjects: 'lit.manageProjects',
+  CanCreateProjects: 'lit.createProjects',
+  CanDeleteProjects: 'lit.deleteProjects',
+  CanViewTasks: 'lit.viewTasks',
+  CanManageTasks: 'lit.manageTasks',
+  CanCreateTasks: 'lit.createTasks',
+  CanDeleteTasks: 'lit.deleteTasks',
+  CanAssignTasks: 'lit.assignTasks',
+  CanManageTimeEntries: 'lit.manageTimeEntries',
+  CanViewReports: 'lit.viewReports',
+  CanViewBudgetInfo: 'lit.viewBudgetInfo',
+  CanManageOrganizations: 'lit.manageOrganizations',
+  CanViewCustomers: 'lit.viewCustomers',
+  CanManageCustomers: 'lit.manageCustomers',
+  CanCreateCustomers: 'lit.createCustomers',
+  CanDeleteCustomers: 'lit.deleteCustomers',
+  CanManageUsers: 'lit.manageUsers',
+  CanManageTickets: 'lit.manageTickets',
+  CanCreateTickets: 'lit.createTickets',
+  CanDeleteTickets: 'lit.deleteTickets',
+  CanAssignTickets: 'lit.assignTickets',
+  CanCreateTaskFromTicket: 'lit.createTaskFromTicket',
+  CanPlanTasks: 'lit.planTasks',
+  CanViewOthersPlanning: 'lit.viewOthersPlanning',
+  CanViewExpenses: 'lit.viewExpenses',
+  CanCreateExpenses: 'lit.createExpenses',
+  CanManageExpenses: 'lit.manageExpenses',
+  CanApproveExpenses: 'lit.approveExpenses',
 };
 
 export type RolePermissionsActionsState = {
@@ -122,12 +128,13 @@ export default function RolePermissionsManagement({
   actionsPlacement = 'embedded',
   onActionsStateChange,
 }: RolePermissionsManagementProps) {
+  const { t } = useI18n();
   const { token } = useAuth();
   const { showToast } = useToast();
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('Developer');
+  const [selectedRole, setSelectedRole] = useState<string>(t('lit.developer'));
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -145,7 +152,7 @@ export default function RolePermissionsManagement({
       const data = await getRolePermissions(token);
       setPermissions(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load permissions');
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadPermissions'));
     } finally {
       setIsLoading(false);
     }
@@ -260,9 +267,13 @@ export default function RolePermissionsManagement({
       });
 
       await loadPermissions();
-      showToast({ type: 'success', title: 'Permissions Saved', message: 'Permissions saved successfully' });
+      showToast({
+        type: 'success',
+        title: t('lit.permissionsSaved'),
+        message: t('lit.permissionsSavedSuccessfully'),
+      });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save permissions');
+      setError(err instanceof Error ? err.message : t('lit.failedToSavePermissions'));
     } finally {
       setIsSaving(false);
     }
@@ -288,7 +299,7 @@ export default function RolePermissionsManagement({
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center text-sm text-[var(--pm-muted)]">
-        Loading permissions…
+        {t('lit.loadingPermissions')}
       </div>
     );
   }
@@ -300,7 +311,7 @@ export default function RolePermissionsManagement({
     <div className="space-y-3 p-4 sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-[var(--pm-muted)]">
-          Configure what each role can do. Permissions from multiple roles are combined.
+          {t('lit.configureWhatEachRoleCanDoPermissionsFromMultipleRolesAreCombined')}
         </p>
         <div className="inline-flex items-center rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-0.5">
           {ROLE_NAMES.map((roleName) => (
@@ -314,7 +325,7 @@ export default function RolePermissionsManagement({
                   : 'text-[var(--pm-muted)] hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-text)]'
               }`}
             >
-              {roleName}
+              {t(ROLE_NAME_KEYS[roleName])}
             </button>
           ))}
         </div>
@@ -329,17 +340,18 @@ export default function RolePermissionsManagement({
       <div className="space-y-3">
         {PERMISSION_CATEGORIES.map((category) => (
           <div
-            key={category.name}
+            key={category.nameKey}
             className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)]"
           >
             <div className="border-b border-[var(--pm-border)] px-3 py-1.5">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
-                {category.name}
+                {t(category.nameKey)}
               </h3>
             </div>
             <div className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
               {category.permissions.map((key) => {
-                const label = PERMISSION_LABELS[key];
+                const labelKey = PERMISSION_LABEL_KEYS[key];
+                const label = labelKey ? t(labelKey) : key;
                 const isChecked = currentPerms
                   ? Boolean((currentPerms as unknown as Record<string, unknown>)[key])
                   : false;
@@ -367,7 +379,7 @@ export default function RolePermissionsManagement({
       </div>
 
       <p className="text-[11px] text-[var(--pm-muted)]">
-        Admins always have all permissions. Changes apply immediately after saving.
+        {t('lit.adminsAlwaysHaveAllPermissionsChangesApplyImmediatelyAfterSaving')}
       </p>
 
       {showEmbeddedActions && (
@@ -378,7 +390,7 @@ export default function RolePermissionsManagement({
             disabled={isSaving || !currentPerms}
             className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {isSaving ? 'Saving…' : 'Save Changes'}
+            {isSaving ? t('common.saving') : t('lit.saveChanges')}
           </button>
         </div>
       )}

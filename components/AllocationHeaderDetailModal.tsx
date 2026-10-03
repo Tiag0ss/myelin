@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFormatHours } from '@/lib/useFormatHours';
@@ -78,6 +80,8 @@ export default function AllocationHeaderDetailModal({
   onDeleteAllAllocations,
   onSaveReplan,
 }: AllocationHeaderDetailModalProps) {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const normalizedHeaderId = useMemo(() => (headerId && Number.isFinite(headerId) && headerId > 0 ? headerId : null), [headerId]);
 
@@ -138,7 +142,7 @@ export default function AllocationHeaderDetailModal({
 
       const data = await response.json();
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || 'Failed to load allocation details');
+        throw new Error(data?.message || t('lit.failedToLoadAllocationDetails'));
       }
 
       const payload = data as AllocationDetailResponse;
@@ -171,7 +175,7 @@ export default function AllocationHeaderDetailModal({
       ).toString());
       setHoursPerDay((storedHoursPerDay > 0 ? storedHoursPerDay : (averageHoursPerDay > 0 ? averageHoursPerDay : 8)).toFixed(2).replace(/\.00$/, ''));
     } catch (err: any) {
-      setError(err?.message || 'Failed to load allocation details');
+      setError(err?.message || t('lit.failedToLoadAllocationDetails'));
       setHeader(null);
       setTaskInfo(null);
       setUserInfo(null);
@@ -210,7 +214,7 @@ export default function AllocationHeaderDetailModal({
       await onDeleteAllAllocations({ headerId: normalizedHeaderId, taskId: Number(taskInfo.Id) });
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to delete allocation slice');
+      setError(err?.message || t('lit.failedToDeleteAllocationSlice'));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -221,19 +225,19 @@ export default function AllocationHeaderDetailModal({
     if (!token || !header || !normalizedHeaderId || !taskInfo || !userInfo || !onSaveReplan) return;
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-      setError('Start date is required.');
+      setError(t('lit.startDateIsRequired'));
       return;
     }
 
     const total = Number(totalHours || 0);
     if (!Number.isFinite(total) || total <= 0) {
-      setError('Total hours must be greater than 0.');
+      setError(t('lit.totalHoursMustBeGreaterThan0'));
       return;
     }
 
     const normalizedHoursPerDay = Number(hoursPerDay || 0);
     if (!Number.isFinite(normalizedHoursPerDay) || normalizedHoursPerDay <= 0) {
-      setError('Hours per day must be greater than 0.');
+      setError(t('lit.hoursPerDayMustBeGreaterThan0'));
       return;
     }
 
@@ -252,7 +256,7 @@ export default function AllocationHeaderDetailModal({
       });
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to replan allocation');
+      setError(err?.message || t('lit.failedToReplanAllocation'));
     } finally {
       setIsSaving(false);
     }
@@ -270,15 +274,15 @@ export default function AllocationHeaderDetailModal({
       >
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Allocation Details</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Edit start date, total hours, and daily allocation without leaving Planning.</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.allocationDetails')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.editStartDateTotalHoursAndDailyAllocationWithoutLeavingPlanning')}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded"
-            aria-label="Close allocation details"
-            title="Close"
+            aria-label={t('lit.closeAllocationDetails')}
+            title={t('common.close')}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
@@ -294,24 +298,24 @@ export default function AllocationHeaderDetailModal({
           )}
 
           {isLoadingData ? (
-            <div className="text-sm text-gray-600 dark:text-gray-300">Loading allocation details...</div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">{t('lit.loadingAllocationDetails')}</div>
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Task</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('common.task')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">{taskInfo?.TaskName || '-'}</p>
                   <p className="text-gray-600 dark:text-gray-400">{taskInfo?.ProjectName || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">User</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('common.user')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {userInfo ? `${userInfo.FirstName} ${userInfo.LastName}`.trim() || userInfo.Username : '-'}
                   </p>
                   <p className="text-gray-600 dark:text-gray-400">{userInfo?.Username || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Header</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.header')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">#{header?.Id || '-'}</p>
                   <p className="text-gray-600 dark:text-gray-400">Mode: {header?.AllocationMode || '-'}</p>
                 </div>
@@ -319,7 +323,7 @@ export default function AllocationHeaderDetailModal({
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.startDate')}</label>
                   <input
                     type="date"
                     value={startDate}
@@ -329,7 +333,7 @@ export default function AllocationHeaderDetailModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Hours</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.totalHours2')}</label>
                   <input
                     type="number"
                     min="0"
@@ -341,7 +345,7 @@ export default function AllocationHeaderDetailModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours / Day</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.hoursDay')}</label>
                   <input
                     type="number"
                     min="0"
@@ -354,30 +358,30 @@ export default function AllocationHeaderDetailModal({
                 </div>
                 <div className="flex items-end">
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    New daily allocations will be recalculated when you save.
+                    {t('lit.newDailyAllocationsWillBeRecalculatedWhenYouSave')}
                   </div>
                 </div>
               </div>
  
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Daily Allocations</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.dailyAllocations')}</h4>
                 </div>
                 <div data-grid-enhancer-ignore="true" className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">Hours</th>
-                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">Start</th>
-                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">End</th>
+                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t('common.date')}</th>
+                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t('common.hours')}</th>
+                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t('lit.start')}</th>
+                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t('lit.end')}</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {groupedDayRows.length === 0 && (
                         <tr>
                           <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                            No daily allocations yet.
+                            {t('lit.noDailyAllocationsYet')}
                           </td>
                         </tr>
                       )}
@@ -407,7 +411,7 @@ export default function AllocationHeaderDetailModal({
                       onClick={() => void onOpenTaskDetails(taskInfo.Id)}
                       className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
                     >
-                      Open task details
+                      {t('lit.openTaskDetails')}
                     </button>
                   )}
                 </div>
@@ -418,7 +422,7 @@ export default function AllocationHeaderDetailModal({
                     disabled={isDeleting}
                     className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
 
                   {canEdit && onDeleteAllAllocations && (
@@ -428,7 +432,7 @@ export default function AllocationHeaderDetailModal({
                       disabled={isSaving || isDeleting}
                       className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 disabled:opacity-60"
                     >
-                      Delete all allocations
+                      {t('lit.deleteAllAllocations')}
                     </button>
                   )}
 
@@ -438,7 +442,7 @@ export default function AllocationHeaderDetailModal({
                     onClick={saveChanges}
                     className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isSaving ? 'Saving...' : 'Save Allocation'}
+                    {isSaving ? t('lit.saving') : t('lit.saveAllocation')}
                   </button>
                 </div>
               </div>
@@ -461,9 +465,9 @@ export default function AllocationHeaderDetailModal({
               onClick={(event) => event.stopPropagation()}
             >
               <div className="p-6">
-                <h4 className="text-base font-semibold text-gray-900 dark:text-white">Delete all allocations?</h4>
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white">{t('common.confirmDelete')}</h4>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  This will remove every allocation in this header slice and cannot be undone.
+                  {t('lit.thisWillRemoveEveryAllocationInThisHeaderSliceAndCannotBeUndone')}
                 </p>
                 <div className="mt-5 flex items-center justify-end gap-2">
                   <button
@@ -472,7 +476,7 @@ export default function AllocationHeaderDetailModal({
                     disabled={isDeleting}
                     className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -480,7 +484,7 @@ export default function AllocationHeaderDetailModal({
                     disabled={isDeleting}
                     className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-red-600 hover:bg-red-700 text-white disabled:opacity-60"
                   >
-                    {isDeleting ? 'Deleting...' : 'Confirm delete'}
+                    {isDeleting ? 'Deleting...' : t('lit.confirmDelete2')}
                   </button>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useColorVision } from '@/hooks/useColorVision';
 import { withAlphaSuffix } from '@/lib/colorVisionPalettes';
@@ -63,13 +64,14 @@ export default function SegmentedTagBadge({
   size = 'xs',
   className = '',
 }: SegmentedTagBadgeProps) {
+  const { t } = useI18n();
   const { mapColor } = useColorVision();
   const segments = String(name || '')
     .split('/')
     .map((segment) => segment.trim())
     .filter(Boolean);
 
-  const fallbackLabel = String(name || '').trim() || 'Tag';
+  const fallbackLabel = String(name || '').trim() || t('lit.tag');
   const label = segments[0] || fallbackLabel;
   const baseColor = mapColor(normalizeHexColor(color));
   const sizeClass = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-2 py-0.5 text-[11px]';

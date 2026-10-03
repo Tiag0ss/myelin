@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type {
@@ -21,6 +23,8 @@ function ChartCard({
   children: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-[220px]">
       <div className="flex items-start justify-between gap-2 mb-1">
@@ -33,7 +37,7 @@ function ChartCard({
         {action}
       </div>
       {empty ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 py-10 text-center flex-1">No tasks to show.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-10 text-center flex-1">{t('lit.noTasksToShow')}</p>
       ) : (
         <div className="mt-3 flex-1">{children}</div>
       )}
@@ -123,17 +127,19 @@ function WorkloadBars({ rows }: { rows: TaskAnalyticsSlice[] }) {
 }
 
 function ParentProgressBars({ rows }: { rows: TaskAnalyticsParentProgress[] }) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-green-500" /> Done
+          <span className="w-2.5 h-2.5 rounded bg-green-500" /> {t('common.done')}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-blue-500" /> In progress
+          <span className="w-2.5 h-2.5 rounded bg-blue-500" /> {t('lit.inProgress2')}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-gray-300 dark:bg-gray-600" /> To do
+          <span className="w-2.5 h-2.5 rounded bg-gray-300 dark:bg-gray-600" /> {t('lit.toDo')}
         </span>
       </div>
       {rows.map((row) => {
@@ -187,6 +193,7 @@ export function TaskAnalyticsCharts({
   /** When set, replaces the default "Parent task progress" card (e.g. Team Members on project overview). */
   fourthCard?: ReactNode;
 }) {
+  const { t } = useI18n();
   if (!data) return null;
 
   const priority = data.priorityBreakdown || [];
@@ -209,11 +216,11 @@ export function TaskAnalyticsCharts({
           onClick={onViewAll}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
         >
-          View all
+          {t('lit.viewAll')}
         </button>
       ) : (
         <Link href={viewAllHref!} className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0">
-          View all
+          {t('lit.viewAll')}
         </Link>
       )
     ) : null;
@@ -221,38 +228,38 @@ export function TaskAnalyticsCharts({
   return (
     <section className={className || 'space-y-3'}>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Task analytics</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.taskAnalytics')}</h2>
         {viewAll}
       </div>
       {!hasAny ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">No task data available.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noTaskDataAvailable')}</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ChartCard
-            title="Priority breakdown"
-            subtitle="All tasks by priority"
+            title={t('lit.priorityBreakdown')}
+            subtitle={t('lit.allTasksByPriority')}
             empty={priority.every((r) => r.value === 0)}
           >
             <VBars rows={priority} />
           </ChartCard>
           <ChartCard
-            title="Types of work"
-            subtitle="Share of tasks by type"
+            title={t('lit.typesOfWork')}
+            subtitle={t('lit.shareOfTasksByType')}
             empty={types.every((r) => r.value === 0)}
           >
             <PercentBars rows={types} />
           </ChartCard>
           <ChartCard
-            title="Team workload"
-            subtitle="Open tasks by assignee"
+            title={t('lit.teamWorkload')}
+            subtitle={t('lit.openTasksByAssignee')}
             empty={workload.every((r) => r.value === 0)}
           >
             <WorkloadBars rows={workload} />
           </ChartCard>
           {fourthCard ?? (
             <ChartCard
-              title="Parent task progress"
-              subtitle="Done / in progress / to do"
+              title={t('lit.parentTaskProgress')}
+              subtitle={t('lit.doneInProgressToDo')}
               empty={parents.length === 0}
             >
               <ParentProgressBars rows={parents} />

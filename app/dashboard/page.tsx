@@ -1,5 +1,16 @@
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { htmlLang, readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+import { useI18n } from '@/lib/i18n/provider';
+
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useMemo, Suspense, useCallback, useRef } from 'react';
@@ -118,6 +129,9 @@ function AssignedKanbanTab({
   onTasksRefresh: () => Promise<TaskWithProject[]>;
   onError: (message: string) => void;
 }) {
+  const { t, locale } = useI18n();
+  const dateLocale = htmlLang(locale);
+
   const { mapColor, pillStyle, borderLeftStyle } = useColorVision();
   const [draggedOverTask, setDraggedOverTask] = useState<number | null>(null);
   const [localTasks, setLocalTasks] = useState<TaskWithProject[]>([]);
@@ -155,7 +169,7 @@ function AssignedKanbanTab({
       return mappedName;
     }
 
-    return 'Unknown Organization';
+    return t('lit.unknownOrganization');
   };
 
   const assignedTasks = useMemo(() => {
@@ -599,7 +613,7 @@ function AssignedKanbanTab({
       await onTasksRefresh();
     } catch (err: any) {
       setLocalTasks(previousTasks);
-      onError(err?.message || 'Failed to reorder tasks');
+      onError(err?.message || t('lit.failedToReorderTasks'));
     }
   };
 
@@ -637,7 +651,7 @@ function AssignedKanbanTab({
       await onTasksRefresh();
     } catch (err: any) {
       setLocalTasks(previousTasks);
-      onError(err?.message || 'Failed to move task');
+      onError(err?.message || t('lit.failedToMoveTask'));
     }
   };
 
@@ -646,15 +660,15 @@ function AssignedKanbanTab({
   };
 
   if (isLoading || loadingStatuses) {
-    return <div className="text-center py-12 text-gray-600 dark:text-gray-400">Loading Kanban board...</div>;
+    return <div className="text-center py-12 text-gray-600 dark:text-gray-400">{t('lit.loadingKanbanBoard')}</div>;
   }
 
   if (assignedTasks.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8">
         <EmptyState
-          title="No assigned tasks"
-          message="You have no tasks assigned right now."
+          title={t('lit.noAssignedTasks')}
+          message={t('lit.youHaveNoTasksAssignedRightNow')}
           icon={<ListTodo size={40} strokeWidth={1.5} className="text-[var(--pm-muted)] opacity-70" aria-hidden />}
         />
       </div>
@@ -693,7 +707,7 @@ function AssignedKanbanTab({
             htmlFor="kanban-org-filter"
             className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
           >
-            Organization
+            {t('common.organization')}
           </label>
           <select
             id="kanban-org-filter"
@@ -704,7 +718,7 @@ function AssignedKanbanTab({
             }}
             className="w-full h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
-            <option value="all">All organizations</option>
+            <option value="all">{t('lit.allOrganizations')}</option>
             {groupedTasksByOrganization.map((group) => (
               <option key={`kanban-org-${group.organizationId}`} value={group.organizationId}>
                 {group.organizationName} ({group.tasks.length})
@@ -718,7 +732,7 @@ function AssignedKanbanTab({
             htmlFor="kanban-project-filter"
             className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
           >
-            Project
+            {t('common.project')}
           </label>
           <select
             id="kanban-project-filter"
@@ -729,7 +743,7 @@ function AssignedKanbanTab({
             }}
             className="w-full h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
-            <option value="">All projects</option>
+            <option value="">{t('lit.allProjects')}</option>
             {projectsInFilterScope.map((project) => (
               <option key={`kanban-project-${project.id}`} value={project.id}>
                 {project.name}
@@ -743,7 +757,7 @@ function AssignedKanbanTab({
             htmlFor="kanban-sprint-filter"
             className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
           >
-            Sprint
+            {t('lit.sprint')}
           </label>
           <select
             id="kanban-sprint-filter"
@@ -763,8 +777,8 @@ function AssignedKanbanTab({
             disabled={!selectedProjectId || loadingSprints}
             className="w-full h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white disabled:opacity-60"
           >
-            <option value="all">All sprints</option>
-            <option value="backlog">Backlog (no sprint)</option>
+            <option value="all">{t('lit.allSprints')}</option>
+            <option value="backlog">{t('lit.backlogNoSprint')}</option>
             {sprints.map((sprint) => (
               <option key={`kanban-sprint-${sprint.Id}`} value={sprint.Id}>
                 {sprint.Name}
@@ -776,7 +790,7 @@ function AssignedKanbanTab({
 
         <div className="relative min-w-[160px]">
           <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            Statuses
+            {t('lit.statuses')}
           </span>
           <button
             type="button"
@@ -791,10 +805,10 @@ function AssignedKanbanTab({
                     hiddenStatusesByOrg,
                     statusPickerOrganizationId
                   ).length;
-                  if (hidden === 0) return 'All statuses';
+                  if (hidden === 0) return t('lit.allStatuses');
                   return `${all.length - hidden}/${all.length} visible`;
                 })()
-              : 'Statuses'}
+              : t('lit.statuses')}
           </button>
           {statusPickerOpen && statusPickerOrganizationId && (
             <div className="absolute z-30 mt-1 w-72 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-2">
@@ -804,7 +818,7 @@ function AssignedKanbanTab({
                     htmlFor="kanban-status-org"
                     className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1"
                   >
-                    Organization statuses
+                    {t('lit.organizationStatuses')}
                   </label>
                   <select
                     id="kanban-status-org"
@@ -821,7 +835,7 @@ function AssignedKanbanTab({
                 </div>
               )}
               <p className="px-1 pb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                Choose which status columns to show
+                {t('lit.chooseWhichStatusColumnsToShow')}
               </p>
               {getStatusesForOrganization(statusPickerOrganizationId).map((status) => {
                 const hiddenIds = getHiddenStatusIdsForOrg(
@@ -906,7 +920,7 @@ function AssignedKanbanTab({
 
               {statuses.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
-                  All statuses are hidden for this organization.
+                  {t('lit.allStatusesAreHiddenForThisOrganization')}
                 </p>
               ) : (
                 <div className="w-full overflow-x-auto">
@@ -983,7 +997,7 @@ function AssignedKanbanTab({
                                     className="px-1.5 py-0.5 rounded"
                                     style={pillStyle(task.PriorityColor, { alpha: '20' })}
                                   >
-                                    {task.PriorityName || 'No Priority'}
+                                    {task.PriorityName || t('lit.noPriority')}
                                   </span>
 
                                   {task.EstimatedHours && (
@@ -992,12 +1006,12 @@ function AssignedKanbanTab({
 
                                   {task.DueDate && (
                                     <span className="text-gray-500 dark:text-gray-400">
-                                      📅 {new Date(task.DueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      📅 {new Date(task.DueDate).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                                     </span>
                                   )}
                                 </div>
 
-                                <div className="text-xs text-gray-600 dark:text-gray-400 truncate">📁 {task.ProjectName || 'Project'}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400 truncate">📁 {task.ProjectName || t('lit.project3')}</div>
                               </div>
                             );
                           })}
@@ -1073,91 +1087,91 @@ type KpiTemplate = {
 };
 const REPORT_DATASOURCE_COLUMNS: Record<string, { key: string; label: string }[]> = {
   'time-entries': [
-    { key: 'Hours', label: 'Hours' },
-    { key: 'WorkDate', label: 'Work Date' },
-    { key: 'TaskName', label: 'Task Name' },
-    { key: 'ProjectName', label: 'Project Name' },
-    { key: 'Description', label: 'Description' },
-    { key: 'StartTime', label: 'Start Time' },
-    { key: 'EndTime', label: 'End Time' },
+    { key: t('lit.hours2'), label: t('lit.hours2') },
+    { key: 'WorkDate', label: t('lit.workDate') },
+    { key: 'TaskName', label: t('lit.taskName') },
+    { key: 'ProjectName', label: t('lit.projectName') },
+    { key: t('lit.description2'), label: t('lit.description2') },
+    { key: 'StartTime', label: t('lit.startTime') },
+    { key: 'EndTime', label: t('lit.endTime') },
   ],
   'time-entries-and-calls': [
-    { key: 'Hours', label: 'Hours' },
-    { key: 'WorkDate', label: 'Work Date' },
-    { key: 'TaskName', label: 'Task Name' },
-    { key: 'ProjectName', label: 'Project Name' },
+    { key: t('lit.hours2'), label: t('lit.hours2') },
+    { key: 'WorkDate', label: t('lit.workDate') },
+    { key: 'TaskName', label: t('lit.taskName') },
+    { key: 'ProjectName', label: t('lit.projectName') },
   ],
   'tasks': [
-    { key: 'EstimatedHours', label: 'Estimated Hours' },
-    { key: 'SubtaskCount', label: 'Subtask Count' },
-    { key: 'TaskName', label: 'Task Name' },
-    { key: 'ProjectName', label: 'Project Name' },
-    { key: 'StatusName', label: 'Status' },
-    { key: 'PriorityName', label: 'Priority' },
-    { key: 'AssigneeName', label: 'Assigned To' },
+    { key: 'EstimatedHours', label: t('lit.estimatedHours') },
+    { key: 'SubtaskCount', label: t('lit.subtaskCount') },
+    { key: 'TaskName', label: t('lit.taskName') },
+    { key: 'ProjectName', label: t('lit.projectName') },
+    { key: 'StatusName', label: t('lit.status') },
+    { key: 'PriorityName', label: t('lit.priority') },
+    { key: 'AssigneeName', label: t('lit.assignedTo') },
   ],
   'projects': [
-    { key: 'ProjectName', label: 'Project Name' },
-    { key: 'StatusName', label: 'Status' },
-    { key: 'OrganizationName', label: 'Organization' },
-    { key: 'CustomerName', label: 'Customer' },
+    { key: 'ProjectName', label: t('lit.projectName') },
+    { key: 'StatusName', label: t('lit.status') },
+    { key: 'OrganizationName', label: t('lit.organization2') },
+    { key: 'CustomerName', label: t('lit.customer2') },
   ],
   'task-allocations': [
-    { key: 'AllocatedHours', label: 'Allocated Hours' },
-    { key: 'AllocationDate', label: 'Allocation Date' },
-    { key: 'TaskName', label: 'Task Name' },
-    { key: 'ProjectName', label: 'Project Name' },
+    { key: 'AllocatedHours', label: t('lit.allocatedHours') },
+    { key: 'AllocationDate', label: t('lit.allocationDate') },
+    { key: 'TaskName', label: t('lit.taskName') },
+    { key: 'ProjectName', label: t('lit.projectName') },
   ],
   'tickets': [
-    { key: 'Title', label: 'Title' },
-    { key: 'StatusName', label: 'Status' },
-    { key: 'PriorityName', label: 'Priority' },
-    { key: 'TypeName', label: 'Category' },
-    { key: 'ProjectName', label: 'Project' },
-    { key: 'AssigneeName', label: 'Assigned To' },
+    { key: t('lit.title'), label: t('lit.title') },
+    { key: 'StatusName', label: t('lit.status') },
+    { key: 'PriorityName', label: t('lit.priority') },
+    { key: 'TypeName', label: t('lit.category') },
+    { key: 'ProjectName', label: t('lit.project3') },
+    { key: 'AssigneeName', label: t('lit.assignedTo') },
   ],
   'dynamic': [],
 };
 
 const KPI_TEMPLATES: KpiTemplate[] = [
-  { type: 'totalProjects', label: 'Projects', defaultTitle: 'Projects', icon: NAV_ICONS['/projects'], borderClass: 'border-blue-500' },
-  { type: 'myTasks', label: 'My Tasks', defaultTitle: 'My Tasks', icon: ListTodo, borderClass: 'border-green-500' },
-  { type: 'myPendingTasks', label: 'My Pending Tasks', defaultTitle: 'My Pending Tasks', icon: Clock, borderClass: 'border-amber-500' },
-  { type: 'myCompletedTasks', label: 'My Completed Tasks', defaultTitle: 'My Completed Tasks', icon: CheckCircle2, borderClass: 'border-emerald-500' },
-  { type: 'myTickets', label: 'My Tickets', defaultTitle: 'My Tickets', icon: NAV_ICONS['/tickets'], borderClass: 'border-indigo-500' },
-  { type: 'hoursThisWeek', label: 'Hours This Week', defaultTitle: 'Hours This Week', icon: NAV_ICONS['/timesheet'], borderClass: 'border-purple-500' },
-  { type: 'hoursThisMonth', label: 'Hours This Month', defaultTitle: 'Hours This Month', icon: NAV_ICONS['/reporting'], borderClass: 'border-orange-500' },
-  { type: 'customersTotal', label: 'Customers', defaultTitle: 'Customers', icon: NAV_ICONS['/customers'], borderClass: 'border-teal-500' },
-  { type: 'organizationProjects', label: 'Organization Projects', defaultTitle: 'Organization Projects', icon: FolderKanban, borderClass: 'border-sky-500', requiresOrganization: true },
-  { type: 'organizationTasks', label: 'Organization Tasks', defaultTitle: 'Organization Tasks', icon: ListTree, borderClass: 'border-cyan-500', requiresOrganization: true },
-  { type: 'organizationPendingTasks', label: 'Organization Pending Tasks', defaultTitle: 'Organization Pending Tasks', icon: Pin, borderClass: 'border-yellow-500', requiresOrganization: true },
-  { type: 'organizationCompletedTasks', label: 'Organization Completed Tasks', defaultTitle: 'Organization Completed Tasks', icon: Target, borderClass: 'border-lime-500', requiresOrganization: true },
-  { type: 'tasksByStatus', label: 'Tasks by Status', defaultTitle: 'Tasks by Status', icon: CircleDot, borderClass: 'border-pink-500', requiresOrganization: true, requiresStatus: true },
-  { type: 'tasksByPriority', label: 'Tasks by Priority', defaultTitle: 'Tasks by Priority', icon: Flag, borderClass: 'border-rose-500', requiresOrganization: true, requiresPriority: true },
-  { type: 'tasksByTag', label: 'Tasks by Tag', defaultTitle: 'Tasks by Tag', icon: Tag, borderClass: 'border-fuchsia-500', requiresOrganization: true, requiresTag: true },
-  { type: 'tasksFiltered', label: 'Filtered Tasks', defaultTitle: 'Filtered Tasks', icon: Search, borderClass: 'border-violet-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'overdueTasksFiltered', label: 'Overdue Tasks', defaultTitle: 'Overdue Tasks', icon: Clock, borderClass: 'border-red-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'blockedTasksFiltered', label: 'Blocked Tasks', defaultTitle: 'Blocked Tasks', icon: Ban, borderClass: 'border-amber-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'unestimatedTasksFiltered', label: 'Unestimated Tasks', defaultTitle: 'Unestimated Tasks', icon: Calculator, borderClass: 'border-slate-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'reopenedTasksFiltered', label: 'Reopened Tasks', defaultTitle: 'Reopened Tasks', icon: Repeat2, borderClass: 'border-orange-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'throughputThisWeek', label: 'Throughput This Week', defaultTitle: 'Throughput This Week', icon: TrendingUp, borderClass: 'border-emerald-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'throughputThisMonth', label: 'Throughput This Month', defaultTitle: 'Throughput This Month', icon: TrendingDown, borderClass: 'border-cyan-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'cycleTimeMedianDays', label: 'Cycle Time Median', defaultTitle: 'Cycle Time Median', icon: MapPin, borderClass: 'border-blue-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'leadTimeMedianDays', label: 'Lead Time Median', defaultTitle: 'Lead Time Median', icon: Rocket, borderClass: 'border-indigo-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
-  { type: 'ticketsSlaRisk', label: 'Tickets SLA Risk', defaultTitle: 'Tickets SLA Risk', icon: AlertTriangle, borderClass: 'border-rose-600', requiresOrganization: true },
-  { type: 'reportKpi', label: 'Advanced Report KPI', defaultTitle: 'Report KPI', icon: NAV_ICONS['/reporting'], borderClass: 'border-purple-600', requiresReport: true },
+  { type: 'totalProjects', label: t('lit.projects'), defaultTitle: t('lit.projects'), icon: NAV_ICONS['/projects'], borderClass: 'border-blue-500' },
+  { type: 'myTasks', label: t('lit.myTasks'), defaultTitle: t('lit.myTasks'), icon: ListTodo, borderClass: 'border-green-500' },
+  { type: 'myPendingTasks', label: t('lit.myPendingTasks'), defaultTitle: t('lit.myPendingTasks'), icon: Clock, borderClass: 'border-amber-500' },
+  { type: 'myCompletedTasks', label: t('lit.myCompletedTasks'), defaultTitle: t('lit.myCompletedTasks'), icon: CheckCircle2, borderClass: 'border-emerald-500' },
+  { type: 'myTickets', label: t('lit.myTickets'), defaultTitle: t('lit.myTickets'), icon: NAV_ICONS['/tickets'], borderClass: 'border-indigo-500' },
+  { type: 'hoursThisWeek', label: t('lit.hoursThisWeek'), defaultTitle: t('lit.hoursThisWeek'), icon: NAV_ICONS['/timesheet'], borderClass: 'border-purple-500' },
+  { type: 'hoursThisMonth', label: t('lit.hoursThisMonth'), defaultTitle: t('lit.hoursThisMonth'), icon: NAV_ICONS['/reporting'], borderClass: 'border-orange-500' },
+  { type: 'customersTotal', label: t('lit.customers'), defaultTitle: t('lit.customers'), icon: NAV_ICONS['/customers'], borderClass: 'border-teal-500' },
+  { type: 'organizationProjects', label: t('lit.organizationProjects'), defaultTitle: t('lit.organizationProjects'), icon: FolderKanban, borderClass: 'border-sky-500', requiresOrganization: true },
+  { type: 'organizationTasks', label: t('lit.organizationTasks'), defaultTitle: t('lit.organizationTasks'), icon: ListTree, borderClass: 'border-cyan-500', requiresOrganization: true },
+  { type: 'organizationPendingTasks', label: t('lit.organizationPendingTasks'), defaultTitle: t('lit.organizationPendingTasks'), icon: Pin, borderClass: 'border-yellow-500', requiresOrganization: true },
+  { type: 'organizationCompletedTasks', label: t('lit.organizationCompletedTasks'), defaultTitle: t('lit.organizationCompletedTasks'), icon: Target, borderClass: 'border-lime-500', requiresOrganization: true },
+  { type: 'tasksByStatus', label: t('lit.tasksByStatus'), defaultTitle: t('lit.tasksByStatus'), icon: CircleDot, borderClass: 'border-pink-500', requiresOrganization: true, requiresStatus: true },
+  { type: 'tasksByPriority', label: t('lit.tasksByPriority'), defaultTitle: t('lit.tasksByPriority'), icon: Flag, borderClass: 'border-rose-500', requiresOrganization: true, requiresPriority: true },
+  { type: 'tasksByTag', label: t('lit.tasksByTag'), defaultTitle: t('lit.tasksByTag'), icon: Tag, borderClass: 'border-fuchsia-500', requiresOrganization: true, requiresTag: true },
+  { type: 'tasksFiltered', label: t('lit.filteredTasks'), defaultTitle: t('lit.filteredTasks'), icon: Search, borderClass: 'border-violet-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'overdueTasksFiltered', label: t('lit.overdueTasks'), defaultTitle: t('lit.overdueTasks'), icon: Clock, borderClass: 'border-red-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'blockedTasksFiltered', label: t('lit.blockedTasks'), defaultTitle: t('lit.blockedTasks'), icon: Ban, borderClass: 'border-amber-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'unestimatedTasksFiltered', label: t('lit.unestimatedTasks'), defaultTitle: t('lit.unestimatedTasks'), icon: Calculator, borderClass: 'border-slate-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'reopenedTasksFiltered', label: t('lit.reopenedTasks'), defaultTitle: t('lit.reopenedTasks'), icon: Repeat2, borderClass: 'border-orange-500', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'throughputThisWeek', label: t('lit.throughputThisWeek'), defaultTitle: t('lit.throughputThisWeek'), icon: TrendingUp, borderClass: 'border-emerald-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'throughputThisMonth', label: t('lit.throughputThisMonth'), defaultTitle: t('lit.throughputThisMonth'), icon: TrendingDown, borderClass: 'border-cyan-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'cycleTimeMedianDays', label: t('lit.cycleTimeMedian'), defaultTitle: t('lit.cycleTimeMedian'), icon: MapPin, borderClass: 'border-blue-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'leadTimeMedianDays', label: t('lit.leadTimeMedian'), defaultTitle: t('lit.leadTimeMedian'), icon: Rocket, borderClass: 'border-indigo-600', requiresOrganization: true, supportsOptionalTaskFilters: true },
+  { type: 'ticketsSlaRisk', label: t('lit.ticketsSlaRisk'), defaultTitle: t('lit.ticketsSlaRisk'), icon: AlertTriangle, borderClass: 'border-rose-600', requiresOrganization: true },
+  { type: 'reportKpi', label: t('lit.advancedReportKpi'), defaultTitle: t('lit.reportKpi'), icon: NAV_ICONS['/reporting'], borderClass: 'border-purple-600', requiresReport: true },
 ];
 
 const getDefaultKpiWidgets = (internalTicketsEnabled: boolean): DashboardKpiWidget[] => {
   const defaults: DashboardKpiWidget[] = [
-    { id: 'projects', type: 'totalProjects', title: 'Projects' },
-    { id: 'my-tasks', type: 'myTasks', title: 'My Tasks' },
-    { id: 'hours-week', type: 'hoursThisWeek', title: 'Hours This Week' },
-    { id: 'hours-month', type: 'hoursThisMonth', title: 'Hours This Month' },
+    { id: 'projects', type: 'totalProjects', title: t('lit.projects') },
+    { id: 'my-tasks', type: 'myTasks', title: t('lit.myTasks') },
+    { id: 'hours-week', type: 'hoursThisWeek', title: t('lit.hoursThisWeek') },
+    { id: 'hours-month', type: 'hoursThisMonth', title: t('lit.hoursThisMonth') },
   ];
 
   if (internalTicketsEnabled) {
-    defaults.splice(2, 0, { id: 'my-tickets', type: 'myTickets', title: 'My Tickets' });
+    defaults.splice(2, 0, { id: 'my-tickets', type: 'myTickets', title: t('lit.myTickets') });
   }
 
   return defaults;
@@ -1180,6 +1194,8 @@ const CalendarTab = dynamic(
 );
 
 export default function DashboardPage() {
+  const { t } = useI18n();
+
   return (
     <Suspense fallback={
         <div className="w-full space-y-5 animate-pulse py-6">
@@ -1194,6 +1210,8 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
+  const { t, locale } = useI18n();
+  const dateLocale = htmlLang(locale);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const taskDeepLinkHandledRef = useRef<string | null>(null);
   const decimalHoursToHMS = useFormatHours();
@@ -1634,11 +1652,11 @@ function DashboardContent() {
   const toDateString = (date: Date): string => date.toISOString().split('T')[0];
 
   const getPeriodLabel = (period: AnalyticsPeriod): string => {
-    if (period === 'thisWeek') return 'This Week';
-    if (period === 'lastWeek') return 'Last Week';
-    if (period === 'thisMonth') return 'This Month';
-    if (period === 'allTime') return 'All Time';
-    return 'Last Month';
+    if (period === 'thisWeek') return t('lit.thisWeek');
+    if (period === 'lastWeek') return t('lit.lastWeek');
+    if (period === 'thisMonth') return t('lit.thisMonth');
+    if (period === 'allTime') return t('lit.allTime');
+    return t('lit.lastMonth');
   };
 
   const getPeriodRange = (period: AnalyticsPeriod) => {
@@ -1746,7 +1764,7 @@ function DashboardContent() {
       const selectedTask = projectTasks.find((task) => Number(task.Id) === Number(taskRef.Id));
 
       if (!project || !selectedTask) {
-        showToast({ type: 'error', message: 'Task details could not be loaded.' });
+        showToast({ type: 'error', message: t('lit.taskDetailsCouldNotBeLoaded') });
         return;
       }
 
@@ -1756,7 +1774,7 @@ function DashboardContent() {
       setShowTaskDetailsModal(true);
     } catch (error) {
       console.error('Failed to open task details modal:', error);
-      showToast({ type: 'error', message: 'Failed to open task details.' });
+      showToast({ type: 'error', message: t('lit.failedToOpenTaskDetails') });
     }
   }, [token, showToast]);
 
@@ -1770,7 +1788,7 @@ function DashboardContent() {
 
     const taskId = Number(taskDeepLinkParam);
     if (!Number.isFinite(taskId) || taskId <= 0) {
-      showToast({ type: 'error', message: 'Invalid task id in link.' });
+      showToast({ type: 'error', message: t('lit.invalidTaskIdInLink') });
       const params = new URLSearchParams(searchParams.toString());
       params.delete('task');
       params.delete('taskId');
@@ -1799,14 +1817,14 @@ function DashboardContent() {
         if (cancelled) return;
         const projectId = Number(res.task?.ProjectId);
         if (!Number.isFinite(projectId) || projectId <= 0) {
-          showToast({ type: 'error', message: 'Task project could not be resolved.' });
+          showToast({ type: 'error', message: t('lit.taskProjectCouldNotBeResolved') });
           clearTaskQuery();
           return;
         }
         await openTaskDetails({ Id: taskId, ProjectId: projectId });
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : 'Failed to open task details.';
+        const message = error instanceof Error ? error.message : t('lit.failedToOpenTaskDetails');
         showToast({ type: 'error', message });
       } finally {
         if (!cancelled) clearTaskQuery();
@@ -1831,7 +1849,7 @@ function DashboardContent() {
   const handleKpiDetailItemOpen = useCallback((item: DashboardKpiDetailItem) => {
     if (kpiDetailModal.type === 'tasks') {
       if (!item.taskId || !item.projectId) {
-        showToast({ type: 'error', message: 'Task details are not available for this item.' });
+        showToast({ type: 'error', message: t('lit.taskDetailsAreNotAvailableForThisItem') });
         return;
       }
       closeKpiDetailModal();
@@ -1841,7 +1859,7 @@ function DashboardContent() {
 
     if (kpiDetailModal.type === 'timeEntries') {
       if (!item.taskId || !item.projectId) {
-        showToast({ type: 'error', message: 'This time entry is not linked to a task.' });
+        showToast({ type: 'error', message: t('lit.thisTimeEntryIsNotLinkedToATask') });
         return;
       }
       closeKpiDetailModal();
@@ -1869,16 +1887,16 @@ function DashboardContent() {
 
   const getKpiDetailItemActionLabel = useCallback(() => {
     if (kpiDetailModal.type === 'tasks' || kpiDetailModal.type === 'timeEntries') {
-      return 'Open task details';
+      return t('lit.openTaskDetails');
     }
     if (kpiDetailModal.type === 'projects') {
-      return 'Open project';
+      return t('lit.openProject');
     }
     if (kpiDetailModal.type === 'customers') {
-      return 'Open customer';
+      return t('lit.openCustomer');
     }
     if (kpiDetailModal.type === 'tickets') {
-      return 'Open ticket';
+      return t('lit.openTicket');
     }
     return null;
   }, [kpiDetailModal.type]);
@@ -1888,7 +1906,7 @@ function DashboardContent() {
     if (kpiDetailModal.type === 'projects') return 'Projects';
     if (kpiDetailModal.type === 'customers') return 'Customers';
     if (kpiDetailModal.type === 'tickets') return 'Tickets';
-    if (kpiDetailModal.type === 'timeEntries') return 'Time Entries';
+    if (kpiDetailModal.type === 'timeEntries') return t('lit.timeEntries');
     if (kpiDetailModal.type === 'reportRows') return 'Rows';
     return 'Items';
   }, [kpiDetailModal.type]);
@@ -1902,11 +1920,11 @@ function DashboardContent() {
       });
       if (!res.ok) {
         const d = await res.json();
-        throw new Error(d.message || 'Failed to load portal');
+        throw new Error(d.message || t('lit.failedToLoadPortal'));
       }
       setPortalData(await res.json());
     } catch (err: any) {
-      const message = err.message || 'Failed to load portal data';
+      const message = err.message || t('lit.failedToLoadPortalData');
       setPortalError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -2154,11 +2172,12 @@ function DashboardContent() {
           const ticketsData = await ticketsResponse.json();
           const tickets = ticketsData.tickets || [];
           
-          const openTickets = tickets.filter((t: any) => t.Status === 'Open').length;
-          const activeTickets = tickets.filter((t: any) => 
-            t.Status !== 'Resolved' && 
-            t.Status !== 'Closed' && 
-            t.Status !== 'Waiting Response'
+          const openTickets = tickets.filter((ticket: any) => ticket.Status === 'Open').length;
+          const activeTickets = tickets.filter(
+            (ticket: any) =>
+              ticket.Status !== 'Resolved' &&
+              ticket.Status !== 'Closed' &&
+              ticket.Status !== 'Waiting Response'
           ).length;
           
           setSummaryStats(prev => ({
@@ -2185,7 +2204,7 @@ function DashboardContent() {
 
     const template = getKpiTemplate(widget.type);
     if (!template) {
-      return 'KPI';
+      return t('lit.kpi');
     }
 
     const statusLabel = widget.organizationId && widget.statusValueId
@@ -2285,7 +2304,7 @@ function DashboardContent() {
       setKpiValues(derivedValues);
     } catch (error) {
       console.error('Failed to load KPI values:', error);
-      showToast({ type: 'error', message: 'Failed to load KPI values' });
+      showToast({ type: 'error', message: t('lit.failedToLoadKpiValues') });
     }
   }, [token, showToast]);
 
@@ -2313,7 +2332,7 @@ function DashboardContent() {
       setKpiConfigLoaded(true);
     } catch (error) {
       console.error('Failed to load KPI config:', error);
-      showToast({ type: 'error', message: 'Failed to load dashboard KPI configuration' });
+      showToast({ type: 'error', message: t('lit.failedToLoadDashboardKpiConfiguration') });
       setKpiConfigLoaded(true);
     } finally {
       setKpiSectionLoading(false);
@@ -2402,10 +2421,10 @@ function DashboardContent() {
       setKpiWidgets(savedWidgets);
       await loadKpiValues(savedWidgets);
       setKpiEditMode(false);
-      showToast({ type: 'success', message: 'Dashboard KPIs updated' });
+      showToast({ type: 'success', message: t('lit.dashboardKpisUpdated') });
     } catch (error) {
       console.error('Failed to save dashboard KPIs:', error);
-      showToast({ type: 'error', message: 'Failed to save dashboard KPIs' });
+      showToast({ type: 'error', message: t('lit.failedToSaveDashboardKpis') });
     } finally {
       setKpiSaving(false);
     }
@@ -2732,7 +2751,7 @@ function DashboardContent() {
       <div className="w-full py-6">
         <div className="rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] p-8 text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[var(--pm-accent)]" />
-          <p className="mt-4 text-[var(--pm-muted)]">Loading dashboard...</p>
+          <p className="mt-4 text-[var(--pm-muted)]">{t('lit.loadingDashboard')}</p>
         </div>
       </div>
     );
@@ -2759,7 +2778,7 @@ function DashboardContent() {
                   onChange={(e) => setKpiAddType(e.target.value as DashboardKpiType | '')}
                   className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-2 text-sm text-[var(--pm-text)]"
                 >
-                  <option value="">Select KPI</option>
+                  <option value="">{t('lit.selectKpi')}</option>
                   {selectableKpiTemplates.map((template) => (
                     <option key={template.type} value={template.type}>{template.label}</option>
                   ))}
@@ -2770,16 +2789,16 @@ function DashboardContent() {
                   className="h-8 rounded-md bg-[var(--pm-accent)] px-3 text-sm font-semibold text-[var(--pm-accent-fg)] disabled:opacity-50"
                   disabled={!kpiAddType}
                 >
-                  Add KPI
+                  {t('lit.addKpi')}
                 </button>
               </div>
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="shrink-0 sm:max-w-[14rem]">
-                <h1 className="text-xl font-semibold leading-tight text-[var(--pm-text)]">Dashboard</h1>
+                <h1 className="text-xl font-semibold leading-tight text-[var(--pm-text)]">{t('nav.dashboard')}</h1>
                 <p className="text-xs leading-snug text-[var(--pm-muted)] sm:text-sm">
-                  {new Date().toLocaleDateString('en-US', {
+                  {new Date().toLocaleDateString(dateLocale, {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -2790,7 +2809,7 @@ function DashboardContent() {
                   {showPendingApprovalAlert && (
                     <div className="rounded-md border border-[var(--pm-warn)]/40 bg-[var(--pm-warn)]/15 px-2 py-1.5 text-[var(--pm-text)]">
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--pm-warn)]">
-                        Approval Required
+                        {t('lit.approvalRequired')}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         {pendingApprovals.timeEntries > 0 && pendingApprovals.canApproveTime && (
@@ -2798,7 +2817,7 @@ function DashboardContent() {
                             type="button"
                             onClick={() => router.push('/approvals?tab=time')}
                             className="rounded bg-[var(--pm-surface-2)] px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-[var(--pm-accent)] hover:text-[var(--pm-bg)]"
-                            title="Open time entries approval"
+                            title={t('lit.openTimeEntriesApproval')}
                           >
                             {pendingApprovals.timeEntries} time entr
                             {pendingApprovals.timeEntries === 1 ? 'y' : 'ies'}
@@ -2809,7 +2828,7 @@ function DashboardContent() {
                             type="button"
                             onClick={() => router.push('/approvals?tab=vacations')}
                             className="rounded bg-[var(--pm-surface-2)] px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-[var(--pm-accent)] hover:text-[var(--pm-bg)]"
-                            title="Open vacations approval"
+                            title={t('lit.openVacationsApproval')}
                           >
                             {pendingApprovals.vacations} vacation
                             {pendingApprovals.vacations === 1 ? '' : 's'}
@@ -2820,7 +2839,7 @@ function DashboardContent() {
                             type="button"
                             onClick={() => router.push('/approvals?tab=expenses')}
                             className="rounded bg-[var(--pm-surface-2)] px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-[var(--pm-accent)] hover:text-[var(--pm-bg)]"
-                            title="Open expenses approval"
+                            title={t('lit.openExpensesApproval')}
                           >
                             {pendingApprovals.expenses} expense
                             {pendingApprovals.expenses === 1 ? '' : 's'}
@@ -2850,7 +2869,7 @@ function DashboardContent() {
                   <div className="flex items-stretch gap-2 overflow-x-auto">
                     {kpiWidgets.length === 0 ? (
                       <div className="flex min-h-14 min-w-0 flex-1 items-center justify-center rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-center text-sm text-[var(--pm-muted)]">
-                        No KPI cards configured.
+                        {t('lit.noKpiCardsConfigured')}
                       </div>
                     ) : (
                       <>
@@ -2906,7 +2925,7 @@ function DashboardContent() {
                                       if (reportName) handleWidgetFieldChange(widget.id, { title: reportName });
                                     }
                                   }}
-                                  placeholder="Card title"
+                                  placeholder={t('lit.cardTitle')}
                                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 />
 
@@ -2929,12 +2948,12 @@ function DashboardContent() {
                                           });
                                         }}
                                         options={kpiAvailableReports.map((r) => ({ value: r.Id, label: r.ReportName }))}
-                                        placeholder="Select report"
-                                        emptyText="No report"
+                                        placeholder={t('lit.selectReport')}
+                                        emptyText={t('lit.noReport')}
                                         dropdownMode="portal"
                                       />
                                       {!widget.reportId && (
-                                        <p className="text-xs text-amber-600 dark:text-amber-400">⚠ Select a report to activate this KPI</p>
+                                        <p className="text-xs text-amber-600 dark:text-amber-400">⚠ {t('lit.selectAReportToActivateThisKpi')}</p>
                                       )}
                                       {widget.reportId && (
                                         <select
@@ -2942,10 +2961,10 @@ function DashboardContent() {
                                           onChange={(e) => handleWidgetFieldChange(widget.id, { reportAggFunc: e.target.value || null, reportAggField: null })}
                                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         >
-                                          <option value="">Count rows (default)</option>
-                                          <option value="sum">Sum of column…</option>
-                                          <option value="avg">Average of column…</option>
-                                          <option value="distinctCount">Distinct count of column…</option>
+                                          <option value="">{t('lit.countRowsDefault')}</option>
+                                          <option value="sum">{t('lit.sumOfColumn')}</option>
+                                          <option value="avg">{t('lit.averageOfColumn')}</option>
+                                          <option value="distinctCount">{t('lit.distinctCountOfColumn')}</option>
                                         </select>
                                       )}
                                       {widget.reportId && needsField && columns.length > 0 && (
@@ -2954,7 +2973,7 @@ function DashboardContent() {
                                           onChange={(e) => handleWidgetFieldChange(widget.id, { reportAggField: e.target.value || null })}
                                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         >
-                                          <option value="">Select column…</option>
+                                          <option value="">{t('lit.selectColumn')}</option>
                                           {columns.map((col) => (
                                             <option key={col.key} value={col.key}>{col.label}</option>
                                           ))}
@@ -2965,7 +2984,7 @@ function DashboardContent() {
                                           type="text"
                                           value={widget.reportAggField || ''}
                                           onChange={(e) => handleWidgetFieldChange(widget.id, { reportAggField: e.target.value || null })}
-                                          placeholder="Column name"
+                                          placeholder={t('lit.columnName')}
                                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
                                       )}
@@ -2990,7 +3009,7 @@ function DashboardContent() {
                                     }}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                   >
-                                    <option value="">Select organization</option>
+                                    <option value="">{t('lit.selectOrganization')}</option>
                                     {kpiMetadata.organizations.map((org) => (
                                       <option key={org.Id} value={org.Id}>{org.Name}</option>
                                     ))}
@@ -3003,7 +3022,7 @@ function DashboardContent() {
                                     onChange={(e) => handleWidgetFieldChange(widget.id, { statusValueId: e.target.value ? Number(e.target.value) : null })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                   >
-                                    <option value="">{template?.requiresStatus ? 'Select status' : 'Any status'}</option>
+                                    <option value="">{template?.requiresStatus ? t('lit.selectStatus') : t('lit.anyStatus')}</option>
                                     {statusOptions.map((status) => (
                                       <option key={status.Id} value={status.Id}>{status.StatusName}</option>
                                     ))}
@@ -3016,7 +3035,7 @@ function DashboardContent() {
                                     onChange={(e) => handleWidgetFieldChange(widget.id, { priorityValueId: e.target.value ? Number(e.target.value) : null })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                   >
-                                    <option value="">{template?.requiresPriority ? 'Select priority' : 'Any priority'}</option>
+                                    <option value="">{template?.requiresPriority ? t('lit.selectPriority2') : t('lit.anyPriority')}</option>
                                     {priorityOptions.map((priority) => (
                                       <option key={priority.Id} value={priority.Id}>{priority.PriorityName}</option>
                                     ))}
@@ -3029,7 +3048,7 @@ function DashboardContent() {
                                     onChange={(e) => handleWidgetFieldChange(widget.id, { tagId: e.target.value ? Number(e.target.value) : null })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                   >
-                                    <option value="">{template?.requiresTag ? 'Select tag' : 'Any tag'}</option>
+                                    <option value="">{template?.requiresTag ? t('lit.selectTag') : t('lit.anyTag')}</option>
                                     {tagOptions.map((tag) => (
                                       <option key={tag.Id} value={tag.Id}>{tag.Name}</option>
                                     ))}
@@ -3042,7 +3061,7 @@ function DashboardContent() {
                                   onClick={() => handleRemoveWidget(widget.id)}
                                   className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40"
                                 >
-                                  Remove
+                                  {t('common.remove')}
                                 </button>
                               </div>
                             </div>
@@ -3059,8 +3078,8 @@ function DashboardContent() {
                       type="button"
                       onClick={handleSaveKpis}
                       disabled={kpiSaving}
-                      title={kpiSaving ? 'Saving…' : 'Save KPIs'}
-                      aria-label={kpiSaving ? 'Saving KPIs' : 'Save KPIs'}
+                      title={kpiSaving ? t('lit.saving2') : t('lit.saveKpis')}
+                      aria-label={kpiSaving ? t('lit.savingKpis') : t('lit.saveKpis')}
                       className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-[var(--pm-accent)]/50 bg-[var(--pm-accent)]/15 text-[var(--pm-accent-soft)] hover:bg-[var(--pm-accent)]/25 disabled:opacity-50"
                     >
                       <Check size={16} strokeWidth={2} />
@@ -3068,8 +3087,8 @@ function DashboardContent() {
                     <button
                       type="button"
                       onClick={handleCancelKpiEdit}
-                      title="Cancel"
-                      aria-label="Cancel KPI edit"
+                      title={t('common.cancel')}
+                      aria-label={t('lit.cancelKpiEdit')}
                       className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] text-[var(--pm-muted)] hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-text)]"
                     >
                       <X size={16} strokeWidth={2} />
@@ -3079,8 +3098,8 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setKpiEditMode(true)}
-                    title="Edit KPIs"
-                    aria-label="Edit KPIs"
+                    title={t('lit.editKpis')}
+                    aria-label={t('lit.editKpis')}
                     className="inline-flex w-9 shrink-0 items-center justify-center self-stretch rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] text-[var(--pm-muted)] hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-accent-soft)]"
                   >
                     <Pencil size={16} strokeWidth={1.75} />
@@ -3093,10 +3112,10 @@ function DashboardContent() {
 
           <PageTabs
             tabs={[
-              { id: 'overview', label: 'Overview' },
-              ...(!showCalendarInOverview ? [{ id: 'calendar', label: 'Calendar' }] : []),
-              { id: 'kanban', label: 'Kanban' },
-              ...(user?.isAdmin ? [{ id: 'analytics', label: 'Analytics' }] : []),
+              { id: 'overview', label: t('lit.overview') },
+              ...(!showCalendarInOverview ? [{ id: 'calendar', label: t('lit.calendar') }] : []),
+              { id: 'kanban', label: t('lit.kanban') },
+              ...(user?.isAdmin ? [{ id: 'analytics', label: t('lit.analytics') }] : []),
             ]}
             activeId={activeTab}
             onChange={(id) => {
@@ -3152,16 +3171,16 @@ function DashboardContent() {
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="text-2xl">📅</span> Today&apos;s Schedule
+                    <span className="text-2xl">📅</span> {t('lit.todaysSchedule')}
                   </h3>
                   {summaryStats.tasksToday.length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-gray-500 dark:text-gray-400">No tasks scheduled for today</p>
+                      <p className="text-gray-500 dark:text-gray-400">{t('lit.noTasksScheduledForToday')}</p>
                       <button
                         onClick={() => router.push(('/planning'))}
                         className="mt-3 text-blue-600 dark:text-blue-400 hover:underline text-sm"
                       >
-                        Go to Planning →
+                        {t('lit.goToPlanning')}
                       </button>
                     </div>
                   ) : (
@@ -3174,7 +3193,7 @@ function DashboardContent() {
                           <div className="flex items-center gap-4">
                             <div className="flex flex-col items-center text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg">
                               <span className="font-medium">{task.startTime || '—'}</span>
-                              <span className="text-xs">to</span>
+                              <span className="text-xs">{t('lit.to')}</span>
                               <span className="font-medium">{task.endTime || '—'}</span>
                             </div>
                             <div>
@@ -3182,7 +3201,7 @@ function DashboardContent() {
                                 <h4 className="font-medium text-gray-900 dark:text-white">{task.taskName}</h4>
                                 {task.isHobby && (
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                    Hobby
+                                    {t('lit.hobby')}
                                   </span>
                                 )}
                               </div>
@@ -3193,7 +3212,7 @@ function DashboardContent() {
                         </div>
                       ))}
                       <div className="pt-3 border-t dark:border-gray-700 flex justify-between items-center">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Total allocated today</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{t('lit.totalAllocatedToday')}</span>
                         <span className="text-lg font-bold text-gray-900 dark:text-white">{decimalHoursToHMS(summaryStats.allocatedToday)}</span>
                       </div>
                     </div>
@@ -3205,10 +3224,10 @@ function DashboardContent() {
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <span className="text-lg">📋</span> My Pending Tasks
+                      <span className="text-lg">📋</span> {t('lit.myPendingTasks')}
                     </h3>
                     <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      One list for all open tasks, filtered by planning type.
+                      {t('lit.oneListForAllOpenTasksFilteredByPlanningType')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -3220,18 +3239,18 @@ function DashboardContent() {
                       onChange={(event) => setPendingSortBy(event.target.value as TaskSortOption)}
                       className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="dueDate">Sort: Due date</option>
-                      <option value="priority">Sort: Priority</option>
-                      <option value="project">Sort: Project</option>
+                      <option value="dueDate">{t('lit.sortDueDate')}</option>
+                      <option value="priority">{t('lit.sortPriority')}</option>
+                      <option value="project">{t('lit.sortProject')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-thin">
                   {[
-                    { key: 'all' as const, label: 'All', count: pendingTasks.length },
-                    { key: 'scheduled' as const, label: 'Scheduled', count: pendingTasks.length - unscheduledPendingTasks.length },
-                    { key: 'unscheduled' as const, label: 'Unscheduled', count: unscheduledPendingTasks.length },
+                    { key: 'all' as const, label: t('lit.all'), count: pendingTasks.length },
+                    { key: 'scheduled' as const, label: t('lit.scheduled2'), count: pendingTasks.length - unscheduledPendingTasks.length },
+                    { key: 'unscheduled' as const, label: t('lit.unscheduled'), count: unscheduledPendingTasks.length },
                   ].map((option) => {
                     const isActive = pendingWorkFilter === option.key;
 
@@ -3266,10 +3285,10 @@ function DashboardContent() {
                   <div className="text-center py-8">
                     <p className="text-gray-500 dark:text-gray-400">
                       {pendingWorkFilter === 'unscheduled'
-                        ? 'No unscheduled pending tasks.'
+                        ? t('lit.noUnscheduledPendingTasks')
                         : pendingWorkFilter === 'scheduled'
-                          ? 'No scheduled pending tasks.'
-                          : '🎉 No pending tasks! Great job!'}
+                          ? t('lit.noScheduledPendingTasks')
+                          : `🎉 ${t('lit.noPendingTasksGreatJob')}`}
                     </p>
                   </div>
                 ) : (
@@ -3308,7 +3327,7 @@ function DashboardContent() {
                                 }}
                                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                               >
-                                Task Details
+                                {t('lit.taskDetails')}
                               </button>
                               <button
                                 type="button"
@@ -3318,7 +3337,7 @@ function DashboardContent() {
                                 }}
                                 className="text-xs text-gray-600 dark:text-gray-300 hover:underline whitespace-nowrap"
                               >
-                                Go to Project →
+                                {t('lit.goToProject')}
                               </button>
                             </div>
                           </div>
@@ -3326,7 +3345,7 @@ function DashboardContent() {
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
                             {!!task.IsHobby && (
                               <span className="rounded px-1.5 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                Hobby
+                                {t('lit.hobby')}
                               </span>
                             )}
                             <span className={`rounded px-1.5 py-0.5 font-medium ${
@@ -3334,15 +3353,15 @@ function DashboardContent() {
                                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                                 : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
                             }`}>
-                              {isUnscheduled ? 'Unscheduled' : 'Scheduled'}
+                              {isUnscheduled ? t('lit.unscheduled') : t('lit.scheduled2')}
                             </span>
                             {isOverdue && (
                               <span className="rounded px-1.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
-                                Overdue
+                                {t('lit.overdue2')}
                               </span>
                             )}
                             <span className="min-w-0 truncate text-gray-600 dark:text-gray-300">
-                              {task.ProjectName || 'No project'}
+                              {task.ProjectName || t('lit.noProject2')}
                               {(task.CustomerName || task.ProjectCustomerName) && (
                                 <span className="text-blue-500">
                                   {' '}• {task.CustomerName || task.ProjectCustomerName}
@@ -3361,13 +3380,13 @@ function DashboardContent() {
                               className="inline-flex items-center rounded px-1.5 py-0.5 font-medium"
                               style={pillStyle(task.PriorityColor, { alpha: '20' })}
                             >
-                              {task.PriorityName || 'Normal'}
+                              {task.PriorityName || t('lit.normal')}
                             </span>
                             <span
                               className="inline-flex items-center rounded px-1.5 py-0.5 font-medium"
                               style={pillStyle(task.StatusColor, { alpha: '20' })}
                             >
-                              {task.StatusName || 'Unknown'}
+                              {task.StatusName || t('lit.unknown')}
                             </span>
                             {task.DueDate && (
                               <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
@@ -3391,7 +3410,7 @@ function DashboardContent() {
                               }}
                               className="sm:hidden text-gray-600 dark:text-gray-300"
                             >
-                              Project →
+                              {t('lit.project2')}
                             </button>
                           </div>
                         </div>
@@ -3405,7 +3424,7 @@ function DashboardContent() {
                         className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
                       >
                         {showAllPendingTasks
-                          ? 'Show less tasks'
+                          ? t('lit.showLessTasks')
                           : `View all ${sortedPendingTasks.length} tasks →`}
                       </button>
                     </div>
@@ -3420,18 +3439,18 @@ function DashboardContent() {
 
                 <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                   {[
-                    { label: 'Allocated today', value: decimalHoursToHMS(summaryStats.allocatedToday) },
-                    { label: 'Worked this week', value: decimalHoursToHMS(summaryStats.hoursThisWeek) },
-                    { label: 'Worked this month', value: decimalHoursToHMS(summaryStats.hoursThisMonth) },
+                    { label: t('lit.allocatedToday'), value: decimalHoursToHMS(summaryStats.allocatedToday) },
+                    { label: t('lit.workedThisWeek'), value: decimalHoursToHMS(summaryStats.hoursThisWeek) },
+                    { label: t('lit.workedThisMonth'), value: decimalHoursToHMS(summaryStats.hoursThisMonth) },
                     {
-                      label: 'Remaining (work)',
+                      label: t('lit.remainingWork'),
                       value: decimalHoursToHMS(
                         Math.max(0, summaryStats.normalEstimatedHours - summaryStats.normalWorkedHours)
                       ),
                     },
-                    { label: 'My pending', value: String(pendingTasks.length) },
+                    { label: t('lit.myPending'), value: String(pendingTasks.length) },
                     {
-                      label: 'Overdue',
+                      label: t('lit.overdue2'),
                       value: String(summaryStats.overdueTasks),
                       warn: summaryStats.overdueTasks > 0,
                     },
@@ -3461,7 +3480,7 @@ function DashboardContent() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-3">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Overall vs estimate
+                      {t('lit.overallVsEstimate')}
                     </h4>
 
                     <div>
@@ -3495,7 +3514,7 @@ function DashboardContent() {
                           ? `${Math.round(
                               (summaryStats.normalWorkedHours / summaryStats.normalEstimatedHours) * 100
                             )}% of estimated hours`
-                          : 'No estimated hours set'}
+                          : t('lit.noEstimatedHoursSet')}
                         {summaryStats.normalWorkedHours > summaryStats.normalEstimatedHours &&
                           summaryStats.normalEstimatedHours > 0 && (
                             <span className="text-red-500">
@@ -3541,7 +3560,7 @@ function DashboardContent() {
                             ? `${Math.round(
                                 (summaryStats.hobbyWorkedHours / summaryStats.hobbyEstimatedHours) * 100
                               )}% of estimated hours`
-                            : 'No estimated hours set'}
+                            : t('lit.noEstimatedHoursSet')}
                         </p>
                       </div>
                     )}
@@ -3549,7 +3568,7 @@ function DashboardContent() {
 
                   <div className="space-y-3">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      This week vs allocated
+                      {t('lit.thisWeekVsAllocated')}
                     </h4>
 
                     <div>
@@ -3578,7 +3597,7 @@ function DashboardContent() {
                           ? `${Math.round(
                               (summaryStats.normalHoursThisWeek / summaryStats.normalAllocatedThisWeek) * 100
                             )}% of planned allocation`
-                          : 'No work allocation this week'}
+                          : t('lit.noWorkAllocationThisWeek')}
                       </p>
                     </div>
 
@@ -3609,26 +3628,26 @@ function DashboardContent() {
                             ? `${Math.round(
                                 (summaryStats.hobbyHoursThisWeek / summaryStats.hobbyAllocatedThisWeek) * 100
                               )}% of planned allocation`
-                            : 'No hobby allocation this week'}
+                            : t('lit.noHobbyAllocationThisWeek')}
                         </p>
                       </div>
                     )}
 
                     <div className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
                       <div className="flex justify-between gap-2">
-                        <span>Allocated this week (all)</span>
+                        <span>{t('lit.allocatedThisWeekAll')}</span>
                         <span className="font-medium tabular-nums text-gray-900 dark:text-white">
                           {decimalHoursToHMS(summaryStats.allocatedThisWeek)}
                         </span>
                       </div>
                       <div className="mt-1 flex justify-between gap-2">
-                        <span>Unscheduled pending</span>
+                        <span>{t('lit.unscheduledPending')}</span>
                         <span className="font-medium tabular-nums text-gray-900 dark:text-white">
                           {unscheduledPendingTasks.length}
                         </span>
                       </div>
                       <div className="mt-1 flex justify-between gap-2">
-                        <span>My tasks (open)</span>
+                        <span>{t('lit.myTasksOpen')}</span>
                         <span className="font-medium tabular-nums text-gray-900 dark:text-white">
                           {summaryStats.myTasks}
                         </span>
@@ -3689,21 +3708,21 @@ function DashboardContent() {
               {/* Compact filter bar — Synapse chrome (no purple banner) */}
               <div className="flex flex-col gap-2 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-[var(--pm-text)]">Analytics</h2>
+                  <h2 className="text-sm font-semibold text-[var(--pm-text)]">{t('lit.analytics')}</h2>
                   <p className="truncate text-xs text-[var(--pm-muted)]">
                     {selectedAnalyticsRange
                       ? `${selectedAnalyticsRange.from} → ${selectedAnalyticsRange.to}`
-                      : 'All time'}
-                    <span className="text-[var(--pm-muted)]/80"> · global KPIs</span>
+                      : t('lit.allTime2')}
+                    <span className="text-[var(--pm-muted)]/80"> · {t('lit.globalKpis')}</span>
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {([
-                    { key: 'thisWeek', label: 'This Week' },
-                    { key: 'lastWeek', label: 'Last Week' },
-                    { key: 'thisMonth', label: 'This Month' },
-                    { key: 'lastMonth', label: 'Last Month' },
-                    { key: 'allTime', label: 'All Time' },
+                    { key: 'thisWeek', label: t('lit.thisWeek') },
+                    { key: 'lastWeek', label: t('lit.lastWeek') },
+                    { key: 'thisMonth', label: t('lit.thisMonth') },
+                    { key: 'lastMonth', label: t('lit.lastMonth') },
+                    { key: 'allTime', label: t('lit.allTime') },
                   ] as { key: AnalyticsPeriod; label: string }[]).map((period) => (
                     <button
                       key={period.key}
@@ -3721,8 +3740,8 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => loadGlobalStats(analyticsPeriod)}
-                    title="Refresh"
-                    aria-label="Refresh analytics"
+                    title={t('common.refresh')}
+                    aria-label={t('lit.refreshAnalytics')}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] text-[var(--pm-muted)] hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-text)]"
                   >
                     <RefreshCw size={14} strokeWidth={2} />
@@ -3745,22 +3764,22 @@ function DashboardContent() {
                 </div>
               ) : !globalStats ? (
                 <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-                  <p className="text-gray-500 dark:text-gray-400">Loading analytics data...</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('lit.loadingAnalyticsData')}</p>
                 </div>
               ) : (
                 <>
                   {/* Main KPIs Grid */}
                   <div className={`grid grid-cols-2 md:grid-cols-4 ${internalTicketsEnabled ? 'lg:grid-cols-8' : 'lg:grid-cols-7'} gap-4`}>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-indigo-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Organizations</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('nav.organizations')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.organizations.total}</p>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-teal-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Customers</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('nav.customers')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.customers.total}</p>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-cyan-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Users</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('nav.users')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.users.total}</p>
                       <div className="flex gap-2 mt-1 text-xs">
                         <span className="text-purple-500">{globalStats.users.admins} admin</span>
@@ -3769,7 +3788,7 @@ function DashboardContent() {
                       </div>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-blue-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projects</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('nav.projects')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.projects.total}</p>
                       <div className="flex gap-2 mt-1 text-xs">
                         <span className="text-green-500">{globalStats.projects.active} active</span>
@@ -3778,7 +3797,7 @@ function DashboardContent() {
                       </div>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-green-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tasks</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('common.tasks')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.tasks.total}</p>
                       <div className="flex gap-2 mt-1 text-xs">
                         <span className="text-green-500">{globalStats.tasks.completed} done</span>
@@ -3788,7 +3807,7 @@ function DashboardContent() {
                     </div>
                     {internalTicketsEnabled && (
                       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-indigo-500">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tickets</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('nav.tickets')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{globalStats.tickets?.total || 0}</p>
                         <div className="flex gap-2 mt-1 text-xs">
                           <span className="text-green-500">{globalStats.tickets?.resolved || 0} resolved</span>
@@ -3798,14 +3817,14 @@ function DashboardContent() {
                       </div>
                     )}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-red-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Overdue</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('lit.overdue2')}</p>
                       <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{globalStats.tasks.overdue}</p>
-                      <p className="text-xs text-red-500 mt-1">tasks past due date</p>
+                      <p className="text-xs text-red-500 mt-1">{t('lit.tasksPastDueDate')}</p>
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-orange-500">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unplanned</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('lit.unplanned')}</p>
                       <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">{globalStats.tasks.unplanned}</p>
-                      <p className="text-xs text-orange-500 mt-1">tasks not allocated</p>
+                      <p className="text-xs text-orange-500 mt-1">{t('lit.tasksNotAllocated')}</p>
                     </div>
                   </div>
 
@@ -3818,23 +3837,23 @@ function DashboardContent() {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎫 Tickets Overview</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
-                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">Open</p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">{t('common.open')}</p>
                           <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">{globalStats.tickets?.open || 0}</p>
                         </div>
                         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
-                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium uppercase tracking-wide">In Progress</p>
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium uppercase tracking-wide">{t('lit.inProgress3')}</p>
                           <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mt-1">{globalStats.tickets?.inProgress || 0}</p>
                         </div>
                         <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
-                          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">Waiting Response</p>
+                          <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">{t('lit.waitingResponse')}</p>
                           <p className="text-2xl font-bold text-orange-900 dark:text-orange-100 mt-1">{globalStats.tickets?.waitingResponse || 0}</p>
                         </div>
                         <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">Resolved</p>
+                          <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">{t('lit.resolved2')}</p>
                           <p className="text-2xl font-bold text-green-900 dark:text-green-100 mt-1">{globalStats.tickets?.resolved || 0}</p>
                         </div>
                         <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide">Closed</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide">{t('lit.closed')}</p>
                           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{globalStats.tickets?.closed || 0}</p>
                         </div>
                       </div>
@@ -3846,21 +3865,21 @@ function DashboardContent() {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">⏱️ Hours Overview</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wide">Total Estimated</p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium uppercase tracking-wide">{t('lit.totalEstimated2')}</p>
                         <div className="flex items-baseline gap-2 mt-2">
                           <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{decimalHoursToHMS(globalStats.hours.totalEstimated)}</p>
                           <p className="text-sm text-purple-700 dark:text-purple-300">+ {decimalHoursToHMS(globalStats.hours.totalEstimatedHobby)} hobby</p>
                         </div>
                       </div>
                       <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                        <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">Total Worked</p>
+                        <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">{t('lit.totalWorked')}</p>
                         <div className="flex items-baseline gap-2 mt-2">
                           <p className="text-3xl font-bold text-green-900 dark:text-green-100">{decimalHoursToHMS(globalStats.hours.totalWorked)}</p>
                           <p className="text-sm text-green-700 dark:text-green-300">+ {decimalHoursToHMS(globalStats.hours.totalWorkedHobby)} hobby</p>
                         </div>
                       </div>
                       <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">This Week</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">{t('lit.thisWeek')}</p>
                         <div className="flex items-baseline gap-2 mt-2">
                           <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{decimalHoursToHMS(globalStats.hours.thisWeek)}</p>
                           <p className="text-sm text-blue-700 dark:text-blue-300">+ {decimalHoursToHMS(globalStats.hours.thisWeekHobby)} hobby</p>
@@ -3878,7 +3897,7 @@ function DashboardContent() {
                     {/* Progress Bar */}
                     <div className="mt-6 pt-4 border-t dark:border-gray-700">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Global Progress</span>
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('lit.globalProgress')}</span>
                         <div className="text-right">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {decimalHoursToHMS(globalStats.hours.totalWorked)} / {decimalHoursToHMS(globalStats.hours.totalEstimated)}
@@ -3937,10 +3956,10 @@ function DashboardContent() {
                     {/* Top Projects */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <span>🏆</span> Top Projects {getPeriodLabel(analyticsPeriod)}
+                        <span>🏆</span> {t('lit.topProjectsPeriod', { period: getPeriodLabel(analyticsPeriod) })}
                       </h3>
                       {globalStats.topProjects.length === 0 ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hours logged in selected period</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noHoursLoggedInSelectedPeriod')}</p>
                       ) : (
                         <div className="space-y-4">
                           {globalStats.topProjects.map((project, idx) => (
@@ -3969,10 +3988,10 @@ function DashboardContent() {
                     {/* Top Contributors */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                        <span>👥</span> Top Contributors {getPeriodLabel(analyticsPeriod)}
+                        <span>👥</span> {t('lit.topContributorsPeriod', { period: getPeriodLabel(analyticsPeriod) })}
                       </h3>
                       {globalStats.topUsers.length === 0 ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hours logged in selected period</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noHoursLoggedInSelectedPeriod')}</p>
                       ) : (
                         <div className="space-y-4">
                           {globalStats.topUsers.map((u, idx) => (
@@ -4002,11 +4021,11 @@ function DashboardContent() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <p className="text-3xl font-bold text-gray-900 dark:text-white">{globalStats.tasks.total}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Total Tasks</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.totalTasks')}</p>
                       </div>
                       <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                         <p className="text-3xl font-bold text-green-600 dark:text-green-400">{globalStats.tasks.completed}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Completed</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.completed')}</p>
                         {globalStats.tasks.total > 0 && (
                           <p className="text-xs text-green-500 mt-1">
                             {Math.round((globalStats.tasks.completed / globalStats.tasks.total) * 100)}%
@@ -4015,7 +4034,7 @@ function DashboardContent() {
                       </div>
                       <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{globalStats.tasks.inProgress}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">In Progress</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.inProgress3')}</p>
                         {globalStats.tasks.total > 0 && (
                           <p className="text-xs text-blue-500 mt-1">
                             {Math.round((globalStats.tasks.inProgress / globalStats.tasks.total) * 100)}%
@@ -4024,7 +4043,7 @@ function DashboardContent() {
                       </div>
                       <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                         <p className="text-3xl font-bold text-red-600 dark:text-red-400">{globalStats.tasks.overdue}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overdue</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.overdue2')}</p>
                         {globalStats.tasks.total > 0 && (
                           <p className="text-xs text-red-500 mt-1">
                             {Math.round((globalStats.tasks.overdue / globalStats.tasks.total) * 100)}%
@@ -4033,7 +4052,7 @@ function DashboardContent() {
                       </div>
                       <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                         <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{globalStats.tasks.unplanned}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Unplanned</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.unplanned')}</p>
                         {globalStats.tasks.total > 0 && (
                           <p className="text-xs text-orange-500 mt-1">
                             {Math.round((globalStats.tasks.unplanned / globalStats.tasks.total) * 100)}%
@@ -4045,27 +4064,27 @@ function DashboardContent() {
 
                   {/* Executive Summary Cards */}
                   <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/30 dark:to-slate-800/30 rounded-lg shadow p-6 border border-slate-200 dark:border-slate-700">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400 mb-4">Executive Summary</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400 mb-4">{t('lit.executiveSummary')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="text-center">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">Active Projects</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">{t('lit.activeProjects')}</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{globalStats.projects.active}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">of {globalStats.projects.total} total</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">Active Users</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">{t('lit.activeUsers')}</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{globalStats.users.total}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{Math.round((globalStats.users.total - globalStats.users.admins) / Math.max(globalStats.users.total, 1) * 100)}% team members</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">Completion</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">{t('lit.completion')}</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">
                           {globalStats.tasks.total > 0 ? Math.round((globalStats.tasks.completed / globalStats.tasks.total) * 100) : 0}%
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{globalStats.tasks.completed}/{globalStats.tasks.total} tasks</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">Estimated Capacity</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-medium mb-2">{t('lit.estimatedCapacity')}</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{decimalHoursToHMS(globalStats.hours.totalEstimated)}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{decimalHoursToHMS(globalStats.hours.totalWorked)} completed</p>
                       </div>
@@ -4076,11 +4095,11 @@ function DashboardContent() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Execution Performance */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">Execution Performance</h3>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">{t('lit.executionPerformance')}</h3>
                       <div className="space-y-4">
                         <div>
                           <div className="flex items-baseline justify-between mb-2">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Task Completion Rate</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.taskCompletionRate')}</span>
                             <span className="text-lg font-bold text-gray-900 dark:text-white">
                               {globalStats.tasks.total > 0 ? Math.round((globalStats.tasks.completed / globalStats.tasks.total) * 100) : 0}%
                             </span>
@@ -4097,7 +4116,7 @@ function DashboardContent() {
 
                         <div>
                           <div className="flex items-baseline justify-between mb-2">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Effort Velocity</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.effortVelocity')}</span>
                             <span className="text-lg font-bold text-gray-900 dark:text-white">
                               {(globalStats.hours.totalWorked / Math.max(globalStats.hours.totalEstimated, 1) * 100).toFixed(0)}%
                             </span>
@@ -4123,13 +4142,13 @@ function DashboardContent() {
 
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Tasks In Progress</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{t('lit.tasksInProgress')}</span>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                               {globalStats.tasks.inProgress}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Completed This Period</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{t('lit.completedThisPeriod')}</span>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">
                               {globalStats.tasks.completed}
                             </span>
@@ -4140,14 +4159,14 @@ function DashboardContent() {
 
                     {/* Risk & Capacity Assessment */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">Risk & Capacity</h3>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">{t('lit.riskCapacity')}</h3>
                       <div className="space-y-4">
                         {globalStats.tasks.overdue > 0 && (
                           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                             <div className="flex items-start gap-3">
                               <div className="text-2xl">⚠️</div>
                               <div className="flex-1">
-                                <p className="text-sm font-semibold text-red-900 dark:text-red-300">Overdue Risk</p>
+                                <p className="text-sm font-semibold text-red-900 dark:text-red-300">{t('lit.overdueRisk')}</p>
                                 <p className="text-2xl font-bold text-red-700 dark:text-red-400 mt-1">{globalStats.tasks.overdue}</p>
                                 <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                                   {((globalStats.tasks.overdue / Math.max(globalStats.tasks.total, 1)) * 100).toFixed(0)}% of active tasks
@@ -4162,7 +4181,7 @@ function DashboardContent() {
                             <div className="flex items-start gap-3">
                               <div className="text-2xl">📋</div>
                               <div className="flex-1">
-                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">Allocation Gap</p>
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">{t('lit.allocationGap')}</p>
                                 <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{globalStats.tasks.unplanned}</p>
                                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                                   {((globalStats.tasks.unplanned / Math.max(globalStats.tasks.total, 1)) * 100).toFixed(0)}% need planning
@@ -4177,9 +4196,9 @@ function DashboardContent() {
                             <div className="flex items-start gap-3">
                               <div className="text-2xl">✅</div>
                               <div className="flex-1">
-                                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">Status: Healthy</p>
+                                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">{t('lit.statusHealthy')}</p>
                                 <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-                                  No overdue tasks or allocation gaps detected
+                                  {t('lit.noOverdueTasksOrAllocationGapsDetected')}
                                 </p>
                               </div>
                             </div>
@@ -4187,14 +4206,14 @@ function DashboardContent() {
                         )}
 
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">Team Capacity</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t('lit.teamCapacity')}</p>
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Avg</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{t('lit.weeklyAvg')}</span>
                               <span className="font-semibold text-gray-900 dark:text-white">{decimalHoursToHMS(globalStats.hours.thisWeek / 7)}/day</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">{getPeriodLabel(analyticsPeriod)} Total</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{t('lit.periodTotal', { period: getPeriodLabel(analyticsPeriod) })}</span>
                               <span className="font-semibold text-gray-900 dark:text-white">{decimalHoursToHMS(globalStats.hours.thisMonth)}</span>
                             </div>
                           </div>
@@ -4205,13 +4224,13 @@ function DashboardContent() {
 
                   {/* Resource Distribution & Utilization */}
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">Project & Resource Focus</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-4">{t('lit.projectResourceFocus')}</h3>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Top Projects Contribution */}
                       <div>
-                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">Hours by Project</p>
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">{t('lit.hoursByProject')}</p>
                         {globalStats.topProjects.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hours logged in period</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noHoursLoggedInPeriod')}</p>
                         ) : (
                           <div className="space-y-3">
                             {globalStats.topProjects.map((project, idx) => (
@@ -4247,9 +4266,9 @@ function DashboardContent() {
 
                       {/* Top Contributors Distribution */}
                       <div>
-                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">Team Effort</p>
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">{t('lit.teamEffort')}</p>
                         {globalStats.topUsers.length === 0 ? (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hours logged</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noHoursLogged')}</p>
                         ) : (
                           <div className="space-y-3">
                             {globalStats.topUsers.map((user, idx) => (
@@ -4284,22 +4303,22 @@ function DashboardContent() {
 
                   {/* Period Summary */}
                   <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/10 dark:to-blue-900/10 rounded-lg shadow p-6 border border-indigo-200 dark:border-indigo-800">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-900 dark:text-indigo-300 mb-4">Period Summary {getPeriodLabel(analyticsPeriod)}</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-indigo-900 dark:text-indigo-300 mb-4">{t('lit.periodSummaryPeriod', { period: getPeriodLabel(analyticsPeriod) })}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Tasks Completed</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">{t('lit.tasksCompleted2')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{globalStats.tasks.completed}</p>
                       </div>
                       <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Hours Worked</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">{t('lit.hoursWorked')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{decimalHoursToHMS(globalStats.hours.thisMonth)}</p>
                       </div>
                       <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Active Projects</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">{t('lit.activeProjects')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{globalStats.projects.active}</p>
                       </div>
                       <div className="p-3 bg-white dark:bg-gray-800 rounded-lg">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">Team Members</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">{t('lit.teamMembers2')}</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">{globalStats.users.total}</p>
                       </div>
                     </div>
@@ -4319,7 +4338,7 @@ function DashboardContent() {
         message={modalMessage?.message || ''}
         onClose={closeModal}
         onConfirm={handleModalConfirm}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
 
@@ -4376,7 +4395,7 @@ function DashboardContent() {
                 </div>
               ) : kpiDetailModal.items.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  No items found for this KPI.
+                  {t('lit.noItemsFoundForThisKpi')}
                 </div>
               ) : kpiDetailModal.type === 'reportRows' ? (
                 <div className="overflow-x-auto">
@@ -4491,7 +4510,7 @@ function DashboardContent() {
                 onClick={closeKpiDetailModal}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>

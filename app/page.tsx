@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { getApiUrl } from '@/lib/api/config';
 
@@ -18,6 +19,7 @@ function isLegacyStockFrontpage(html: string): boolean {
 }
 
 export default function Home() {
+  const { t } = useI18n();
   const router = useRouter();
   const [stats, setStats] = useState({
     users: 0,
@@ -126,7 +128,7 @@ export default function Home() {
   if (isCheckingInstall || isLoadingFrontpage) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
-        <div className="text-sm text-[var(--pm-muted)]">Loading…</div>
+        <div className="text-sm text-[var(--pm-muted)]">{t('common.loading')}</div>
       </div>
     );
   }
@@ -141,27 +143,27 @@ export default function Home() {
 
   const features = [
     {
-      title: 'Full Data Ownership',
+      title: t('lit.fullDataOwnership'),
       body: 'Your data stays on your servers. No third-party access, complete privacy and control.',
     },
     {
-      title: 'Enterprise Security',
+      title: t('lit.enterpriseSecurity'),
       body: 'JWT authentication, role-based permissions, and encrypted data storage.',
     },
     {
-      title: 'Fully Customizable',
+      title: t('lit.fullyCustomizable'),
       body: 'Custom statuses, workflows, and permissions tailored to your organization.',
     },
     {
-      title: 'Advanced Planning',
+      title: t('lit.advancedPlanning'),
       body: 'Gantt charts, resource allocation, and capacity planning tools.',
     },
     {
-      title: 'Time Tracking',
+      title: t('lit.timeTracking'),
       body: 'Comprehensive time tracking with daily and weekly timesheets.',
     },
     {
-      title: 'Multi-Tenant Support',
+      title: t('lit.multiTenantSupport'),
       body: 'Manage multiple organizations with isolated data and custom permissions.',
     },
   ];
@@ -189,14 +191,14 @@ export default function Home() {
               href="/login"
               className="rounded-lg px-3 py-1.5 text-sm text-[var(--pm-muted)] transition-colors hover:text-[var(--pm-text)]"
             >
-              Login
+              {t('lit.login')}
             </Link>
             {allowPublicRegistration && (
               <Link
                 href="/register"
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
-                {registrationType === 'customer' ? 'Create Account' : 'Get Started'}
+                {registrationType === 'customer' ? t('lit.createAccount') : t('lit.getStarted')}
               </Link>
             )}
           </div>
@@ -207,13 +209,13 @@ export default function Home() {
         <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pb-20 sm:pt-20">
           <div className="max-w-3xl">
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-              Self-hosted · Open source · Full control
+              {t('lit.selfHostedOpenSourceFullControl')}
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-[var(--pm-text)] sm:text-5xl">
               {brand}
             </h1>
             <p className="mt-2 text-xl text-[var(--pm-muted)] sm:text-2xl">
-              Your projects, your infrastructure.
+              {t('lit.yourProjectsYourInfrastructure')}
             </p>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--pm-muted)] sm:text-base">
               Myelin — a self-hosted project and delivery platform. Deploy on your own servers, keep full control
@@ -225,14 +227,14 @@ export default function Home() {
                 href="/login"
                 className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
-                Access Dashboard
+                {t('lit.accessDashboard')}
               </Link>
               {allowPublicRegistration && (
                 <Link
                   href="/register"
                   className="inline-flex h-10 items-center rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] px-4 text-sm font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)]"
                 >
-                  {registrationType === 'customer' ? 'Create Account' : 'Get Started'}
+                  {registrationType === 'customer' ? t('lit.createAccount') : t('lit.getStarted')}
                 </Link>
               )}
             </div>
@@ -240,15 +242,15 @@ export default function Home() {
             {hasStats && (
               <div className="mt-10 grid max-w-xl grid-cols-3 gap-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-3">
                 <div>
-                  <p className="text-[11px] text-[var(--pm-muted)]">Users</p>
+                  <p className="text-[11px] text-[var(--pm-muted)]">{t('nav.users')}</p>
                   <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.users}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-[var(--pm-muted)]">Projects</p>
+                  <p className="text-[11px] text-[var(--pm-muted)]">{t('common.projects')}</p>
                   <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.projects}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-[var(--pm-muted)]">Tasks</p>
+                  <p className="text-[11px] text-[var(--pm-muted)]">{t('common.tasks')}</p>
                   <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.tasks}</p>
                 </div>
               </div>
@@ -260,9 +262,9 @@ export default function Home() {
       <section className="border-t border-[var(--pm-border)] bg-[var(--pm-surface)] py-14">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="mb-8 max-w-2xl">
-            <h2 className="text-2xl font-semibold text-[var(--pm-text)]">Built for self-hosting</h2>
+            <h2 className="text-2xl font-semibold text-[var(--pm-text)]">{t('lit.builtForSelfHosting')}</h2>
             <p className="mt-2 text-sm text-[var(--pm-muted)]">
-              Deploy on your infrastructure and keep complete control over project data.
+              {t('lit.deployOnYourInfrastructureAndKeepCompleteControlOverProjectData')}
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -288,14 +290,14 @@ export default function Home() {
               </div>
               <span className="text-sm font-semibold text-[var(--pm-text)]">{brand}</span>
             </div>
-            <p className="text-xs text-[var(--pm-muted)]">Self-hosted delivery platform · Myelin</p>
+            <p className="text-xs text-[var(--pm-muted)]">{t('lit.selfHostedDeliveryPlatformMyelin')}</p>
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
-              Getting started
+              {t('lit.gettingStarted')}
             </p>
             <Link href="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              Access your instance
+              {t('lit.accessYourInstance')}
             </Link>
           </div>
         </div>

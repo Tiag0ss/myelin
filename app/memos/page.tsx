@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { useAuth } from '@/contexts/AuthContext';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -15,6 +16,19 @@ import ScrollToTopButton from '@/components/ScrollToTopButton';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import { Pin, PinOff } from 'lucide-react';
+
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return readLocaleStorage() ?? 'en';
+}
+
+/** Path translate without hook — for nested helpers/components that cannot call useI18n. */
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
 
 const MEMO_CALENDAR_LOCALE = 'en-US';
 const MEMO_CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -63,6 +77,8 @@ function mergeMemosListFilters(
 }
 
 export default function MemosPage() {
+  const { t } = useI18n();
+
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <MemosPageContent />
@@ -130,7 +146,7 @@ function MemosPageContent() {
       const data = await getMemos(token);
       setMemos(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load memos');
+      setError(err.message || t('lit.failedToLoadMemos'));
     } finally {
       setIsLoadingData(false);
     }
@@ -202,7 +218,7 @@ function MemosPageContent() {
 
   const handleSaveMemo = async () => {
     if (!token || !memoForm.title.trim()) {
-      setError('Title is required');
+      setError(t('lit.titleIsRequired'));
       return;
     }
 
@@ -220,15 +236,15 @@ function MemosPageContent() {
       setShowMemoModal(false);
       loadMemos();
     } catch (err: any) {
-      setError(err.message || 'Failed to save memo');
+      setError(err.message || t('lit.failedToSaveMemo'));
     }
   };
 
   const handleDeleteMemo = (id: number) => {
     setConfirmModal({
       show: true,
-      title: 'Delete Memo',
-      message: 'Are you sure you want to delete this memo? This action cannot be undone.',
+      title: t('lit.deleteMemo'),
+      message: t('lit.areYouSureYouWantToDeleteThisMemoThisActionCannotBeUndone'),
       onConfirm: async () => {
         setConfirmModal(null);
         if (!token) return;
@@ -236,7 +252,7 @@ function MemosPageContent() {
           await deleteMemo(id, token);
           loadMemos();
         } catch (err: any) {
-          setError(err.message || 'Failed to delete memo');
+          setError(err.message || t('lit.failedToDeleteMemo'));
         }
       },
     });
@@ -303,6 +319,7 @@ function MemosPageContent() {
   };
 
   const handleClearAllFilters = () => {
+  const { t } = useI18n();
     setEnableDateFilter(false);
     resetListFilters();
   };
@@ -387,13 +404,13 @@ function MemosPageContent() {
       <div className="w-full mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Memos</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('pages.memos.title')}</h1>
           <button
             onClick={handleCreateMemo}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2 shrink-0"
           >
             <span>+</span>
-            <span>New Memo</span>
+            <span>{t('pages.memos.newMemo')}</span>
           </button>
         </div>
 
@@ -502,19 +519,19 @@ function MemosPageContent() {
 
               {/* Visibility Filter */}
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Search</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('common.search')}</h3>
                 <input
                   type="text"
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
-                  placeholder="Search title, content, tags..."
+                  placeholder={t('lit.searchTitleContentTags')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Visibility Filter */}
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Visibility</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('lit.visibility')}</h3>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setFilterVisibility('all')}
@@ -561,7 +578,7 @@ function MemosPageContent() {
 
               {/* Tags Filter */}
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tags</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('lit.tags')}</h3>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setFilterTag(null)}
@@ -571,7 +588,7 @@ function MemosPageContent() {
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    All
+                    {t('common.all')}
                   </button>
                   {allTags.map(tag => (
                     <button
@@ -590,7 +607,7 @@ function MemosPageContent() {
               </div>
               {/* Filter Actions */}
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Actions</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('common.actions')}</h3>
                 <div className="flex flex-col gap-2">
                   {enableDateFilter && (
                     <button
@@ -622,8 +639,8 @@ function MemosPageContent() {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {enableDateFilter
-                    ? `No memos for ${selectedDate.toLocaleDateString(MEMO_CALENDAR_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })}`
-                    : 'No memos found with the current filters'
+                    ? `${t('pages.memos.noMemos')} (${selectedDate.toLocaleDateString(MEMO_CALENDAR_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })})`
+                    : t('pages.memos.noMemos')
                   }
                 </p>
                 {enableDateFilter && (
@@ -631,7 +648,7 @@ function MemosPageContent() {
                     onClick={handleClearDateFilter}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
                   >
-                    Show All Memos
+                    {t('lit.showAllMemos')}
                   </button>
                 )}
               </div>
@@ -652,7 +669,7 @@ function MemosPageContent() {
                               size={14}
                               strokeWidth={2}
                               className="shrink-0 fill-[var(--pm-accent)] text-[var(--pm-accent)]"
-                              aria-label="Pinned"
+                              aria-label={t('nav.pinned')}
                             />
                           )}
                           <span className="truncate">{memo.Title}</span>
@@ -693,8 +710,8 @@ function MemosPageContent() {
                         <button
                           type="button"
                           onClick={() => togglePinned(memo.Id)}
-                          title={isPinned(memo.Id) ? 'Unpin memo' : 'Pin memo to top'}
-                          aria-label={isPinned(memo.Id) ? 'Unpin memo' : 'Pin memo to top'}
+                          title={isPinned(memo.Id) ? t('lit.unpinMemo') : t('lit.pinMemoToTop')}
+                          aria-label={isPinned(memo.Id) ? t('lit.unpinMemo') : t('lit.pinMemoToTop')}
                           className={`rounded p-2 transition-colors ${
                             isPinned(memo.Id)
                               ? 'text-[var(--pm-accent)] hover:bg-[var(--pm-accent)]/10'
@@ -765,7 +782,7 @@ function MemosPageContent() {
                     {/* Related Memos */}
                     {memo.RelatedMemos && memo.RelatedMemos.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Related memos</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.relatedMemos')}</p>
                         <div className="flex flex-wrap gap-2">
                           {memo.RelatedMemos.map((relatedMemo) => (
                             <button
@@ -795,7 +812,7 @@ function MemosPageContent() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {selectedMemo ? 'Edit Memo' : 'New Memo'}
+                  {selectedMemo ? t('lit.editMemo') : t('lit.newMemo')}
                 </h2>
                 <button
                   onClick={() => setShowMemoModal(false)}
@@ -811,13 +828,13 @@ function MemosPageContent() {
                 {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Title <span className="text-red-500">*</span>
+                    {t('lit.title')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={memoForm.title}
                     onChange={(e) => setMemoForm(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Enter memo title"
+                    placeholder={t('lit.enterMemoTitle')}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -825,7 +842,7 @@ function MemosPageContent() {
                 {/* Visibility */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Visibility
+                    {t('lit.visibility')}
                   </label>
                   <select
                     value={memoForm.visibility}
@@ -841,19 +858,19 @@ function MemosPageContent() {
                 {/* Content */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Content
+                    {t('lit.content')}
                   </label>
                   <RichTextEditor
                     content={memoForm.content}
                     onChange={(html) => setMemoForm(prev => ({ ...prev, content: html }))}
-                    placeholder="Enter memo content..."
+                    placeholder={t('lit.enterMemoContent')}
                   />
                 </div>
 
                 {/* Tags */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Tags
+                    {t('lit.tags')}
                   </label>
                   <div className="space-y-3">
                     <SearchableMultiSelect
@@ -869,14 +886,14 @@ function MemosPageContent() {
                         setMemoForm(prev => ({ ...prev, tags: normalized }));
                       }}
                       options={memoTagOptions}
-                      placeholder="Select existing tags"
+                      placeholder={t('lit.selectExistingTags')}
                       allowCreate
-                      createLabel="Add tag"
+                      createLabel={t('lit.addTag')}
                       onCreateOption={addTag}
                     />
                   </div>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Select existing tags, or type in the search box to add a new one.
+                    {t('lit.selectExistingTagsOrTypeInTheSearchBoxToAddANewOne')}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {memoForm.tags.map((tag, idx) => (
@@ -899,7 +916,7 @@ function MemosPageContent() {
                 {/* Related Memos */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Related Memos
+                    {t('lit.relatedMemos2')}
                   </label>
                   <div className="space-y-3">
                     <SearchableMultiSelect
@@ -915,11 +932,11 @@ function MemosPageContent() {
                         setMemoForm(prev => ({ ...prev, relatedMemoIds }));
                       }}
                       options={relatedMemoOptions}
-                      placeholder="Select related memos"
+                      placeholder={t('lit.selectRelatedMemos')}
                     />
                   </div>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Linked memos will appear below this memo and can be clicked to open.
+                    {t('lit.linkedMemosWillAppearBelowThisMemoAndCanBeClickedToOpen')}
                   </p>
                 </div>
               </div>
@@ -930,14 +947,14 @@ function MemosPageContent() {
                   onClick={() => setShowMemoModal(false)}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveMemo}
                   disabled={!memoForm.title.trim()}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
                 >
-                  {selectedMemo ? 'Update' : 'Create'}
+                  {selectedMemo ? t('lit.update') : t('lit.create')}
                 </button>
               </div>
             </div>
@@ -957,13 +974,13 @@ function MemosPageContent() {
                 onClick={() => setConfirmModal(null)}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmModal.onConfirm}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

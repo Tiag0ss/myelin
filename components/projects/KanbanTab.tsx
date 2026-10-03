@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Task } from '@/lib/api/tasks';
@@ -17,7 +18,7 @@ import {
 import { useColorVision } from '@/hooks/useColorVision';
 
 export function KanbanTab({
-  tasks,
+tasks,
   project,
   onTaskUpdated,
   onError,
@@ -37,6 +38,8 @@ export function KanbanTab({
   canCreate: boolean;
   canManage: boolean;
 }) {
+  const { t } = useI18n();
+
   const { pillStyle, borderLeftStyle } = useColorVision();
   const [taskStatuses, setTaskStatuses] = useState<StatusValue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,7 +163,7 @@ export function KanbanTab({
       if (srcTask.Status !== newStatus) onTaskUpdated();
     } catch (err: any) {
       setLocalTasks(prev); // rollback
-      onError(err?.message || 'Failed to reorder tasks');
+      onError(err?.message || t('lit.failedToReorderTasks'));
     }
   };
 
@@ -191,7 +194,7 @@ export function KanbanTab({
       onTaskUpdated();
     } catch (err: any) {
       setLocalTasks(prev);
-      onError(err?.message || 'Failed to move task');
+      onError(err?.message || t('lit.failedToMoveTask'));
     }
   };
 
@@ -200,7 +203,7 @@ export function KanbanTab({
   };
 
   if (isLoading) {
-    return <div className="text-center py-12">Loading Kanban board...</div>;
+    return <div className="text-center py-12">{t('common.loading')}</div>;
   }
 
   const allStatuses =
@@ -218,7 +221,7 @@ export function KanbanTab({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div ref={statusPickerRef} className="relative min-w-[160px]">
           <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            Statuses
+            {t('lit.statuses')}
           </span>
           <button
             type="button"
@@ -227,16 +230,16 @@ export function KanbanTab({
             aria-expanded={statusPickerOpen}
             aria-haspopup="dialog"
           >
-            {hiddenCount === 0 ? 'All statuses' : `${statuses.length}/${allStatuses.length} visible`}
+            {hiddenCount === 0 ? t('lit.allStatuses') : `${statuses.length}/${allStatuses.length} visible`}
           </button>
           {statusPickerOpen && (
             <div
               role="dialog"
-              aria-label="Kanban status visibility"
+              aria-label={t('lit.kanbanStatusVisibility')}
               className="absolute z-30 mt-1 w-72 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-2"
             >
               <p className="px-1 pb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                Choose which status columns to show
+                {t('lit.chooseWhichStatusColumnsToShow')}
               </p>
               {allStatuses.map((status) => {
                 const visible = !hiddenIds.includes(Number(status.Id));
@@ -269,14 +272,14 @@ export function KanbanTab({
             className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center gap-2"
           >
             <span className="text-base leading-none">+</span>
-            New Task
+            {t('lit.newTask')}
           </button>
         )}
       </div>
 
       {statuses.length === 0 ? (
         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-8 text-sm text-gray-500 dark:text-gray-400">
-          No status columns visible. Use Statuses to show at least one column.
+          {t('lit.noStatusColumnsVisibleUseStatusesToShowAtLeastOneColumn')}
         </div>
       ) : (
       <div className="w-full overflow-x-auto flex-1 min-h-0">
@@ -328,7 +331,7 @@ export function KanbanTab({
                       <div className="mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                           <span>↳</span>
-                          <span className="font-medium">Subtask of:</span>
+                          <span className="font-medium">{t('lit.subtaskOf')}</span>
                           <span className="text-blue-600 dark:text-blue-400 truncate">{parentTask.TaskName}</span>
                         </div>
                       </div>
@@ -357,7 +360,7 @@ export function KanbanTab({
                       <span className="px-2 py-1 rounded"
                         style={pillStyle(task.PriorityColor, { alpha: '20' })}
                       >
-                        {task.PriorityName || 'No Priority'}
+                        {task.PriorityName || t('lit.noPriority')}
                       </span>
                       
                       {task.EstimatedHours && (

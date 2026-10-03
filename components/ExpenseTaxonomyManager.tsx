@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import {
@@ -18,6 +20,8 @@ interface Props {
 }
 
 export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Props) {
+  const { t } = useI18n();
+
   const [groups, setGroups] = useState<ExpenseCategoryGroup[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +56,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
       setGroups(g);
       setCategories(c);
     } catch (err: any) {
-      setError(err.message || 'Failed to load expense taxonomy');
+      setError(err.message || t('lit.failedToLoadExpenseTaxonomy'));
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +115,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setDialog({ type: 'alert', title: 'Validation', message: 'Name is required' });
+      setDialog({ type: 'alert', title: t('lit.validation'), message: t('lit.nameIsRequired') });
       return;
     }
     try {
@@ -134,7 +138,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               isDefault: form.isDefault,
             }),
           });
-          if (!res.ok) throw new Error((await res.json()).message || 'Failed to update group');
+          if (!res.ok) throw new Error((await res.json()).message || t('lit.failedToUpdateGroup'));
         } else {
           const res = await fetch(`${getApiUrl()}/api/status-values/expense-category-group`, {
             method: 'POST',
@@ -147,11 +151,11 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               isDefault: form.isDefault,
             }),
           });
-          if (!res.ok) throw new Error((await res.json()).message || 'Failed to create group');
+          if (!res.ok) throw new Error((await res.json()).message || t('lit.failedToCreateGroup'));
         }
       } else {
         if (!form.groupId) {
-          setDialog({ type: 'alert', title: 'Validation', message: 'Group is required' });
+          setDialog({ type: 'alert', title: t('lit.validation'), message: t('lit.groupIsRequired') });
           return;
         }
         if (editingCategory) {
@@ -167,7 +171,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               ...maxReimbPayload,
             }),
           });
-          if (!res.ok) throw new Error((await res.json()).message || 'Failed to update category');
+          if (!res.ok) throw new Error((await res.json()).message || t('lit.failedToUpdateCategory'));
         } else {
           const res = await fetch(`${getApiUrl()}/api/status-values/expense-category`, {
             method: 'POST',
@@ -182,20 +186,20 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               ...maxReimbPayload,
             }),
           });
-          if (!res.ok) throw new Error((await res.json()).message || 'Failed to create category');
+          if (!res.ok) throw new Error((await res.json()).message || t('lit.failedToCreateCategory'));
         }
       }
       setShowForm(false);
       await load();
     } catch (err: any) {
-      setDialog({ type: 'alert', title: 'Error', message: err.message || 'Save failed' });
+      setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.saveFailed') });
     }
   };
 
   const handleDeleteGroup = (g: ExpenseCategoryGroup) => {
     setDialog({
       type: 'confirm',
-      title: 'Delete group',
+      title: t('lit.deleteGroup'),
       message: `Delete group "${g.GroupName}"? It must have no categories.`,
       onConfirm: async () => {
         const res = await fetch(`${getApiUrl()}/api/status-values/expense-category-group/${g.Id}`, {
@@ -204,7 +208,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setDialog({ type: 'alert', title: 'Error', message: err.message || 'Delete failed' });
+          setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.deleteFailed') });
           return;
         }
         await load();
@@ -215,7 +219,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
   const handleDeleteCategory = (c: ExpenseCategory) => {
     setDialog({
       type: 'confirm',
-      title: 'Delete category',
+      title: t('lit.deleteCategory'),
       message: `Delete category "${c.CategoryName}"?`,
       onConfirm: async () => {
         const res = await fetch(`${getApiUrl()}/api/status-values/expense-category/${c.Id}`, {
@@ -224,7 +228,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setDialog({ type: 'alert', title: 'Error', message: err.message || 'Delete failed' });
+          setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.deleteFailed') });
           return;
         }
         await load();
@@ -249,8 +253,8 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
         <div className="min-w-0 flex-1">
           <PageTabs
             tabs={[
-              { id: 'groups', label: 'Expense Groups' },
-              { id: 'categories', label: 'Expense Categories' },
+              { id: 'groups', label: t('lit.expenseGroups') },
+              { id: 'categories', label: t('lit.expenseCategories') },
             ]}
             activeId={mode}
             onChange={(id) => setMode(id as 'groups' | 'categories')}
@@ -262,7 +266,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
             onClick={openCreate}
             className="inline-flex h-9 shrink-0 items-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            {mode === 'groups' ? 'New Group' : 'New Category'}
+            {mode === 'groups' ? t('lit.newGroup') : t('lit.newCategory')}
           </button>
         )}
       </div>
@@ -274,11 +278,11 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
       )}
 
       {isLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
       ) : mode === 'groups' ? (
         groups.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-            No expense groups yet.
+            {t('lit.noExpenseGroupsYet')}
           </div>
         ) : (
           <div className="overflow-hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
@@ -286,23 +290,23 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    Color
+                    {t('lit.color')}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    Group
+                    {t('lit.group')}
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    Categories
+                    {t('lit.categories')}
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    Order
+                    {t('lit.order')}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                    Flags
+                    {t('lit.flags')}
                   </th>
                   {canManage && (
                     <th scope="col" className="relative px-3 py-2">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   )}
                 </tr>
@@ -328,7 +332,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                     <td className="px-3 py-2.5">
                       {g.IsDefault ? (
                         <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                          Default
+                          {t('lit.default')}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
@@ -339,8 +343,8 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            title="Edit"
-                            aria-label="Edit group"
+                            title={t('common.edit')}
+                            aria-label={t('lit.editGroup')}
                             onClick={() => openEditGroup(g)}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
@@ -348,8 +352,8 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                           </button>
                           <button
                             type="button"
-                            title="Delete"
-                            aria-label="Delete group"
+                            title={t('common.delete')}
+                            aria-label={t('lit.deleteGroup')}
                             onClick={() => handleDeleteGroup(g)}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
                           >
@@ -366,7 +370,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
         )
       ) : categories.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-          No expense categories yet.
+          {t('lit.noExpenseCategoriesYet')}
         </div>
       ) : (
         <div className="overflow-hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
@@ -374,26 +378,26 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Color
+                  {t('lit.color')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Category
+                  {t('lit.category')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Group
+                  {t('lit.group')}
                 </th>
                 <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Max reimburse
+                  {t('lit.maxReimburse')}
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Order
+                  {t('lit.order')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Flags
+                  {t('lit.flags')}
                 </th>
                 {canManage && (
                   <th scope="col" className="relative px-3 py-2">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -424,7 +428,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                   <td className="px-3 py-2.5">
                     {c.IsDefault ? (
                       <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                        Default
+                        {t('lit.default')}
                       </span>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
@@ -435,8 +439,8 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          title="Edit"
-                          aria-label="Edit category"
+                          title={t('common.edit')}
+                          aria-label={t('lit.editCategory')}
                           onClick={() => openEditCategory(c)}
                           className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                         >
@@ -444,8 +448,8 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                         </button>
                         <button
                           type="button"
-                          title="Delete"
-                          aria-label="Delete category"
+                          title={t('common.delete')}
+                          aria-label={t('lit.deleteCategory')}
                           onClick={() => handleDeleteCategory(c)}
                           className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
                         >
@@ -465,17 +469,17 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md space-y-4 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {editingGroup || editingCategory ? 'Edit' : 'New'} {mode === 'groups' ? 'Group' : 'Category'}
+              {editingGroup || editingCategory ? t('common.edit') : t('lit.new2')} {mode === 'groups' ? t('lit.group') : t('lit.category')}
             </h3>
             {mode === 'categories' && (
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Group</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.group')}</span>
                 <select
                   value={form.groupId}
                   onChange={(e) => setForm((f) => ({ ...f, groupId: Number(e.target.value) }))}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value={0}>Select...</option>
+                  <option value={0}>{t('lit.select')}</option>
                   {groups.map((g) => (
                     <option key={g.Id} value={g.Id}>{g.GroupName}</option>
                   ))}
@@ -483,7 +487,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               </label>
             )}
             <label className="block text-sm">
-              <span className="text-gray-700 dark:text-gray-300">Name</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('common.name')}</span>
               <input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -491,7 +495,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700 dark:text-gray-300">Color</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('lit.color')}</span>
               <input
                 type="color"
                 value={form.colorCode}
@@ -500,7 +504,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700 dark:text-gray-300">Sort order</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('lit.sortOrder')}</span>
               <input
                 type="number"
                 value={form.sortOrder}
@@ -514,22 +518,22 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                 checked={form.isDefault}
                 onChange={(e) => setForm((f) => ({ ...f, isDefault: e.target.checked }))}
               />
-              Default
+              {t('lit.default')}
             </label>
             {mode === 'categories' && (
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Max reimbursement (optional)</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.maxReimbursementOptional')}</span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={form.maxReimbursementAmount}
                   onChange={(e) => setForm((f) => ({ ...f, maxReimbursementAmount: e.target.value }))}
-                  placeholder="No cap"
+                  placeholder={t('lit.noCap')}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Maximum amount that can be reimbursed per expense in this category.
+                  {t('lit.maximumAmountThatCanBeReimbursedPerExpenseInThisCategory')}
                 </span>
               </label>
             )}
@@ -539,10 +543,10 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
                 onClick={() => setShowForm(false)}
                 className="h-10 rounded-lg border border-gray-300 px-4 text-sm text-gray-700 dark:border-gray-600 dark:text-gray-200"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" onClick={handleSave} className="h-10 rounded-lg bg-blue-600 px-4 text-sm text-white">
-                Save
+                {t('common.save')}
               </button>
             </div>
           </div>
@@ -559,7 +563,7 @@ export default function ExpenseTaxonomyManager({ orgId, token, canManage }: Prop
           dialog?.onConfirm?.();
           setDialog(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

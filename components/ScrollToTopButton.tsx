@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useState, type CSSProperties, type RefObject } from 'react';
 
 interface ScrollToTopButtonProps {
@@ -40,6 +42,7 @@ export default function ScrollToTopButton({
   threshold = 320,
   className = '',
 }: ScrollToTopButtonProps) {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
   const [bottomPx, setBottomPx] = useState(24);
 
@@ -135,8 +138,8 @@ export default function ScrollToTopButton({
       onClick={() => scrollElementToTop(scrollContainerRef?.current ?? window)}
       style={style}
       className={`fixed right-6 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ${className}`}
-      title="Back to top"
-      aria-label="Back to top"
+      title={t('lit.backToTop')}
+      aria-label={t('lit.backToTop')}
     >
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />

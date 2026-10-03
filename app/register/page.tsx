@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,6 +18,8 @@ import AuthShell, {
 } from '@/components/AuthShell';
 
 export default function RegisterPage() {
+  const { t } = useI18n();
+
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
@@ -74,12 +78,12 @@ export default function RegisterPage() {
     const confirmPassword = readPasswordInput(confirmPasswordRef);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsMismatch'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError(t('lit.passwordMustBeAtLeast6CharactersLong'));
       return;
     }
 
@@ -97,7 +101,7 @@ export default function RegisterPage() {
       clearPasswordInput(confirmPasswordRef);
       router.push('/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setError(err instanceof Error ? err.message : t('lit.registrationFailedPleaseTryAgain'));
     } finally {
       setIsLoading(false);
     }
@@ -106,22 +110,22 @@ export default function RegisterPage() {
   if (isCheckingSettings) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
-        <div className="text-sm text-[var(--pm-muted)]">Loading…</div>
+        <div className="text-sm text-[var(--pm-muted)]">{t('common.loading')}</div>
       </div>
     );
   }
 
   return (
     <AuthShell
-      title="Create Account"
-      description="Register to start using the workspace."
+      title={t('auth.registerTitle')}
+      description={t('auth.registerSubtitle')}
       companyName={companyName}
       companyLogoUrl={companyLogoUrl}
       footer={
         <p>
-          Already have an account?{' '}
+          {t('lit.alreadyHaveAnAccount')}{' '}
           <Link href="/login" className={`${authLinkClass} font-medium`}>
-            Login here
+            {t('lit.loginHere')}
           </Link>
         </p>
       }
@@ -135,7 +139,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="username" className={authLabelClass}>
-            Username *
+            {t('auth.username')} *
           </label>
           <input
             id="username"
@@ -145,13 +149,13 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             className={authFieldClass}
-            placeholder="Choose a username"
+            placeholder={t('lit.chooseAUsername')}
           />
         </div>
 
         <div>
           <label htmlFor="email" className={authLabelClass}>
-            Email *
+            {t('auth.email')} *
           </label>
           <input
             id="email"
@@ -161,14 +165,14 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             className={authFieldClass}
-            placeholder="your@email.com"
+            placeholder={t('lit.yourEmailCom')}
           />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="firstName" className={authLabelClass}>
-              First Name
+              {t('lit.firstName')}
             </label>
             <input
               id="firstName"
@@ -177,13 +181,13 @@ export default function RegisterPage() {
               value={formData.firstName}
               onChange={handleChange}
               className={authFieldClass}
-              placeholder="First name"
+              placeholder={t('lit.firstName')}
             />
           </div>
 
           <div>
             <label htmlFor="lastName" className={authLabelClass}>
-              Last Name
+              {t('lit.lastName')}
             </label>
             <input
               id="lastName"
@@ -192,14 +196,14 @@ export default function RegisterPage() {
               value={formData.lastName}
               onChange={handleChange}
               className={authFieldClass}
-              placeholder="Last name"
+              placeholder={t('lit.lastName')}
             />
           </div>
         </div>
 
         <div>
           <label htmlFor="password" className={authLabelClass}>
-            Password *
+            {t('auth.password')} *
           </label>
           <PasswordInput
             ref={passwordRef}
@@ -208,13 +212,13 @@ export default function RegisterPage() {
             required
             autoComplete="new-password"
             preventAutofill
-            placeholder="At least 6 characters"
+            placeholder={t('lit.atLeast6Characters')}
           />
         </div>
 
         <div>
           <label htmlFor="confirmPassword" className={authLabelClass}>
-            Confirm Password *
+            {t('auth.confirmPassword')} *
           </label>
           <PasswordInput
             ref={confirmPasswordRef}
@@ -223,12 +227,12 @@ export default function RegisterPage() {
             required
             autoComplete="new-password"
             preventAutofill
-            placeholder="Re-enter password"
+            placeholder={t('lit.reEnterPassword')}
           />
         </div>
 
         <button type="submit" disabled={isLoading} className={authPrimaryButtonClass}>
-          {isLoading ? 'Creating Account…' : 'Create Account'}
+          {isLoading ? t('auth.creating') : t('auth.createAccount')}
         </button>
       </form>
     </AuthShell>

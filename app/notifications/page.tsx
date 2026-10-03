@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect } from 'react';
@@ -26,6 +27,8 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+  const { t } = useI18n();
+
   const { user, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -159,7 +162,7 @@ export default function NotificationsPage() {
       const activeTask = projectTasks.find((entry) => Number(entry.Id) === Number(taskId)) || null;
 
       if (!project || !activeTask) {
-        throw new Error('Task no longer exists in this project');
+        throw new Error(t('lit.taskNoLongerExistsInThisProject'));
       }
 
       setTaskModalState({
@@ -177,7 +180,7 @@ export default function NotificationsPage() {
         project: null,
         task: null,
         tasks: [],
-        error: err?.message || 'Failed to open task detail',
+        error: err?.message || t('lit.failedToOpenTaskDetail'),
       });
     }
   };
@@ -218,7 +221,7 @@ export default function NotificationsPage() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return t('lit.justNow');
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -247,9 +250,11 @@ export default function NotificationsPage() {
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('pages.notifications.title')}</h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
+                {unreadCount > 0
+                  ? t('lit.youHaveCountUnreadNotificationS', { count: unreadCount })
+                  : t('lit.allCaughtUp')}
               </p>
             </div>
             {unreadCount > 0 && (
@@ -257,7 +262,7 @@ export default function NotificationsPage() {
                 onClick={markAllAsRead}
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shrink-0"
               >
-                Mark all as read
+                {t('pages.notifications.markAllRead')}
               </button>
             )}
           </div>
@@ -272,7 +277,7 @@ export default function NotificationsPage() {
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              All
+              {t('common.all')}
             </button>
             <button
               onClick={() => setFilter('unread')}
@@ -282,7 +287,7 @@ export default function NotificationsPage() {
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              Unread {unreadCount > 0 && `(${unreadCount})`}
+              {t('lit.unread')} {unreadCount > 0 && `(${unreadCount})`}
             </button>
           </div>
         </div>
@@ -291,14 +296,16 @@ export default function NotificationsPage() {
         {loading ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading notifications...</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">{t('lit.loadingNotifications')}</p>
           </div>
         ) : notifications.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
             <span className="text-6xl">🔔</span>
-            <h3 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">No notifications</h3>
+            <h3 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">{t('pages.notifications.empty')}</h3>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-              {filter === 'unread' ? "You don't have any unread notifications" : "You don't have any notifications yet"}
+              {filter === 'unread'
+                ? t('lit.youDontHaveAnyUnreadNotifications')
+                : t('lit.youDontHaveAnyNotificationsYet')}
             </p>
           </div>
         ) : (
@@ -341,8 +348,8 @@ export default function NotificationsPage() {
                             <button
                               onClick={() => handleNotificationClick(notification)}
                               className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                              title="View notification"
-                              aria-label="View notification"
+                              title={t('lit.viewNotification')}
+                              aria-label={t('lit.viewNotification')}
                             >
                               👁️
                             </button>
@@ -351,8 +358,8 @@ export default function NotificationsPage() {
                             <button
                               onClick={() => markAsRead(notification.Id)}
                               className="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
-                              title="Mark as read"
-                              aria-label="Mark as read"
+                              title={t('lit.markAsRead')}
+                              aria-label={t('lit.markAsRead')}
                             >
                               ✓
                             </button>
@@ -360,8 +367,8 @@ export default function NotificationsPage() {
                           <button
                             onClick={() => deleteNotification(notification.Id)}
                             className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-md transition-colors"
-                            title="Delete notification"
-                            aria-label="Delete notification"
+                            title={t('lit.deleteNotification')}
+                            aria-label={t('lit.deleteNotification')}
                           >
                             🗑️
                           </button>
@@ -382,7 +389,7 @@ export default function NotificationsPage() {
           {taskModalState.isLoading && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 text-gray-700 dark:text-gray-300">
-                Loading task details...
+                {t('lit.loadingTaskDetails')}
               </div>
             </div>
           )}
@@ -396,7 +403,7 @@ export default function NotificationsPage() {
                     onClick={closeTaskDetails}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>

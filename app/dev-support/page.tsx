@@ -1,6 +1,16 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
 
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation'
 import ScrollToTopButton from '@/components/ScrollToTopButton';
@@ -29,7 +39,7 @@ interface DevSupportEntry {
 
 const getMemberLabel = (entry: { Username?: string; FirstName?: string; LastName?: string }) => {
   const fullName = `${entry.FirstName || ''} ${entry.LastName || ''}`.trim();
-  return fullName || entry.Username || 'User';
+  return fullName || entry.Username || t('lit.user2');
 };
 
 const getRequestDays = (startDate: string, endDate: string) => {
@@ -41,6 +51,8 @@ const getRequestDays = (startDate: string, endDate: string) => {
 };
 
 export default function DevSupportManagementPage() {
+  const { t } = useI18n();
+
   const { user, token, isLoading: authLoading, isCustomerUser } = useAuth();
   const router = useRouter();
 
@@ -95,7 +107,7 @@ export default function DevSupportManagementPage() {
       ]);
 
       if (!membersResponse.ok || !entriesResponse.ok) {
-        throw new Error('Failed to load dev support data');
+        throw new Error(t('lit.failedToLoadDevSupportData'));
       }
 
       const membersData = await membersResponse.json();
@@ -103,7 +115,7 @@ export default function DevSupportManagementPage() {
       setMembers((membersData.members || []) as DevSupportTeamMember[]);
       setEntries((entriesData.entries || []) as DevSupportEntry[]);
     } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Failed to load dev support data');
+      setMessage(err instanceof Error ? err.message : t('lit.failedToLoadDevSupportData'));
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +156,7 @@ export default function DevSupportManagementPage() {
     if (!token || !addMemberId) return;
 
     if (getRequestDays(startDate, endDate) <= 0) {
-      setMessage('Invalid dev support date range');
+      setMessage(t('lit.invalidDevSupportDateRange'));
       return;
     }
 
@@ -153,7 +165,7 @@ export default function DevSupportManagementPage() {
 
     try {
       const response = await fetch(`${getApiUrl()}/api/dev-support/team-members/${addMemberId}/configure`, {
-        method: 'POST',
+        method: t('lit.post'),
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -163,14 +175,14 @@ export default function DevSupportManagementPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to save dev support days');
+        throw new Error(data.message || t('lit.failedToSaveDevSupportDays'));
       }
 
-      setMessage(data.message || 'Dev support days saved');
+      setMessage(data.message || t('lit.devSupportDaysSaved'));
       setShowAddModal(false);
       await loadData();
     } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Failed to save dev support days');
+      setMessage(err instanceof Error ? err.message : t('lit.failedToSaveDevSupportDays'));
     } finally {
       setIsSaving(false);
     }
@@ -190,13 +202,13 @@ export default function DevSupportManagementPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete dev support day');
+        throw new Error(data.message || t('lit.failedToDeleteDevSupportDay'));
       }
 
-      setMessage('Dev support day deleted');
+      setMessage(t('lit.devSupportDayDeleted'));
       await loadData();
     } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Failed to delete dev support day');
+      setMessage(err instanceof Error ? err.message : t('lit.failedToDeleteDevSupportDay'));
     }
   };
 
@@ -224,7 +236,7 @@ export default function DevSupportManagementPage() {
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div>
-              <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Year</label>
+              <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.year')}</label>
               <input
                 type="number"
                 min={2000}
@@ -235,13 +247,13 @@ export default function DevSupportManagementPage() {
               />
             </div>
             <div className="min-w-[12rem] flex-1 sm:min-w-[14rem] sm:flex-none">
-              <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Team member</label>
+              <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.teamMember')}</label>
               <select
                 value={selectedMemberId}
                 onChange={(e) => setSelectedMemberId(e.target.value)}
                 className={fieldClass}
               >
-                <option value="">All users</option>
+                <option value="">{t('lit.allUsers')}</option>
                 {members.map((member) => (
                   <option key={member.Id} value={member.Id}>
                     {getMemberLabel(member)} ({Number(member.DevSupportDays || 0)} day
@@ -256,7 +268,7 @@ export default function DevSupportManagementPage() {
               disabled={members.length === 0}
               className="inline-flex h-9 items-center rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:bg-gray-400"
             >
-              Add Dev Support
+              {t('lit.addDevSupport')}
             </button>
           </div>
         </div>
@@ -270,29 +282,29 @@ export default function DevSupportManagementPage() {
         {!isLoading && (
           <div className="grid grid-cols-2 gap-2 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-2 sm:grid-cols-4 sm:gap-4">
             <div>
-              <p className="text-[11px] text-[var(--pm-muted)]">Team members</p>
+              <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.teamMembers')}</p>
               <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.teamSize}</p>
             </div>
             <div>
-              <p className="text-[11px] text-[var(--pm-muted)]">Scheduled days</p>
+              <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.scheduledDays')}</p>
               <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.totalDays}</p>
             </div>
             <div>
-              <p className="text-[11px] text-[var(--pm-muted)]">Users with days</p>
+              <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.usersWithDays')}</p>
               <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.membersWithDays}</p>
             </div>
             <div>
-              <p className="text-[11px] text-[var(--pm-muted)]">Filtered users</p>
+              <p className="text-[11px] text-[var(--pm-muted)]">{t('lit.filteredUsers')}</p>
               <p className="text-sm font-semibold tabular-nums text-[var(--pm-text)]">{stats.uniqueUsers}</p>
             </div>
           </div>
         )}
 
         {isLoading ? (
-          <div className="py-8 text-center text-sm text-[var(--pm-muted)]">Loading dev support…</div>
+          <div className="py-8 text-center text-sm text-[var(--pm-muted)]">{t('lit.loadingDevSupport')}</div>
         ) : entries.length === 0 ? (
           <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-8 text-center text-sm text-[var(--pm-muted)]">
-            No dev support days found for this filter.
+            {t('lit.noDevSupportDaysFoundForThisFilter')}
           </div>
         ) : (
           <div className="overflow-hidden rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)]">
@@ -306,19 +318,19 @@ export default function DevSupportManagementPage() {
                 <thead className="bg-[var(--pm-panel)]">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      User
+                      {t('common.user')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Date
+                      {t('common.date')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Notes
+                      {t('lit.notes')}
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                      Added by
+                      {t('lit.addedBy')}
                     </th>
                     <th scope="col" className="relative px-3 py-2">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -339,8 +351,8 @@ export default function DevSupportManagementPage() {
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(entry)}
-                          title="Delete"
-                          aria-label="Delete"
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
                           className="rounded p-1.5 text-[var(--pm-muted)] transition-colors hover:text-red-600 dark:hover:text-red-400"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,19 +379,19 @@ export default function DevSupportManagementPage() {
           <div className="w-full max-w-lg rounded-lg border border-[var(--pm-border)] bg-[var(--pm-surface)] shadow-xl">
             <div className="space-y-3 p-4 sm:p-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--pm-text)]">Add Dev Support</h3>
+                <h3 className="text-sm font-semibold text-[var(--pm-text)]">{t('lit.addDevSupport')}</h3>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="rounded p-1 text-[var(--pm-muted)] hover:text-[var(--pm-text)]"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   ✕
                 </button>
               </div>
 
               <div>
-                <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Team member</label>
+                <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.teamMember')}</label>
                 <select value={addMemberId} onChange={(e) => setAddMemberId(e.target.value)} className={fieldClass}>
                   {members.map((member) => (
                     <option key={member.Id} value={member.Id}>
@@ -391,7 +403,7 @@ export default function DevSupportManagementPage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Start date</label>
+                  <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.startDate')}</label>
                   <input
                     type="date"
                     value={startDate}
@@ -400,7 +412,7 @@ export default function DevSupportManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">End date</label>
+                  <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.endDate')}</label>
                   <input
                     type="date"
                     value={endDate}
@@ -411,13 +423,13 @@ export default function DevSupportManagementPage() {
               </div>
 
               <div>
-                <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Notes</label>
+                <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('lit.notes')}</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className={fieldClass}
-                  placeholder="Optional notes"
+                  placeholder={t('lit.optionalNotes')}
                 />
               </div>
 
@@ -427,7 +439,7 @@ export default function DevSupportManagementPage() {
                   onClick={() => setShowAddModal(false)}
                   className="h-9 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-sm font-medium text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)]"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -435,7 +447,7 @@ export default function DevSupportManagementPage() {
                   disabled={isSaving || !addMemberId}
                   className="h-9 rounded-lg bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400"
                 >
-                  {isSaving ? 'Saving…' : `Add ${getRequestDays(startDate, endDate)} day(s)`}
+                  {isSaving ? t('lit.saving2') : `Add ${getRequestDays(startDate, endDate)} day(s)`}
                 </button>
               </div>
             </div>
@@ -446,9 +458,9 @@ export default function DevSupportManagementPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-[var(--pm-border)] bg-[var(--pm-surface)] p-4 shadow-xl sm:p-5">
-            <h3 className="mb-1 text-sm font-semibold text-[var(--pm-text)]">Delete Dev Support Day</h3>
+            <h3 className="mb-1 text-sm font-semibold text-[var(--pm-text)]">{t('lit.deleteDevSupportDay')}</h3>
             <p className="mb-4 text-sm text-[var(--pm-muted)]">
-              Delete dev support for <span className="font-medium text-[var(--pm-text)]">{getMemberLabel(deleteTarget)}</span> on{' '}
+              {t('lit.deleteDevSupportFor')} <span className="font-medium text-[var(--pm-text)]">{getMemberLabel(deleteTarget)}</span> on{' '}
               <span className="font-medium text-[var(--pm-text)]">{String(deleteTarget.DevSupportDate).split('T')[0]}</span>?
             </p>
             <div className="flex justify-end gap-2">
@@ -457,14 +469,14 @@ export default function DevSupportManagementPage() {
                 onClick={() => setDeleteTarget(null)}
                 className="h-9 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-sm font-medium text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)]"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
                 onClick={() => void handleDelete()}
                 className="h-9 rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

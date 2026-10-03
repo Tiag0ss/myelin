@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
 
@@ -73,6 +75,8 @@ interface TimeEntry {
 const ROLES = ['Admin', 'Manager', 'Member', 'Viewer'];
 
 export default function UserDetailPage() {
+  const { t } = useI18n();
+
   const { user: currentUser, token, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -123,9 +127,9 @@ export default function UserDetailPage() {
 
       if (!res.ok) {
         if (res.status === 404) {
-          setError('User not found');
+          setError(t('lit.userNotFound'));
         } else {
-          throw new Error('Failed to load user');
+          throw new Error(t('lit.failedToLoadUser'));
         }
         return;
       }
@@ -137,7 +141,7 @@ export default function UserDetailPage() {
       setRecentActivity(data.recentActivity || []);
     } catch (err) {
       console.error('Failed to load user:', err);
-      setError('Failed to load user details');
+      setError(t('lit.failedToLoadUserDetails'));
     } finally {
       setLoading(false);
     }
@@ -204,7 +208,7 @@ export default function UserDetailPage() {
   const handleAddMembership = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addForm.organizationId) {
-      setError('Please select an organization');
+      setError(t('lit.pleaseSelectAnOrganization'));
       return;
     }
 
@@ -215,7 +219,7 @@ export default function UserDetailPage() {
       const res = await fetch(
         `${getApiUrl()}/api/users/${userId}/memberships`,
         {
-          method: 'POST',
+          method: t('lit.post'),
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -230,14 +234,14 @@ export default function UserDetailPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to add membership');
+        throw new Error(data.message || t('lit.failedToAddMembership'));
       }
 
       setShowAddModal(false);
       setAddForm({ organizationId: '', role: 'Member', permissionGroupId: '' });
       await loadUserDetails();
     } catch (err: any) {
-      setError(err.message || 'Failed to add membership');
+      setError(err.message || t('lit.failedToAddMembership'));
     } finally {
       setAdding(false);
     }
@@ -277,13 +281,13 @@ export default function UserDetailPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.message || 'Failed to update membership');
+        throw new Error(data.message || t('lit.failedToUpdateMembership'));
       }
 
       setEditingMembership(null);
       await loadUserDetails();
     } catch (err: any) {
-      setError(err.message || 'Failed to update membership');
+      setError(err.message || t('lit.failedToUpdateMembership'));
     } finally {
       setSaving(false);
     }
@@ -457,7 +461,7 @@ export default function UserDetailPage() {
               href="/users"
               className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
-              Back to Users
+              {t('lit.backToUsers')}
             </Link>
           </div>
         </div>
@@ -480,7 +484,7 @@ export default function UserDetailPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Users
+            {t('lit.backToUsers')}
           </Link>
 
           <div className="flex items-center gap-4">
@@ -496,12 +500,12 @@ export default function UserDetailPage() {
               <div className="flex flex-wrap gap-2 mt-1">
                 {!!user.IsAdmin && (
                   <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
-                    Admin
+                    {t('nav.sectionAdmin')}
                   </span>
                 )}
                 {user.UserType === 'fictitious' && (
                   <span className="px-2 py-0.5 text-xs bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 rounded-full">
-                    Fictitious User
+                    {t('lit.fictitiousUser')}
                   </span>
                 )}
                 {user.CustomerId && (
@@ -511,7 +515,7 @@ export default function UserDetailPage() {
                 )}
                 {!user.CustomerId && user.UserType !== 'fictitious' && (
                   <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
-                    Internal User
+                    {t('lit.internalUser')}
                   </span>
                 )}
                 <span className={`px-2 py-0.5 text-xs rounded-full ${
@@ -519,7 +523,7 @@ export default function UserDetailPage() {
                     ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                     : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                 }`}>
-                  {user.IsActive ? 'Active' : 'Inactive'}
+                  {user.IsActive ? t('lit.active2') : t('lit.inactive')}
                 </span>
               </div>
             </div>
@@ -540,7 +544,7 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {kpis.timeThisMonth.hours.toFixed(1)}h
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Hours This Month</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.hoursThisMonth')}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">{kpis.timeThisMonth.entries} entries</div>
             </div>
 
@@ -548,7 +552,7 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {kpis.timeAllTime.hours.toFixed(0)}h
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Total Hours</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.totalHours2')}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">{kpis.timeAllTime.entries} entries</div>
             </div>
 
@@ -556,7 +560,7 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {kpis.tasks.total}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Tasks Assigned</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.tasksAssigned')}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">
                 {kpis.tasks.completed} completed, {kpis.tasks.inProgress} in progress
               </div>
@@ -566,7 +570,7 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {kpis.allocations.totalHours.toFixed(0)}h
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Allocated Hours</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.allocatedHours')}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">
                 {kpis.allocations.taskCount} tasks, {kpis.allocations.dayCount} days
               </div>
@@ -576,7 +580,7 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
                 {kpis.tickets.total}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Tickets Created</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.ticketsCreated')}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">
                 {kpis.tickets.open} open, {kpis.tickets.resolved} resolved
               </div>
@@ -586,8 +590,8 @@ export default function UserDetailPage() {
               <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                 {getWeeklyWorkHours()}h
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Weekly Capacity</div>
-              <div className="text-xs text-gray-400 dark:text-gray-500">configured hours</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.weeklyCapacity')}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">{t('lit.configuredHours')}</div>
             </div>
           </div>
         )}
@@ -606,7 +610,7 @@ export default function UserDetailPage() {
               }`}
             >
               <span className="inline-flex items-center gap-2">
-                <span>📊</span> Overview
+                <span>📊</span> {t('lit.overview')}
               </span>
             </button>
             <button
@@ -644,7 +648,7 @@ export default function UserDetailPage() {
               }`}
             >
               <span className="inline-flex items-center gap-2">
-                <span>📜</span> History
+                <span>📜</span> {t('lit.history')}
               </span>
             </button>
           </nav>
@@ -658,7 +662,7 @@ export default function UserDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>🏢</span> Organization Memberships
+                  <span>🏢</span> {t('lit.organizationMemberships')}
                   <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-blue-600 rounded-full">
                     {memberships.length}
                   </span>
@@ -668,7 +672,7 @@ export default function UserDetailPage() {
                     onClick={() => setShowAddModal(true)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                   >
-                    <span>➕</span> Add Organization
+                    <span>➕</span> {t('lit.addOrganization')}
                   </button>
                 )}
               </div>
@@ -678,7 +682,7 @@ export default function UserDetailPage() {
                   <div className="p-6 text-center">
                     <div className="text-4xl mb-2">🚀</div>
                     <p className="text-gray-500 dark:text-gray-400">
-                      User is not a member of any organization yet
+                      {t('lit.userIsNotAMemberOfAnyOrganizationYet')}
                     </p>
                   </div>
                 ) : (
@@ -696,7 +700,7 @@ export default function UserDetailPage() {
                                 router.push(`/organizations/${membership.OrganizationId}`);
                               }}
                               className="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              title="View organization"
+                              title={t('lit.viewOrganization')}
                             >
                               {membership.OrganizationName}
                             </button>
@@ -719,8 +723,8 @@ export default function UserDetailPage() {
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditMembership(membership)}
-                          title="Edit membership"
-                          aria-label="Edit membership"
+                          title={t('lit.editMembership')}
+                          aria-label={t('lit.editMembership')}
                           className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -729,8 +733,8 @@ export default function UserDetailPage() {
                         </button>
                         <button
                           onClick={() => handleRemoveMembership(membership.Id)}
-                          title="Remove membership"
-                          aria-label="Remove membership"
+                          title={t('lit.removeMembership')}
+                          aria-label={t('lit.removeMembership')}
                           className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -748,14 +752,14 @@ export default function UserDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>⏱️</span> Recent Time Entries
+                  <span>⏱️</span> {t('lit.recentTimeEntries')}
                 </h2>
               </div>
 
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {recentActivity.length === 0 ? (
                   <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-                    No recent time entries
+                    {t('lit.noRecentTimeEntries')}
                   </div>
                 ) : (
                   recentActivity.map((entry) => (
@@ -776,7 +780,7 @@ export default function UserDetailPage() {
                               // router.push(`/projects/${projectId}/tasks/${entry.taskId}`);
                             }}
                             className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block text-left transition-colors"
-                            title="View task details"
+                            title={t('lit.viewTaskDetails')}
                           >
                             {entry.TaskName}
                           </button>
@@ -786,7 +790,7 @@ export default function UserDetailPage() {
                               // Would navigate to project page
                             }}
                             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 block mt-0.5 text-left transition-colors"
-                            title="View project details"
+                            title={t('lit.viewProjectDetails')}
                           >
                             📁 {entry.ProjectName}
                           </button>
@@ -819,49 +823,49 @@ export default function UserDetailPage() {
             {/* User Info */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>👤</span> User Information
+                <span>👤</span> {t('lit.userInformation')}
               </h3>
               <dl className="space-y-4">
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email</dt>
+                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('auth.email')}</dt>
                   <dd className="text-sm text-gray-900 dark:text-white font-medium break-all hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                    <a href={`mailto:${user.Email}`} title="Send email">
+                    <a href={`mailto:${user.Email}`} title={t('lit.sendEmail')}>
                       {user.Email}
                     </a>
                   </dd>
                 </div>
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Username</dt>
+                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('auth.username')}</dt>
                   <dd className="text-sm text-gray-900 dark:text-white font-medium">@{user.Username}</dd>
                 </div>
                 {user.FirstName && (
                   <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">First Name</dt>
+                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('lit.firstName2')}</dt>
                     <dd className="text-sm text-gray-900 dark:text-white font-medium">{user.FirstName}</dd>
                   </div>
                 )}
                 {user.LastName && (
                   <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Last Name</dt>
+                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('lit.lastName2')}</dt>
                     <dd className="text-sm text-gray-900 dark:text-white font-medium">{user.LastName}</dd>
                   </div>
                 )}
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Created</dt>
+                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('lit.created')}</dt>
                   <dd className="text-sm text-gray-900 dark:text-white font-medium">{formatDate(user.CreatedAt)}</dd>
                 </div>
                 <div className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Last Updated</dt>
+                  <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('lit.lastUpdated')}</dt>
                   <dd className="text-sm text-gray-900 dark:text-white font-medium">{formatDate(user.UpdatedAt)}</dd>
                 </div>
                 {user.CustomerId && (
                   <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Associated Customer</dt>
+                    <dt className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('lit.associatedCustomer')}</dt>
                     <dd className="text-sm text-gray-900 dark:text-white font-medium">
                       <button
                         onClick={() => router.push(`/customers/${user.CustomerId}`)}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                        title="View customer"
+                        title={t('lit.viewCustomer')}
                       >
                         {user.CustomerName}
                       </button>
@@ -874,7 +878,7 @@ export default function UserDetailPage() {
             {/* Work Hours */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-5 flex items-center gap-2">
-                <span>📅</span> Work Schedule
+                <span>📅</span> {t('lit.workSchedule')}
               </h3>
               <div className="space-y-2.5">
                 {[
@@ -918,7 +922,7 @@ export default function UserDetailPage() {
                 })}
                 <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/50">
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">Weekly Total</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">{t('lit.weeklyTotal')}</span>
                     <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{getWeeklyWorkHours()}h</span>
                   </div>
                 </div>
@@ -932,7 +936,7 @@ export default function UserDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span>📎</span> Uploaded Files
+                <span>📎</span> {t('lit.uploadedFiles')}
               </h2>
             </div>
             
@@ -944,10 +948,10 @@ export default function UserDetailPage() {
               <div className="p-12 text-center">
                 <div className="text-5xl mb-3">📁</div>
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  No files uploaded yet
+                  {t('lit.noFilesUploadedYet')}
                 </p>
                 <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-                  Files will appear here once uploaded
+                  {t('lit.filesWillAppearHereOnceUploaded')}
                 </p>
               </div>
             ) : (
@@ -982,12 +986,12 @@ export default function UserDetailPage() {
                     <button
                       onClick={() => handleDownloadAttachment(attachment)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
-                      title="Download file"
+                      title={t('lit.downloadFile')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
-                      Download
+                      {t('common.download')}
                     </button>
                   </div>
                 ))}
@@ -1000,7 +1004,7 @@ export default function UserDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span>📜</span> Change History
+                <span>📜</span> {t('lit.changeHistory')}
               </h2>
             </div>
             <div className="p-6">
@@ -1016,7 +1020,7 @@ export default function UserDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <span>➕</span> Add to Organization
+                <span>➕</span> {t('lit.addToOrganization')}
               </h2>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -1030,7 +1034,7 @@ export default function UserDetailPage() {
             <form onSubmit={handleAddMembership} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Organization *
+                  {t('lit.organization')}
                 </label>
                 <SearchableSelect
                   value={addForm.organizationId}
@@ -1039,14 +1043,14 @@ export default function UserDetailPage() {
                     if (value) loadPermissionGroups(parseInt(value));
                   }}
                   options={availableOrganizations.map(org => ({ value: org.Id, label: org.Name }))}
-                  placeholder="Select organization..."
-                  emptyText="No organizations available"
+                  placeholder={t('lit.selectOrganization3')}
+                  emptyText={t('lit.noOrganizationsAvailable')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Role
+                  {t('lit.role')}
                 </label>
                 <select
                   value={addForm.role}
@@ -1062,14 +1066,14 @@ export default function UserDetailPage() {
               {addForm.organizationId && permissionGroups[parseInt(addForm.organizationId)]?.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Permission Group
+                    {t('lit.permissionGroup')}
                   </label>
                   <select
                     value={addForm.permissionGroupId}
                     onChange={(e) => setAddForm(prev => ({ ...prev, permissionGroupId: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">None</option>
+                    <option value="">{t('common.none')}</option>
                     {permissionGroups[parseInt(addForm.organizationId)]?.map(pg => (
                       <option key={pg.Id} value={pg.Id}>{pg.GroupName}</option>
                     ))}
@@ -1083,7 +1087,7 @@ export default function UserDetailPage() {
                   onClick={() => setShowAddModal(false)}
                   className="px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -1093,11 +1097,11 @@ export default function UserDetailPage() {
                   {adding ? (
                     <>
                       <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      Adding...
+                      {t('lit.adding')}
                     </>
                   ) : (
                     <>
-                      <span>➕</span> Add Membership
+                      <span>➕</span> {t('lit.addMembership')}
                     </>
                   )}
                 </button>
@@ -1113,7 +1117,7 @@ export default function UserDetailPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <span>✏️</span> Edit Membership
+                <span>✏️</span> {t('lit.editMembership2')}
               </h2>
               <button
                 onClick={() => setEditingMembership(null)}
@@ -1127,7 +1131,7 @@ export default function UserDetailPage() {
             <form onSubmit={handleSaveMembership} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Role
+                  {t('lit.role')}
                 </label>
                 <select
                   value={editForm.role}
@@ -1143,14 +1147,14 @@ export default function UserDetailPage() {
               {permissionGroups[editingMembership.OrganizationId]?.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Permission Group
+                    {t('lit.permissionGroup')}
                   </label>
                   <select
                     value={editForm.permissionGroupId}
                     onChange={(e) => setEditForm(prev => ({ ...prev, permissionGroupId: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">None</option>
+                    <option value="">{t('common.none')}</option>
                     {permissionGroups[editingMembership.OrganizationId]?.map(pg => (
                       <option key={pg.Id} value={pg.Id}>{pg.GroupName}</option>
                     ))}
@@ -1164,7 +1168,7 @@ export default function UserDetailPage() {
                   onClick={() => setEditingMembership(null)}
                   className="px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -1174,11 +1178,11 @@ export default function UserDetailPage() {
                   {saving ? (
                     <>
                       <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      Saving...
+                      {t('lit.saving')}
                     </>
                   ) : (
                     <>
-                      <span>💾</span> Save Changes
+                      <span>💾</span> {t('lit.saveChanges')}
                     </>
                   )}
                 </button>

@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useState } from 'react';
 
@@ -13,6 +14,8 @@ export function ReportingByUserPanel({
   isLoading: boolean;
   decimalHoursToHMS: HoursFmt;
 }) {
+  const { t } = useI18n();
+
   const [expandedUsers, setExpandedUsers] = useState<Set<number>>(new Set());
 
   const toggleUserExpand = (userId: number) => {
@@ -30,11 +33,11 @@ export function ReportingByUserPanel({
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {isLoading ? (
       <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-        Loading user statistics...
+        {t('lit.loadingUserStatistics')}
       </div>
     ) : userStats.length === 0 ? (
       <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-        No user data available for this project.
+        {t('lit.noUserDataAvailableForThisProject')}
       </div>
     ) : (
       userStats.map((user) => {
@@ -76,13 +79,13 @@ export function ReportingByUserPanel({
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {decimalHoursToHMS(user.TotalAllocated)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Allocated</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.allocated')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {decimalHoursToHMS(user.TotalWorked)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Worked</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.worked')}</div>
                 </div>
               </div>
               
@@ -90,7 +93,7 @@ export function ReportingByUserPanel({
               {user.TotalAllocated > 0 && (
                 <div>
                   <div className="flex justify-between items-center text-xs mb-1">
-                    <span className="text-gray-500 dark:text-gray-400">Progress</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('lit.progress')}</span>
                     <span className={`font-medium ${efficiency > 100 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                       {efficiency}%
                     </span>
@@ -110,9 +113,9 @@ export function ReportingByUserPanel({
             {/* Expanded Details */}
             {expandedUsers.has(user.UserId) && (
               <div className="border-t border-gray-100 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-700/50">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Time Entries</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('lit.recentTimeEntries')}</h4>
                 {user.TimeEntries.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No time entries recorded.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noTimeEntriesRecorded')}</p>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {user.TimeEntries.slice(0, 10).map((entry: any, idx: number) => (
@@ -147,17 +150,17 @@ export function ReportingByUserPanel({
   {!isLoading && userStats.length > 0 && (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">User Summary</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('lit.userSummary')}</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">User</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Allocated</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Worked</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Difference</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Efficiency</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('common.user')}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.allocated')}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.worked')}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.difference')}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.efficiency')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -194,7 +197,7 @@ export function ReportingByUserPanel({
           </tbody>
           <tfoot className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">Total</td>
+              <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">{t('common.total')}</td>
               <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
                 {decimalHoursToHMS(userStats.reduce((sum, u) => sum + u.TotalAllocated, 0))}
               </td>

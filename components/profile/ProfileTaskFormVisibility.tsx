@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import React, { useEffect, useState } from 'react';
 import TaskFormVisibilitySettingsPanel, {
   type TaskFormVisibilityActionsState,
@@ -16,6 +18,8 @@ export default function ProfileTaskFormVisibility({
   token,
   onActionsStateChange,
 }: ProfileTaskFormVisibilityProps) {
+  const { t } = useI18n();
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState<number | null>(null);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
@@ -39,7 +43,7 @@ export default function ProfileTaskFormVisibility({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setLoadError(err instanceof Error ? err.message : 'Failed to load organizations');
+        setLoadError(err instanceof Error ? err.message : t('lit.failedToLoadOrganizations'));
       })
       .finally(() => {
         if (!cancelled) setLoadingOrgs(false);
@@ -54,7 +58,7 @@ export default function ProfileTaskFormVisibility({
   }, [organizationId, onActionsStateChange]);
 
   if (loadingOrgs) {
-    return <div className="text-sm text-[var(--pm-muted)]">Loading organizations…</div>;
+    return <div className="text-sm text-[var(--pm-muted)]">{t('common.loading')}</div>;
   }
 
   if (loadError) {
@@ -68,7 +72,7 @@ export default function ProfileTaskFormVisibility({
   if (organizations.length === 0) {
     return (
       <div className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3 text-sm text-[var(--pm-muted)]">
-        You are not a member of any organization, so there is no task form layout to customize.
+        {t('lit.youAreNotAMemberOfAnyOrganizationSoThereIsNoTaskFormLayoutToCustomize')}
       </div>
     );
   }
@@ -76,7 +80,7 @@ export default function ProfileTaskFormVisibility({
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">Organization</label>
+        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">{t('common.organization')}</label>
         <select
           value={organizationId ?? ''}
           onChange={(e) => setOrganizationId(Number(e.target.value))}
@@ -90,7 +94,7 @@ export default function ProfileTaskFormVisibility({
           ))}
         </select>
         <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-          Personal overrides are per organization. Cascade: your override → organization → global.
+          {t('lit.personalOverridesArePerOrganizationCascadeYourOverrideOrganizationGlobal')}
         </p>
       </div>
 
@@ -112,8 +116,8 @@ export default function ProfileTaskFormVisibility({
       <ConfirmAlertModal
         isOpen={resetConfirmOpen}
         type="confirm"
-        title="Use organization default"
-        message="This removes your personal task form override for this organization. The organization default will apply (or the global default if the organization has none)."
+        title={t('lit.useOrganizationDefault')}
+        message={t('lit.thisRemovesYourPersonalTaskFormOverrideForThisOrganizationTheOrganizatio')}
         onClose={() => {
           setResetConfirmOpen(false);
           setPendingReset(null);
@@ -124,7 +128,7 @@ export default function ProfileTaskFormVisibility({
           setPendingReset(null);
           action?.();
         }}
-        confirmLabel="Reset"
+        confirmLabel={t('lit.reset')}
         confirmVariant="primary"
       />
     </div>

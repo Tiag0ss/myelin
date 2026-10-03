@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
 import React, { useEffect, useState } from 'react';
 import TaskFormVisibilityEditor from '@/components/admin/TaskFormVisibilityEditor';
 import { taskFieldVisibilityApi, TaskFieldVisibilitySource } from '@/lib/api/taskFieldVisibility';
@@ -32,10 +33,10 @@ export type TaskFormVisibilityActionsState = {
   onReset: () => void;
 };
 
-const SOURCE_LABEL: Record<TaskFieldVisibilitySource, string> = {
-  user: 'Your personal override',
-  organization: 'Organization default',
-  global: 'Global default',
+const SOURCE_LABEL_KEY: Record<TaskFieldVisibilitySource, string> = {
+  user: 'lit.yourPersonalOverride',
+  organization: 'lit.organizationDefault',
+  global: 'lit.globalDefault',
 };
 
 export default function TaskFormVisibilitySettingsPanel({
@@ -48,6 +49,7 @@ export default function TaskFormVisibilitySettingsPanel({
   onRequestSyncConfirm,
   onRequestResetConfirm,
 }: TaskFormVisibilitySettingsPanelProps) {
+  const { t } = useI18n();
   const { showToast } = useToast();
   const [config, setConfig] = useState<TaskFieldVisibilityConfig>(createDefaultTaskFieldVisibility());
   const [loading, setLoading] = useState(true);
@@ -79,10 +81,10 @@ export default function TaskFormVisibilitySettingsPanel({
       if (result.success && result.data) {
         applyResult(result.data);
       } else {
-        showToast({ type: 'error', message: result.message || 'Failed to load task form visibility' });
+        showToast({ type: 'error', message: result.message || t('lit.failedToLoadTaskFormVisibility') });
       }
     } catch {
-      showToast({ type: 'error', message: 'Failed to load task form visibility' });
+      showToast({ type: 'error', message: t('lit.failedToLoadTaskFormVisibility') });
     } finally {
       setLoading(false);
     }
@@ -104,12 +106,12 @@ export default function TaskFormVisibilitySettingsPanel({
             : await taskFieldVisibilityApi.updateMine(organizationId!, token, config);
       if (result.success && result.data) {
         applyResult(result.data);
-        showToast({ type: 'success', message: result.message || 'Task form visibility saved' });
+        showToast({ type: 'success', message: result.message || t('lit.taskFormVisibilitySaved') });
       } else {
-        showToast({ type: 'error', message: result.message || 'Failed to save' });
+        showToast({ type: 'error', message: result.message || t('lit.failedToSave2') });
       }
     } catch {
-      showToast({ type: 'error', message: 'Failed to save task form visibility' });
+      showToast({ type: 'error', message: t('lit.failedToSaveTaskFormVisibility') });
     } finally {
       setSaving(false);
     }
@@ -122,12 +124,12 @@ export default function TaskFormVisibilitySettingsPanel({
       const result = await taskFieldVisibilityApi.syncOrganizationFromGlobal(organizationId, token);
       if (result.success && result.data) {
         applyResult(result.data);
-        showToast({ type: 'success', message: result.message || 'Synced from global template' });
+        showToast({ type: 'success', message: result.message || t('lit.syncedFromGlobalTemplate') });
       } else {
-        showToast({ type: 'error', message: result.message || 'Failed to sync' });
+        showToast({ type: 'error', message: result.message || t('lit.failedToSync') });
       }
     } catch {
-      showToast({ type: 'error', message: 'Failed to sync from global' });
+      showToast({ type: 'error', message: t('lit.failedToSyncFromGlobal') });
     } finally {
       setSyncing(false);
     }
@@ -140,12 +142,12 @@ export default function TaskFormVisibilitySettingsPanel({
       const result = await taskFieldVisibilityApi.clearMine(organizationId, token);
       if (result.success && result.data) {
         applyResult(result.data);
-        showToast({ type: 'success', message: result.message || 'Using organization or global defaults' });
+        showToast({ type: 'success', message: result.message || t('lit.usingOrganizationOrGlobalDefaults') });
       } else {
-        showToast({ type: 'error', message: result.message || 'Failed to reset' });
+        showToast({ type: 'error', message: result.message || t('lit.failedToReset') });
       }
     } catch {
-      showToast({ type: 'error', message: 'Failed to clear personal override' });
+      showToast({ type: 'error', message: t('lit.failedToClearPersonalOverride') });
     } finally {
       setSyncing(false);
     }
@@ -194,15 +196,17 @@ export default function TaskFormVisibilitySettingsPanel({
   }, [loading, mode, canManage, hasUserOverride, saving, syncing, config, organizationId]);
 
   if (loading) {
-    return <div className="text-sm text-gray-500 dark:text-gray-400">Loading task form visibility…</div>;
+    return (
+      <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.loadingTaskFormVisibility')}</div>
+    );
   }
 
   const description =
     mode === 'global'
-      ? 'Choose which parts of the task modal are visible by default. New organizations copy this template; Sync from global overwrites an org copy.'
+      ? t('lit.chooseWhichPartsOfTheTaskModalAreVisibleByDefaultNewOrganizationsCopyThisTemplat')
       : mode === 'organization'
-        ? 'Choose which parts of the task modal are visible for this organization. Sync from global overwrites this with the global template. Users may still set a personal override in My Profile.'
-        : 'Personal layout for the task modal in this organization. If you have not saved an override, the organization default is used (or the global default when the organization has none).';
+        ? t('lit.chooseWhichPartsOfTheTaskModalAreVisibleForThisOrganizationSyncFromGlobalOverwri')
+        : t('lit.personalLayoutForTheTaskModalInThisOrganizationIfYouHaveNotSavedAnOverrideTheOrg');
 
   const showEmbeddedActions =
     actionsPlacement === 'embedded' && (canManage || (mode === 'user' && hasUserOverride));
@@ -213,8 +217,9 @@ export default function TaskFormVisibilitySettingsPanel({
         <p className="text-xs text-[var(--pm-muted)]">{description}</p>
         {mode === 'user' && source && (
           <p className="mt-1 text-[11px] text-[var(--pm-muted)]">
-            Currently applying: <span className="font-medium text-[var(--pm-text)]">{SOURCE_LABEL[source]}</span>
-            {!hasUserOverride && ' — save to create your personal override.'}
+            {t('lit.currentlyApplying')}{' '}
+            <span className="font-medium text-[var(--pm-text)]">{t(SOURCE_LABEL_KEY[source])}</span>
+            {!hasUserOverride && t('lit.saveToCreateYourPersonalOverride')}
           </p>
         )}
       </div>
@@ -230,7 +235,7 @@ export default function TaskFormVisibilitySettingsPanel({
               disabled={syncing || saving}
               className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-50"
             >
-              {syncing ? 'Syncing…' : 'Sync from global'}
+              {syncing ? t('lit.syncing') : t('lit.syncFromGlobal')}
             </button>
           )}
           {mode === 'user' && hasUserOverride && (
@@ -240,7 +245,7 @@ export default function TaskFormVisibilitySettingsPanel({
               disabled={syncing || saving}
               className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-50"
             >
-              {syncing ? 'Resetting…' : 'Use organization default'}
+              {syncing ? t('lit.resetting') : t('lit.useOrganizationDefault')}
             </button>
           )}
           {canManage && (
@@ -250,7 +255,11 @@ export default function TaskFormVisibilitySettingsPanel({
               disabled={saving || syncing}
               className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
             >
-              {saving ? 'Saving…' : mode === 'user' ? 'Save personal override' : 'Save'}
+              {saving
+                ? t('common.saving')
+                : mode === 'user'
+                  ? t('lit.savePersonalOverride')
+                  : t('common.save')}
             </button>
           )}
         </div>

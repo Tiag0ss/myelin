@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { useI18n } from '@/lib/i18n/provider';
 
 interface ConfirmAlertModalProps {
   isOpen: boolean;
@@ -23,12 +24,17 @@ export default function ConfirmAlertModal({
   message,
   onClose,
   onConfirm,
-  cancelLabel = 'Cancel',
-  confirmLabel = 'Delete',
-  alertLabel = 'OK',
+  cancelLabel,
+  confirmLabel,
+  alertLabel,
   confirmVariant = 'danger',
   preserveLineBreaks = false,
 }: ConfirmAlertModalProps) {
+  const { t } = useI18n();
+  const resolvedCancel = cancelLabel ?? t('common.cancel');
+  const resolvedConfirm = confirmLabel ?? t('common.delete');
+  const resolvedAlert = alertLabel ?? t('common.ok');
+
   if (!isOpen) {
     return null;
   }
@@ -71,14 +77,14 @@ export default function ConfirmAlertModal({
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
-                {cancelLabel}
+                {resolvedCancel}
               </button>
             )}
             <button
               onClick={isConfirm ? onConfirm : onClose}
               className={actionClassName}
             >
-              {isConfirm ? confirmLabel : alertLabel}
+              {isConfirm ? resolvedConfirm : resolvedAlert}
             </button>
           </div>
         </div>

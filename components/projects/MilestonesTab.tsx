@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import React, { useEffect, useState } from 'react';
 import { ProjectMilestone, SaveProjectMilestoneData, projectMilestonesApi } from '@/lib/api/projectMilestones';
 import { statusValuesApi, StatusValue } from '@/lib/api/statusValues';
@@ -25,6 +27,8 @@ export function MilestonesTab({
   token: string;
   canManage: boolean;
 }) {
+  const { t } = useI18n();
+
   const { pillStyle } = useColorVision();
   const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
   const [milestoneTypes, setMilestoneTypes] = useState<StatusValue[]>([]);
@@ -64,7 +68,7 @@ export function MilestonesTab({
       setMilestoneTypes(typesRes.types || []);
       setMilestones(milestonesRes.milestones || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load milestones');
+      setError(err.message || t('lit.failedToLoadMilestones'));
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +103,7 @@ export function MilestonesTab({
   const handleSaveMilestone = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setError('Milestone name is required');
+      setError(t('lit.milestoneNameIsRequired'));
       return;
     }
 
@@ -124,7 +128,7 @@ export function MilestonesTab({
       setEditingMilestone(null);
       await loadData();
     } catch (err: any) {
-      setError(err.message || 'Failed to save milestone');
+      setError(err.message || t('lit.failedToSaveMilestone2'));
     } finally {
       setIsSaving(false);
     }
@@ -137,12 +141,12 @@ export function MilestonesTab({
       setDeleteTarget(null);
       await loadData();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete milestone');
+      setError(err.message || t('lit.failedToDeleteMilestone2'));
     }
   };
 
   if (isLoading) {
-    return <div>Loading milestones...</div>;
+    return <div>{t('common.loading')}</div>;
   }
 
   return (
@@ -153,7 +157,7 @@ export function MilestonesTab({
             onClick={openCreateModal}
             className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white transition-colors"
           >
-            New Milestone
+            {t('lit.newMilestone')}
           </button>
         )}
       </div>
@@ -169,13 +173,13 @@ export function MilestonesTab({
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Milestone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.milestone')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.type')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.dueDate')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
                 {canManage && (
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -184,7 +188,7 @@ export function MilestonesTab({
               {milestones.length === 0 ? (
                 <tr>
                   <td colSpan={canManage ? 5 : 4} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No milestones defined for this project.
+                    {t('lit.noMilestonesDefinedForThisProject')}
                   </td>
                 </tr>
               ) : (
@@ -213,9 +217,9 @@ export function MilestonesTab({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {Number(milestone.IsCompleted || 0) === 1 ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Completed</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{t('lit.completed')}</span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Open</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{t('common.open')}</span>
                       )}
                     </td>
                     {canManage && (
@@ -224,8 +228,8 @@ export function MilestonesTab({
                           <button
                             type="button"
                             onClick={() => openEditModal(milestone)}
-                            title="Edit milestone"
-                            aria-label="Edit milestone"
+                            title={t('lit.editMilestone')}
+                            aria-label={t('lit.editMilestone')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,8 +239,8 @@ export function MilestonesTab({
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(milestone)}
-                            title="Delete milestone"
-                            aria-label="Delete milestone"
+                            title={t('lit.deleteMilestone')}
+                            aria-label={t('lit.deleteMilestone')}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,13 +263,13 @@ export function MilestonesTab({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingMilestone ? 'Edit Milestone' : 'New Milestone'}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{editingMilestone ? t('lit.editMilestone2') : t('lit.newMilestone')}</h3>
                 <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">×</button>
               </div>
 
               <form onSubmit={handleSaveMilestone} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.name')}</label>
                   <input
                     type="text"
                     value={formData.name}
@@ -276,13 +280,13 @@ export function MilestonesTab({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.type')}</label>
                   <select
                     value={formData.milestoneTypeId ?? ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, milestoneTypeId: e.target.value ? Number(e.target.value) : null }))}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value="">No type</option>
+                    <option value="">{t('lit.noType')}</option>
                     {milestoneTypes.map((typeOption) => (
                       <option key={typeOption.Id} value={typeOption.Id}>
                         {typeOption.TypeName}
@@ -292,7 +296,7 @@ export function MilestonesTab({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Due Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.dueDate')}</label>
                   <input
                     type="date"
                     value={formData.dueDate}
@@ -302,7 +306,7 @@ export function MilestonesTab({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('common.description')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
@@ -313,7 +317,7 @@ export function MilestonesTab({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort Order</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.sortOrder2')}</label>
                     <input
                       type="number"
                       value={formData.sortOrder}
@@ -328,7 +332,7 @@ export function MilestonesTab({
                       onChange={(e) => setFormData((prev) => ({ ...prev, isCompleted: e.target.checked }))}
                       className="rounded"
                     />
-                    Mark as completed
+                    {t('lit.markAsCompleted')}
                   </label>
                 </div>
 
@@ -338,14 +342,14 @@ export function MilestonesTab({
                     onClick={() => setShowModal(false)}
                     className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition-colors"
                   >
-                    {isSaving ? 'Saving...' : editingMilestone ? 'Update' : 'Create'}
+                    {isSaving ? t('lit.saving') : editingMilestone ? t('lit.update') : t('lit.create')}
                   </button>
                 </div>
               </form>
@@ -358,7 +362,7 @@ export function MilestonesTab({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[110]">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete milestone</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('lit.deleteMilestone')}</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Are you sure you want to delete milestone "{deleteTarget.Name}"?
               </p>
@@ -368,14 +372,14 @@ export function MilestonesTab({
                   onClick={() => setDeleteTarget(null)}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleDeleteMilestone()}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>

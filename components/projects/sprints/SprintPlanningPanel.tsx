@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import { useColorVision } from '@/hooks/useColorVision';
@@ -14,7 +15,7 @@ import type {
 const EMPTY_FILTER: TaskFilterState = { search: '', status: '', priority: '', assignee: '' };
 
 export function SprintPlanningPanel({
-  projectId,
+projectId,
   token,
   sprints,
   backlog,
@@ -34,6 +35,8 @@ export function SprintPlanningPanel({
   onReload: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const { t } = useI18n();
+
   const { pillStyle } = useColorVision();
   const API_URL = getApiUrl();
   const [showSprintModal, setShowSprintModal] = useState(false);
@@ -97,7 +100,7 @@ export function SprintPlanningPanel({
     setIsSaving(true);
     try {
       const url = editingSprint ? `${API_URL}/api/sprints/${editingSprint.Id}` : `${API_URL}/api/sprints`;
-      const method = editingSprint ? 'PUT' : 'POST';
+      const method = editingSprint ? 'PUT' : t('lit.post');
       const body = editingSprint
         ? { ...sprintForm }
         : { projectId, ...sprintForm };
@@ -108,13 +111,13 @@ export function SprintPlanningPanel({
       });
       if (!res.ok) {
         const data = await res.json();
-        onError(data.message || 'Failed to save sprint');
+        onError(data.message || t('lit.failedToSaveSprint'));
         return;
       }
       setShowSprintModal(false);
       await onReload();
     } catch {
-      onError('Failed to save sprint');
+      onError(t('lit.failedToSaveSprint'));
     } finally {
       setIsSaving(false);
     }
@@ -245,15 +248,15 @@ export function SprintPlanningPanel({
       {velocitySummary && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Recent</span>
+            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('nav.recent')}</span>
             <span className="font-semibold text-gray-900 dark:text-white">{velocitySummary.recentAverage.toFixed(1)} SP</span>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Previous</span>
+            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('common.previous')}</span>
             <span className="font-semibold text-gray-900 dark:text-white">{velocitySummary.previousAverage.toFixed(1)} SP</span>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Trend</span>
+            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.trend')}</span>
             <span
               className={`font-semibold ${
                 velocitySummary.trendDirection === 'up'
@@ -273,24 +276,24 @@ export function SprintPlanningPanel({
       {sprints.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide shrink-0">Filter tasks:</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide shrink-0">{t('lit.filterTasks')}</span>
             <input
               type="text"
-              placeholder="Search tasks…"
+              placeholder={t('lit.searchTasks2')}
               value={sprintTaskFilter.search}
               onChange={e => setSprintTaskFilter(f => ({ ...f, search: e.target.value }))}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 w-48"
             />
             <select value={sprintTaskFilter.status} onChange={e => setSprintTaskFilter(f => ({ ...f, status: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All statuses</option>
+              <option value="">{t('lit.allStatuses')}</option>
               {sprintTaskStatuses.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <select value={sprintTaskFilter.priority} onChange={e => setSprintTaskFilter(f => ({ ...f, priority: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All priorities</option>
+              <option value="">{t('lit.allPriorities')}</option>
               {sprintTaskPriorities.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
             <select value={sprintTaskFilter.assignee} onChange={e => setSprintTaskFilter(f => ({ ...f, assignee: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All assignees</option>
+              <option value="">{t('lit.allAssignees')}</option>
               {sprintTaskAssignees.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             {hasSprintTaskFilter && (
@@ -303,8 +306,8 @@ export function SprintPlanningPanel({
       <div className="space-y-4">
         {sprints.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-            <p className="text-lg font-medium">No sprints yet</p>
-            <p className="text-sm mt-1">Create your first sprint to start organizing work into iterations.</p>
+            <p className="text-lg font-medium">{t('lit.noSprintsYet')}</p>
+            <p className="text-sm mt-1">{t('lit.createYourFirstSprintToStartOrganizingWorkIntoIterations')}</p>
           </div>
         )}
         {sprints.map(sprint => {
@@ -353,7 +356,7 @@ export function SprintPlanningPanel({
                 </div>
                 <div className="mt-3">
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span>Progress</span>
+                    <span>{t('lit.progress')}</span>
                     <span>{progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -368,19 +371,19 @@ export function SprintPlanningPanel({
               {isExpanded && (
                 <div className="border-t border-gray-200 dark:border-gray-700">
                   {tasks.length === 0 ? (
-                    <p className="text-sm text-gray-400 px-4 py-3 italic">No tasks in this sprint.</p>
+                    <p className="text-sm text-gray-400 px-4 py-3 italic">{t('lit.noTasksInThisSprint')}</p>
                   ) : (
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Task</th>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">Status</th>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">Priority</th>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">Assignee</th>
-                          <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden sm:table-cell">Est.</th>
-                          <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">Alloc.</th>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">Planned</th>
-                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">Due</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">{t('common.task')}</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">{t('common.status')}</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">{t('common.priority')}</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">{t('pages.tickets.assignee')}</th>
+                          <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden sm:table-cell">{t('lit.est2')}</th>
+                          <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">{t('lit.alloc2')}</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">{t('lit.planned')}</th>
+                          <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">{t('lit.due')}</th>
                           <th className="px-2 py-2"></th>
                         </tr>
                       </thead>
@@ -388,7 +391,7 @@ export function SprintPlanningPanel({
                         {(() => {
                           const rows = buildTaskRows(tasks, sprintTaskFilter);
                           if (rows.length === 0) return (
-                            <tr><td colSpan={9} className="px-4 py-4 text-center text-sm text-gray-400 italic">No tasks match the current filters.</td></tr>
+                            <tr><td colSpan={9} className="px-4 py-4 text-center text-sm text-gray-400 italic">{t('lit.noTasksMatchTheCurrentFilters')}</td></tr>
                           );
                           return rows.map(({ task, depth, hasChildren }) => (
                             <tr key={task.Id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
@@ -440,7 +443,7 @@ export function SprintPlanningPanel({
                               <td className="px-2 py-2">
                                 <button
                                   onClick={() => removeTaskFromSprint(sprint.Id, task.Id)}
-                                  title="Remove from sprint"
+                                  title={t('lit.removeFromSprint')}
                                   className="text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                   ✕
@@ -463,8 +466,8 @@ export function SprintPlanningPanel({
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">Backlog</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tasks not assigned to any sprint</p>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('lit.backlog')}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('lit.tasksNotAssignedToAnySprint')}</p>
             </div>
             {selectedBacklogTasks.size > 0 && (
               <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{selectedBacklogTasks.size} selected — click a sprint to assign</span>
@@ -473,21 +476,21 @@ export function SprintPlanningPanel({
           <div className="flex flex-wrap gap-2 items-center">
             <input
               type="text"
-              placeholder="Search backlog…"
+              placeholder={t('lit.searchBacklog')}
               value={backlogFilter.search}
               onChange={e => setBacklogFilter(f => ({ ...f, search: e.target.value }))}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 w-44"
             />
             <select value={backlogFilter.status} onChange={e => setBacklogFilter(f => ({ ...f, status: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All statuses</option>
+              <option value="">{t('lit.allStatuses')}</option>
               {backlogStatuses.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <select value={backlogFilter.priority} onChange={e => setBacklogFilter(f => ({ ...f, priority: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All priorities</option>
+              <option value="">{t('lit.allPriorities')}</option>
               {backlogPriorities.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
             <select value={backlogFilter.assignee} onChange={e => setBacklogFilter(f => ({ ...f, assignee: e.target.value }))} className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="">All assignees</option>
+              <option value="">{t('lit.allAssignees')}</option>
               {backlogAssignees.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             {hasBacklogFilter && (
@@ -496,9 +499,9 @@ export function SprintPlanningPanel({
           </div>
         </div>
         {backlog.length === 0 ? (
-          <p className="text-sm text-gray-400 px-4 py-8 text-center italic">All tasks are assigned to sprints.</p>
+          <p className="text-sm text-gray-400 px-4 py-8 text-center italic">{t('lit.allTasksAreAssignedToSprints')}</p>
         ) : buildTaskRows(backlog, backlogFilter).length === 0 ? (
-          <p className="text-sm text-gray-400 px-4 py-8 text-center italic">No backlog tasks match the current filters.</p>
+          <p className="text-sm text-gray-400 px-4 py-8 text-center italic">{t('lit.noBacklogTasksMatchTheCurrentFilters')}</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-900">
@@ -511,14 +514,14 @@ export function SprintPlanningPanel({
                     className="rounded"
                   />
                 </th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">Task</th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">Status</th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">Priority</th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">Assignee</th>
-                <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden sm:table-cell">Est.</th>
-                <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">Alloc.</th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">Planned</th>
-                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">Due</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">{t('common.task')}</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">{t('common.status')}</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">{t('common.priority')}</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden md:table-cell">{t('pages.tickets.assignee')}</th>
+                <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden sm:table-cell">{t('lit.est2')}</th>
+                <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">{t('lit.alloc2')}</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden xl:table-cell">{t('lit.planned')}</th>
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium hidden lg:table-cell">{t('lit.due')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -588,32 +591,32 @@ export function SprintPlanningPanel({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {editingSprint ? 'Edit Sprint' : 'New Sprint'}
+                {editingSprint ? t('lit.editSprint') : t('lit.newSprint')}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.name')}</label>
                   <input
                     type="text"
                     value={sprintForm.name}
                     onChange={e => setSprintForm({ ...sprintForm, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                    placeholder="Sprint 1"
+                    placeholder={t('lit.sprint1')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.goal')}</label>
                   <textarea
                     value={sprintForm.goal}
                     onChange={e => setSprintForm({ ...sprintForm, goal: e.target.value })}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                    placeholder="What is the main goal of this sprint?"
+                    placeholder={t('lit.whatIsTheMainGoalOfThisSprint')}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.startDate')}</label>
                     <input
                       type="date"
                       value={sprintForm.startDate}
@@ -622,7 +625,7 @@ export function SprintPlanningPanel({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.endDate')}</label>
                     <input
                       type="date"
                       value={sprintForm.endDate}
@@ -632,16 +635,16 @@ export function SprintPlanningPanel({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.status')}</label>
                   <select
                     value={sprintForm.status}
                     onChange={e => setSprintForm({ ...sprintForm, status: e.target.value as Sprint['Status'] })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="planned">Planned</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="planned">{t('lit.planned')}</option>
+                    <option value="active">{t('common.active')}</option>
+                    <option value="completed">{t('lit.completed')}</option>
+                    <option value="cancelled">{t('lit.cancelled')}</option>
                   </select>
                 </div>
               </div>
@@ -650,14 +653,14 @@ export function SprintPlanningPanel({
                   onClick={() => setShowSprintModal(false)}
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={saveSprint}
                   disabled={isSaving || !sprintForm.name.trim()}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white rounded-lg transition-colors"
                 >
-                  {isSaving ? 'Saving…' : editingSprint ? 'Save Changes' : 'Create Sprint'}
+                  {isSaving ? t('lit.saving2') : editingSprint ? t('lit.saveChanges') : t('lit.createSprint')}
                 </button>
               </div>
             </div>
@@ -670,8 +673,8 @@ export function SprintPlanningPanel({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
             <p className="text-gray-900 dark:text-white mb-6">{confirmModal.message}</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmModal(null)} className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors">Cancel</button>
-              <button onClick={confirmModal.onConfirm} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Delete</button>
+              <button onClick={() => setConfirmModal(null)} className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors">{t('common.cancel')}</button>
+              <button onClick={confirmModal.onConfirm} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">{t('common.delete')}</button>
             </div>
           </div>
         </div>

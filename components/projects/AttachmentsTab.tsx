@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 type ProjectAttachment = {
   Id: number;
   FileName: string;
@@ -41,6 +43,7 @@ export function AttachmentsTab({
   onDownload: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
       <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
@@ -58,12 +61,12 @@ export function AttachmentsTab({
           />
         </label>
         <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
-          Max 10MB. Allowed: images, PDF, Word, Excel, ZIP, TXT
+          {t('lit.max10mbAllowedImagesPdfWordExcelZipTxt')}
         </span>
       </div>
 
       {attachments.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400 text-center py-8">No attachments yet.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-8">{t('lit.noAttachmentsYet2')}</p>
       ) : (
         <div className="space-y-3">
           {attachments.map((attachment) => {
@@ -86,7 +89,7 @@ export function AttachmentsTab({
                     <button
                       onClick={() => onPreview(attachment.Id)}
                       className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                      title="Preview"
+                      title={t('lit.preview')}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -97,7 +100,7 @@ export function AttachmentsTab({
                   <button
                     onClick={() => onDownload(attachment.Id)}
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                    title="Download"
+                    title={t('common.download')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -106,7 +109,7 @@ export function AttachmentsTab({
                   <button
                     onClick={() => onDelete(attachment.Id)}
                     className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

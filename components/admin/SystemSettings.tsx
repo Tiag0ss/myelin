@@ -1,5 +1,17 @@
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useRef } from 'react';
@@ -9,92 +21,92 @@ import PasswordInput, { clearPasswordInput, readPasswordInput } from '@/componen
 import PageTabs from '@/components/PageTabs';
 // Complete list of IANA timezones
 const TIMEZONES = [
-  { value: '', label: 'Use browser/system default' },
-  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: '', label: t('lit.useBrowserSystemDefault') },
+  { value: 'UTC', label: t('lit.utcCoordinatedUniversalTime') },
   // Africa
-  { value: 'Africa/Cairo', label: 'Africa/Cairo (EET)' },
-  { value: 'Africa/Casablanca', label: 'Africa/Casablanca (WET)' },
-  { value: 'Africa/Johannesburg', label: 'Africa/Johannesburg (SAST)' },
-  { value: 'Africa/Lagos', label: 'Africa/Lagos (WAT)' },
-  { value: 'Africa/Nairobi', label: 'Africa/Nairobi (EAT)' },
+  { value: t('lit.africaCairo'), label: t('lit.africaCairoEet') },
+  { value: t('lit.africaCasablanca'), label: t('lit.africaCasablancaWet') },
+  { value: t('lit.africaJohannesburg'), label: t('lit.africaJohannesburgSast') },
+  { value: t('lit.africaLagos'), label: t('lit.africaLagosWat') },
+  { value: t('lit.africaNairobi'), label: t('lit.africaNairobiEat') },
   // America
-  { value: 'America/Anchorage', label: 'America/Anchorage (AKST)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'America/Buenos Aires (ART)' },
-  { value: 'America/Bogota', label: 'America/Bogota (COT)' },
-  { value: 'America/Caracas', label: 'America/Caracas (VET)' },
-  { value: 'America/Chicago', label: 'America/Chicago (CST)' },
-  { value: 'America/Denver', label: 'America/Denver (MST)' },
-  { value: 'America/Halifax', label: 'America/Halifax (AST)' },
-  { value: 'America/Lima', label: 'America/Lima (PET)' },
-  { value: 'America/Los_Angeles', label: 'America/Los Angeles (PST)' },
-  { value: 'America/Mexico_City', label: 'America/Mexico City (CST)' },
-  { value: 'America/New_York', label: 'America/New York (EST)' },
-  { value: 'America/Phoenix', label: 'America/Phoenix (MST)' },
-  { value: 'America/Santiago', label: 'America/Santiago (CLT)' },
-  { value: 'America/Sao_Paulo', label: 'America/Sao Paulo (BRT)' },
-  { value: 'America/St_Johns', label: 'America/St Johns (NST)' },
-  { value: 'America/Toronto', label: 'America/Toronto (EST)' },
-  { value: 'America/Vancouver', label: 'America/Vancouver (PST)' },
+  { value: t('lit.americaAnchorage'), label: t('lit.americaAnchorageAkst') },
+  { value: 'America/Argentina/Buenos_Aires', label: t('lit.americaBuenosAiresArt') },
+  { value: t('lit.americaBogota'), label: t('lit.americaBogotaCot') },
+  { value: t('lit.americaCaracas'), label: t('lit.americaCaracasVet') },
+  { value: t('lit.americaChicago'), label: t('lit.americaChicagoCst') },
+  { value: t('lit.americaDenver'), label: t('lit.americaDenverMst') },
+  { value: t('lit.americaHalifax'), label: t('lit.americaHalifaxAst') },
+  { value: t('lit.americaLima'), label: t('lit.americaLimaPet') },
+  { value: 'America/Los_Angeles', label: t('lit.americaLosAngelesPst') },
+  { value: 'America/Mexico_City', label: t('lit.americaMexicoCityCst') },
+  { value: 'America/New_York', label: t('lit.americaNewYorkEst') },
+  { value: t('lit.americaPhoenix'), label: t('lit.americaPhoenixMst') },
+  { value: t('lit.americaSantiago'), label: t('lit.americaSantiagoClt') },
+  { value: 'America/Sao_Paulo', label: t('lit.americaSaoPauloBrt') },
+  { value: 'America/St_Johns', label: t('lit.americaStJohnsNst') },
+  { value: t('lit.americaToronto'), label: t('lit.americaTorontoEst') },
+  { value: t('lit.americaVancouver'), label: t('lit.americaVancouverPst') },
   // Asia
-  { value: 'Asia/Baghdad', label: 'Asia/Baghdad (AST)' },
-  { value: 'Asia/Bangkok', label: 'Asia/Bangkok (ICT)' },
-  { value: 'Asia/Colombo', label: 'Asia/Colombo (IST)' },
-  { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
-  { value: 'Asia/Hong_Kong', label: 'Asia/Hong Kong (HKT)' },
-  { value: 'Asia/Istanbul', label: 'Asia/Istanbul (TRT)' },
-  { value: 'Asia/Jakarta', label: 'Asia/Jakarta (WIB)' },
-  { value: 'Asia/Jerusalem', label: 'Asia/Jerusalem (IST)' },
-  { value: 'Asia/Karachi', label: 'Asia/Karachi (PKT)' },
-  { value: 'Asia/Kathmandu', label: 'Asia/Kathmandu (NPT)' },
-  { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
-  { value: 'Asia/Kuala_Lumpur', label: 'Asia/Kuala Lumpur (MYT)' },
-  { value: 'Asia/Manila', label: 'Asia/Manila (PHT)' },
-  { value: 'Asia/Seoul', label: 'Asia/Seoul (KST)' },
-  { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
-  { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT)' },
-  { value: 'Asia/Taipei', label: 'Asia/Taipei (CST)' },
-  { value: 'Asia/Tehran', label: 'Asia/Tehran (IRST)' },
-  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
+  { value: t('lit.asiaBaghdad'), label: t('lit.asiaBaghdadAst') },
+  { value: t('lit.asiaBangkok'), label: t('lit.asiaBangkokIct') },
+  { value: t('lit.asiaColombo'), label: t('lit.asiaColomboIst') },
+  { value: t('lit.asiaDubai'), label: t('lit.asiaDubaiGst') },
+  { value: 'Asia/Hong_Kong', label: t('lit.asiaHongKongHkt') },
+  { value: t('lit.asiaIstanbul'), label: t('lit.asiaIstanbulTrt') },
+  { value: t('lit.asiaJakarta'), label: t('lit.asiaJakartaWib') },
+  { value: t('lit.asiaJerusalem'), label: t('lit.asiaJerusalemIst') },
+  { value: t('lit.asiaKarachi'), label: t('lit.asiaKarachiPkt') },
+  { value: t('lit.asiaKathmandu'), label: t('lit.asiaKathmanduNpt') },
+  { value: t('lit.asiaKolkata'), label: t('lit.asiaKolkataIst') },
+  { value: 'Asia/Kuala_Lumpur', label: t('lit.asiaKualaLumpurMyt') },
+  { value: t('lit.asiaManila'), label: t('lit.asiaManilaPht') },
+  { value: t('lit.asiaSeoul'), label: t('lit.asiaSeoulKst') },
+  { value: t('lit.asiaShanghai'), label: t('lit.asiaShanghaiCst') },
+  { value: t('lit.asiaSingapore'), label: t('lit.asiaSingaporeSgt') },
+  { value: t('lit.asiaTaipei'), label: t('lit.asiaTaipeiCst') },
+  { value: t('lit.asiaTehran'), label: t('lit.asiaTehranIrst') },
+  { value: t('lit.asiaTokyo'), label: t('lit.asiaTokyoJst') },
   // Atlantic
-  { value: 'Atlantic/Azores', label: 'Atlantic/Azores (AZOT)' },
-  { value: 'Atlantic/Reykjavik', label: 'Atlantic/Reykjavik (GMT)' },
+  { value: t('lit.atlanticAzores'), label: t('lit.atlanticAzoresAzot') },
+  { value: t('lit.atlanticReykjavik'), label: t('lit.atlanticReykjavikGmt') },
   // Australia
-  { value: 'Australia/Adelaide', label: 'Australia/Adelaide (ACST)' },
-  { value: 'Australia/Brisbane', label: 'Australia/Brisbane (AEST)' },
-  { value: 'Australia/Darwin', label: 'Australia/Darwin (ACST)' },
-  { value: 'Australia/Melbourne', label: 'Australia/Melbourne (AEST)' },
-  { value: 'Australia/Perth', label: 'Australia/Perth (AWST)' },
-  { value: 'Australia/Sydney', label: 'Australia/Sydney (AEST)' },
+  { value: t('lit.australiaAdelaide'), label: t('lit.australiaAdelaideAcst') },
+  { value: t('lit.australiaBrisbane'), label: t('lit.australiaBrisbaneAest') },
+  { value: t('lit.australiaDarwin'), label: t('lit.australiaDarwinAcst') },
+  { value: t('lit.australiaMelbourne'), label: t('lit.australiaMelbourneAest') },
+  { value: t('lit.australiaPerth'), label: t('lit.australiaPerthAwst') },
+  { value: t('lit.australiaSydney'), label: t('lit.australiaSydneyAest') },
   // Europe
-  { value: 'Europe/Amsterdam', label: 'Europe/Amsterdam (CET)' },
-  { value: 'Europe/Athens', label: 'Europe/Athens (EET)' },
-  { value: 'Europe/Berlin', label: 'Europe/Berlin (CET)' },
-  { value: 'Europe/Brussels', label: 'Europe/Brussels (CET)' },
-  { value: 'Europe/Bucharest', label: 'Europe/Bucharest (EET)' },
-  { value: 'Europe/Budapest', label: 'Europe/Budapest (CET)' },
-  { value: 'Europe/Copenhagen', label: 'Europe/Copenhagen (CET)' },
-  { value: 'Europe/Dublin', label: 'Europe/Dublin (GMT)' },
-  { value: 'Europe/Helsinki', label: 'Europe/Helsinki (EET)' },
-  { value: 'Europe/Lisbon', label: 'Europe/Lisbon (WET)' },
-  { value: 'Europe/London', label: 'Europe/London (GMT)' },
-  { value: 'Europe/Madrid', label: 'Europe/Madrid (CET)' },
-  { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK)' },
-  { value: 'Europe/Oslo', label: 'Europe/Oslo (CET)' },
-  { value: 'Europe/Paris', label: 'Europe/Paris (CET)' },
-  { value: 'Europe/Prague', label: 'Europe/Prague (CET)' },
-  { value: 'Europe/Rome', label: 'Europe/Rome (CET)' },
-  { value: 'Europe/Stockholm', label: 'Europe/Stockholm (CET)' },
-  { value: 'Europe/Vienna', label: 'Europe/Vienna (CET)' },
-  { value: 'Europe/Warsaw', label: 'Europe/Warsaw (CET)' },
-  { value: 'Europe/Zurich', label: 'Europe/Zurich (CET)' },
+  { value: t('lit.europeAmsterdam'), label: t('lit.europeAmsterdamCet') },
+  { value: t('lit.europeAthens'), label: t('lit.europeAthensEet') },
+  { value: t('lit.europeBerlin'), label: t('lit.europeBerlinCet') },
+  { value: t('lit.europeBrussels'), label: t('lit.europeBrusselsCet') },
+  { value: t('lit.europeBucharest'), label: t('lit.europeBucharestEet') },
+  { value: t('lit.europeBudapest'), label: t('lit.europeBudapestCet') },
+  { value: t('lit.europeCopenhagen'), label: t('lit.europeCopenhagenCet') },
+  { value: t('lit.europeDublin'), label: t('lit.europeDublinGmt') },
+  { value: t('lit.europeHelsinki'), label: t('lit.europeHelsinkiEet') },
+  { value: t('lit.europeLisbon'), label: t('lit.europeLisbonWet') },
+  { value: t('lit.europeLondon'), label: t('lit.europeLondonGmt') },
+  { value: t('lit.europeMadrid'), label: t('lit.europeMadridCet') },
+  { value: t('lit.europeMoscow'), label: t('lit.europeMoscowMsk') },
+  { value: t('lit.europeOslo'), label: t('lit.europeOsloCet') },
+  { value: t('lit.europeParis'), label: t('lit.europeParisCet') },
+  { value: t('lit.europePrague'), label: t('lit.europePragueCet') },
+  { value: t('lit.europeRome'), label: t('lit.europeRomeCet') },
+  { value: t('lit.europeStockholm'), label: t('lit.europeStockholmCet') },
+  { value: t('lit.europeVienna'), label: t('lit.europeViennaCet') },
+  { value: t('lit.europeWarsaw'), label: t('lit.europeWarsawCet') },
+  { value: t('lit.europeZurich'), label: t('lit.europeZurichCet') },
   // Indian
-  { value: 'Indian/Mauritius', label: 'Indian/Mauritius (MUT)' },
+  { value: t('lit.indianMauritius'), label: t('lit.indianMauritiusMut') },
   // Pacific
-  { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST)' },
-  { value: 'Pacific/Fiji', label: 'Pacific/Fiji (FJT)' },
-  { value: 'Pacific/Guam', label: 'Pacific/Guam (ChST)' },
-  { value: 'Pacific/Honolulu', label: 'Pacific/Honolulu (HST)' },
-  { value: 'Pacific/Samoa', label: 'Pacific/Samoa (SST)' },
+  { value: t('lit.pacificAuckland'), label: t('lit.pacificAucklandNzst') },
+  { value: t('lit.pacificFiji'), label: t('lit.pacificFijiFjt') },
+  { value: t('lit.pacificGuam'), label: t('lit.pacificGuamChst') },
+  { value: t('lit.pacificHonolulu'), label: t('lit.pacificHonoluluHst') },
+  { value: t('lit.pacificSamoa'), label: t('lit.pacificSamoaSst') },
 ];
 
 interface SystemSettings {
@@ -167,18 +179,20 @@ type SystemSettingsProps = {
 };
 
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'branding', label: 'Branding' },
-  { id: 'email', label: 'Email (SMTP)' },
-  { id: 'access', label: 'Access & Auth' },
-  { id: 'features', label: 'Features' },
+  { id: 'branding', label: t('lit.branding') },
+  { id: 'email', label: t('lit.emailSmtp') },
+  { id: 'access', label: t('lit.accessAuth') },
+  { id: 'features', label: t('lit.features') },
   { id: 'ai', label: 'AI' },
-  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'maintenance', label: t('lit.maintenance') },
 ];
 
 export default function SystemSettings({
   actionsPlacement = 'embedded',
   onActionsStateChange,
 }: SystemSettingsProps) {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<SettingsTab>('branding');
@@ -311,7 +325,7 @@ export default function SystemSettings({
       }
     } catch (err) {
       console.error('Failed to load settings:', err);
-      setError('Failed to load settings');
+      setError(t('lit.failedToLoadSettings'));
     } finally {
       setIsLoading(false);
     }
@@ -378,10 +392,10 @@ export default function SystemSettings({
       if (response.ok && data.success) {
         setMigrationResult({ created: data.created, skipped: data.skipped });
       } else {
-        setMigrationError(data.message || 'Migration failed');
+        setMigrationError(data.message || t('lit.migrationFailed'));
       }
     } catch (err: any) {
-      setMigrationError(err.message || 'Migration failed');
+      setMigrationError(err.message || t('lit.migrationFailed'));
     } finally {
       setIsMigrating(false);
     }
@@ -402,12 +416,12 @@ export default function SystemSettings({
 
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Failed to sync AI views');
+        throw new Error(data.message || t('lit.failedToSyncAiViews'));
       }
 
       setAiViewsSyncMessage(`AI views synced (${data.synced || 0} view(s)).`);
     } catch (err: any) {
-      setAiViewsSyncError(err.message || 'Failed to sync AI views');
+      setAiViewsSyncError(err.message || t('lit.failedToSyncAiViews'));
     } finally {
       setIsSyncingAiViews(false);
     }
@@ -441,18 +455,18 @@ export default function SystemSettings({
       );
 
       if (response.ok) {
-        setSuccess('Settings saved successfully');
-        showToast({ type: 'success', title: 'Settings Saved', message: 'Settings saved successfully' });
+        setSuccess(t('lit.settingsSavedSuccessfully'));
+        showToast({ type: 'success', title: t('lit.settingsSaved'), message: t('lit.settingsSavedSuccessfully') });
         clearPasswordInput(smtpPasswordRef);
         clearPasswordInput(outlookClientSecretRef);
         clearPasswordInput(openAIApiKeyRef);
         setTimeout(() => setSuccess(''), 3000);
       } else {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to save settings');
+        throw new Error(data.message || t('lit.failedToSaveSettings'));
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to save settings');
+      setError(err.message || t('lit.failedToSaveSettings'));
     } finally {
       setIsSaving(false);
     }
@@ -511,13 +525,13 @@ export default function SystemSettings({
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Upload failed');
+        throw new Error(data.message || t('lit.uploadFailed'));
       }
       const field = kind === 'logo' ? 'companyLogoUrl' : 'faviconUrl';
       handleChange(field, data.url || '');
-      showToast({ type: 'success', message: data.message || 'Uploaded' });
+      showToast({ type: 'success', message: data.message || t('lit.uploaded') });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed';
+      const message = err instanceof Error ? err.message : t('lit.uploadFailed');
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -530,7 +544,7 @@ export default function SystemSettings({
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center text-sm text-[var(--pm-muted)]">
-        Loading settings…
+        {t('lit.loadingSettings')}
       </div>
     );
   }
@@ -538,7 +552,7 @@ export default function SystemSettings({
   return (
     <div className="space-y-3 p-4 sm:p-6">
       <p className="text-xs text-[var(--pm-muted)]">
-        Configure branding, email, access, features, AI, and maintenance utilities.
+        {t('lit.configureBrandingEmailAccessFeaturesAiAndMaintenanceUtilities')}
       </p>
 
       {error && (
@@ -563,31 +577,31 @@ export default function SystemSettings({
         
         {activeTab === 'branding' && (
           <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Branding</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.branding')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  Company Name
+                  {t('lit.companyName')}
                 </label>
                 <input
                   type="text"
                   value={settings.companyName || ''}
                   onChange={(e) => handleChange('companyName', e.target.value)}
-                  placeholder="Myelin"
+                  placeholder={t('lit.myelin')}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  Company Logo URL
+                  {t('lit.companyLogoUrl')}
                 </label>
                 <input
                   type="text"
                   inputMode="url"
                   value={settings.companyLogoUrl || ''}
                   onChange={(e) => handleChange('companyLogoUrl', e.target.value)}
-                  placeholder="https://example.com/logo.png or /uploads/branding/…"
+                  placeholder='https://example.com/logo.png or /uploads/branding/…'
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -604,25 +618,25 @@ export default function SystemSettings({
                     disabled={isUploadingBranding === 'logo'}
                     className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
                   >
-                    {isUploadingBranding === 'logo' ? 'Uploading…' : 'Upload logo'}
+                    {isUploadingBranding === 'logo' ? t('lit.uploading') : t('lit.uploadLogo')}
                   </button>
                   {settings.companyLogoUrl ? (
                      
-                    <img src={settings.companyLogoUrl} alt="Logo preview" className="h-8 max-w-[120px] object-contain rounded border border-gray-200 dark:border-gray-600 bg-white" />
+                    <img src={settings.companyLogoUrl} alt={t('lit.logoPreview')} className="h-8 max-w-[120px] object-contain rounded border border-gray-200 dark:border-gray-600 bg-white" />
                   ) : null}
                 </div>
               </div>
 
               <div className="md:col-span-2">
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  Favicon URL
+                  {t('lit.faviconUrl')}
                 </label>
                 <input
                   type="text"
                   inputMode="url"
                   value={settings.faviconUrl || ''}
                   onChange={(e) => handleChange('faviconUrl', e.target.value)}
-                  placeholder="https://example.com/favicon.ico or /uploads/branding/…"
+                  placeholder='https://example.com/favicon.ico or /uploads/branding/…'
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -639,11 +653,11 @@ export default function SystemSettings({
                     disabled={isUploadingBranding === 'favicon'}
                     className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
                   >
-                    {isUploadingBranding === 'favicon' ? 'Uploading…' : 'Upload favicon'}
+                    {isUploadingBranding === 'favicon' ? t('lit.uploading') : t('lit.uploadFavicon')}
                   </button>
                   {settings.faviconUrl ? (
                      
-                    <img src={settings.faviconUrl} alt="Favicon preview" className="h-8 w-8 object-contain rounded border border-gray-200 dark:border-gray-600 bg-white" />
+                    <img src={settings.faviconUrl} alt={t('lit.faviconPreview')} className="h-8 w-8 object-contain rounded border border-gray-200 dark:border-gray-600 bg-white" />
                   ) : null}
                 </div>
               </div>
@@ -654,24 +668,24 @@ export default function SystemSettings({
         
         {activeTab === 'email' && (
           <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">SMTP Configuration</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.smtpConfiguration')}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  SMTP Host
+                  {t('lit.smtpHost')}
                 </label>
                 <input
                   type="text"
                   value={settings.smtpHost}
                   onChange={(e) => handleChange('smtpHost', e.target.value)}
-                  placeholder="smtp.example.com"
+                  placeholder={t('lit.smtpExampleCom')}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  SMTP Port
+                  {t('lit.smtpPort')}
                 </label>
                 <input
                   type="number"
@@ -684,20 +698,20 @@ export default function SystemSettings({
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  SMTP User
+                  {t('lit.smtpUser')}
                 </label>
                 <input
                   type="text"
                   value={settings.smtpUser}
                   onChange={(e) => handleChange('smtpUser', e.target.value)}
-                  placeholder="user@example.com"
+                  placeholder={t('lit.userExampleCom')}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  SMTP Password
+                  {t('lit.smtpPassword')}
                 </label>
                 <PasswordInput
                   ref={smtpPasswordRef}
@@ -707,53 +721,53 @@ export default function SystemSettings({
                   preventAutofill
                 />
                 <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                  Leave blank to keep the existing password. Only fill in to change it.
+                  {t('lit.leaveBlankToKeepTheExistingPasswordOnlyFillInToChangeIt')}
                 </p>
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  From Email
+                  {t('lit.fromEmail')}
                 </label>
                 <input
                   type="email"
                   value={settings.smtpFrom}
                   onChange={(e) => handleChange('smtpFrom', e.target.value)}
-                  placeholder="noreply@example.com"
+                  placeholder={t('lit.noreplyExampleCom')}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  From Name
+                  {t('lit.fromName')}
                 </label>
                 <input
                   type="text"
                   value={settings.smtpFromName}
                   onChange={(e) => handleChange('smtpFromName', e.target.value)}
-                  placeholder="Myelin"
+                  placeholder={t('lit.myelin')}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 />
               </div>
 
               <div>
                 <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                  Use TLS/SSL
+                  {t('lit.useTlsSsl')}
                 </label>
                 <select
                   value={settings.smtpSecure}
                   onChange={(e) => handleChange('smtpSecure', e.target.value)}
                   className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                 >
-                  <option value="true">Yes (TLS/SSL)</option>
-                  <option value="false">No (Plain)</option>
+                  <option value="true">{t('lit.yesTlsSsl')}</option>
+                  <option value="false">{t('lit.noPlain')}</option>
                 </select>
               </div>
             </div>
 
             <div className="mt-8 border-t border-gray-200 dark:border-gray-600 pt-6">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Outlook Calendar Integration</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.outlookCalendarIntegration')}</h3>
 
               <div className="space-y-3">
                 <label className="flex cursor-pointer items-start gap-2">
@@ -764,7 +778,7 @@ export default function SystemSettings({
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-[var(--pm-accent)] focus:ring-[var(--pm-accent)]"
                   />
                   <div>
-                    <div className="text-sm font-medium text-[var(--pm-text)]">Enable Outlook Calendar Sync</div>
+                    <div className="text-sm font-medium text-[var(--pm-text)]">{t('lit.enableOutlookCalendarSync')}</div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
                       Adds Outlook events to the in-app calendar. Managers/admins can include team members in the same organization.
                     </div>
@@ -775,33 +789,33 @@ export default function SystemSettings({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-0 md:ml-8">
                     <div>
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Azure Tenant ID
+                        {t('lit.azureTenantId')}
                       </label>
                       <input
                         type="text"
                         value={settings.outlookTenantId || ''}
                         onChange={(e) => handleChange('outlookTenantId', e.target.value)}
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        placeholder={t('lit.xxxxxxxxXxxxXxxxXxxxXxxxxxxxxxxx')}
                         className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       />
                     </div>
 
                     <div>
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Azure Client ID
+                        {t('lit.azureClientId')}
                       </label>
                       <input
                         type="text"
                         value={settings.outlookClientId || ''}
                         onChange={(e) => handleChange('outlookClientId', e.target.value)}
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        placeholder={t('lit.xxxxxxxxXxxxXxxxXxxxXxxxxxxxxxxx')}
                         className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Azure Client Secret
+                        {t('lit.azureClientSecret')}
                       </label>
                       <PasswordInput
                         ref={outlookClientSecretRef}
@@ -811,7 +825,7 @@ export default function SystemSettings({
                         preventAutofill
                       />
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                        Leave empty and save to clear the stored Outlook client secret.
+                        {t('lit.leaveEmptyAndSaveToClearTheStoredOutlookClientSecret')}
                       </p>
                     </div>
 
@@ -824,9 +838,9 @@ export default function SystemSettings({
                           className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-[var(--pm-accent)] focus:ring-[var(--pm-accent)]"
                         />
                         <div>
-                          <div className="text-sm font-medium text-[var(--pm-text)]">Managers/Admins see team Outlook events</div>
+                          <div className="text-sm font-medium text-[var(--pm-text)]">{t('lit.managersAdminsSeeTeamOutlookEvents')}</div>
                           <div className="text-[11px] text-[var(--pm-muted)]">
-                            Uses users in the same organization with valid email addresses.
+                            {t('lit.usesUsersInTheSameOrganizationWithValidEmailAddresses')}
                           </div>
                         </div>
                       </label>
@@ -842,7 +856,7 @@ export default function SystemSettings({
         {activeTab === 'access' && (
           <div className="space-y-3">
             <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Registration Settings</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.registrationSettings')}</h3>
               <div className="space-y-3">
                 <div>
                   <label className="flex cursor-pointer items-start gap-2">
@@ -854,10 +868,10 @@ export default function SystemSettings({
                     />
                     <div>
                       <div className="text-sm font-medium text-[var(--pm-text)]">
-                        Allow Public Registration
+                        {t('lit.allowPublicRegistration')}
                       </div>
                       <div className="text-[11px] text-[var(--pm-muted)]">
-                        Allow users to register from the frontpage without an invitation
+                        {t('lit.allowUsersToRegisterFromTheFrontpageWithoutAnInvitation')}
                       </div>
                     </div>
                   </label>
@@ -867,7 +881,7 @@ export default function SystemSettings({
                   <div className="ml-8 mt-4 space-y-4">
                     <div>
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Registration Type *
+                        {t('lit.registrationType')}
                       </label>
                       <select
                         value={settings.publicRegistrationType}
@@ -875,12 +889,12 @@ export default function SystemSettings({
                         required={settings.allowPublicRegistration === 'true'}
                         className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       >
-                        <option value="internal">Internal User</option>
-                        <option value="customer">Customer User</option>
+                        <option value="internal">{t('lit.internalUser')}</option>
+                        <option value="customer">{t('lit.customerUser')}</option>
                       </select>
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
                         {settings.publicRegistrationType === 'internal'
-                          ? 'New users will be created as internal users'
+                          ? t('lit.newUsersWillBeCreatedAsInternalUsers')
                           : 'New users will be created as customer users (linked to a specific customer)'}
                       </p>
                     </div>
@@ -888,7 +902,7 @@ export default function SystemSettings({
                     {settings.publicRegistrationType === 'customer' && (
                       <div>
                         <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                          Default Customer *
+                          {t('lit.defaultCustomer')}
                         </label>
                         <select
                           value={settings.defaultCustomerId}
@@ -896,7 +910,7 @@ export default function SystemSettings({
                           required={settings.publicRegistrationType === 'customer'}
                           className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         >
-                          <option value="">Select a customer...</option>
+                          <option value="">{t('lit.selectACustomer')}</option>
                           {customers.map((customer) => (
                             <option key={customer.Id} value={customer.Id}>
                               {customer.Name}
@@ -904,7 +918,7 @@ export default function SystemSettings({
                           ))}
                         </select>
                         <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                          New users will be linked to this customer
+                          {t('lit.newUsersWillBeLinkedToThisCustomer')}
                         </p>
                       </div>
                     )}
@@ -914,11 +928,11 @@ export default function SystemSettings({
             </div>
 
             <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Timezone Settings</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.timezoneSettings')}</h3>
               <div className="space-y-3">
                 <div>
                   <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                    Default System Timezone
+                    {t('lit.defaultSystemTimezone')}
                   </label>
                   <select
                     value={settings.defaultTimezone}
@@ -942,7 +956,7 @@ export default function SystemSettings({
         {activeTab === 'features' && (
           <div className="space-y-3">
             <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">Feature Toggles</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.featureToggles')}</h3>
               <div className="space-y-3">
                 <label className="flex cursor-pointer items-start gap-2">
                   <input
@@ -953,10 +967,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Enable Front Page
+                      {t('lit.enableFrontPage')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      When disabled, visiting the root URL redirects directly to the login page.
+                      {t('lit.whenDisabledVisitingTheRootUrlRedirectsDirectlyToTheLoginPage')}
                     </div>
                   </div>
                 </label>
@@ -970,10 +984,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Enable Internal Ticket System
+                      {t('lit.enableInternalTicketSystem')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      Shows/hides internal tickets module globally. Does not disable ticket integration used in tasks.
+                      {t('lit.showsHidesInternalTicketsModuleGloballyDoesNotDisableTicketIntegrationUsedInTask')}
                     </div>
                   </div>
                 </label>
@@ -987,10 +1001,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Enable Memos Menu
+                      {t('lit.enableMemosMenu')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      Only controls visibility of Memos in the navbar.
+                      {t('lit.onlyControlsVisibilityOfMemosInTheNavbar')}
                     </div>
                   </div>
                 </label>
@@ -1004,10 +1018,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Enable Expenses Module
+                      {t('lit.enableExpensesModule')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      Shows/hides the project expenses module globally. When disabled, expense APIs return 403.
+                      {t('lit.showsHidesTheProjectExpensesModuleGloballyWhenDisabledExpenseApisReturn403')}
                     </div>
                   </div>
                 </label>
@@ -1021,10 +1035,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Auto-approve Expenses
+                      {t('lit.autoApproveExpenses')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      When enabled, new expenses are created as approved instead of pending.
+                      {t('lit.whenEnabledNewExpensesAreCreatedAsApprovedInsteadOfPending')}
                     </div>
                   </div>
                 </label>
@@ -1038,10 +1052,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Auto-approve Time Entries
+                      {t('lit.autoApproveTimeEntries')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      New time entries are created as approved and approved entries remain editable.
+                      {t('lit.newTimeEntriesAreCreatedAsApprovedAndApprovedEntriesRemainEditable')}
                     </div>
                   </div>
                 </label>
@@ -1055,10 +1069,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Auto-approve Vacations
+                      {t('lit.autoApproveVacations')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      New vacation requests are immediately approved.
+                      {t('lit.newVacationRequestsAreImmediatelyApproved')}
                     </div>
                   </div>
                 </label>
@@ -1072,10 +1086,10 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Auto-approve Out Of Office
+                      {t('lit.autoApproveOutOfOffice')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      New out-of-office requests are immediately approved.
+                      {t('lit.newOutOfOfficeRequestsAreImmediatelyApproved')}
                     </div>
                   </div>
                 </label>
@@ -1087,7 +1101,7 @@ export default function SystemSettings({
         {activeTab === 'ai' && (
           <div className="space-y-3">
             <div className="space-y-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">AI Assistant</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">{t('lit.aiAssistant')}</h3>
               <div className="space-y-3">
                 <label className="flex cursor-pointer items-start gap-2">
                   <input
@@ -1098,28 +1112,28 @@ export default function SystemSettings({
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--pm-text)]">
-                      Enable AI Assistant
+                      {t('lit.enableAiAssistant')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      Shows/hides AI features globally. Configure OpenAI or Ollama below.
+                      {t('lit.showsHidesAiFeaturesGloballyConfigureOpenaiOrOllamaBelow')}
                     </div>
                   </div>
                 </label>
 
                 <div>
                   <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                    AI Provider
+                    {t('lit.aiProvider')}
                   </label>
                   <select
                     value={settings.aiProvider === 'ollama' ? 'ollama' : 'openai'}
                     onChange={(e) => handleChange('aiProvider', e.target.value)}
                     className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                   >
-                    <option value="openai">OpenAI</option>
-                    <option value="ollama">Ollama (local / self-hosted)</option>
+                    <option value="openai">{t('lit.openai')}</option>
+                    <option value="ollama">{t('lit.ollamaLocalSelfHosted')}</option>
                   </select>
                   <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                    Used by the assistant widget, task translate/summarize, and patch-notes improvement.
+                    {t('lit.usedByTheAssistantWidgetTaskTranslateSummarizeAndPatchNotesImprovement')}
                   </p>
                 </div>
 
@@ -1127,32 +1141,32 @@ export default function SystemSettings({
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div>
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Ollama Base URL
+                        {t('lit.ollamaBaseUrl')}
                       </label>
                       <input
                         type="text"
                         value={settings.ollamaBaseUrl || 'http://127.0.0.1:11434'}
                         onChange={(e) => handleChange('ollamaBaseUrl', e.target.value)}
-                        placeholder="http://127.0.0.1:11434"
+                        placeholder='http://127.0.0.1:11434'
                         className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       />
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                        From Docker on Linux, try <code className="font-mono">http://172.17.0.1:11434</code> or host networking.
+                        {t('lit.fromDockerOnLinuxTry')} <code className="font-mono">http://172.17.0.1:11434</code> {t('lit.orHostNetworking')}
                       </p>
                     </div>
                     <div>
                       <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                        Ollama Model
+                        {t('lit.ollamaModel')}
                       </label>
                       <input
                         type="text"
                         value={settings.ollamaModel || 'llama3.2'}
                         onChange={(e) => handleChange('ollamaModel', e.target.value)}
-                        placeholder="llama3.2"
+                        placeholder={t('lit.llama32')}
                         className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       />
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                        Must already be pulled (`ollama pull llama3.2`).
+                        {t('lit.mustAlreadyBePulledOllamaPullLlama32')}
                       </p>
                     </div>
                   </div>
@@ -1160,38 +1174,38 @@ export default function SystemSettings({
                   <>
                 <div>
                   <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                    OpenAI API Key
+                    {t('lit.openaiApiKey')}
                   </label>
                   <PasswordInput
                     ref={openAIApiKeyRef}
                     name="openAIApiKey"
-                    placeholder="sk-..."
+                    placeholder={t('lit.sk')}
                     autoComplete="new-password"
                     preventAutofill
                     className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                   />
                   <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                    Leave blank to keep the existing key. Only fill in to change it.
+                    {t('lit.leaveBlankToKeepTheExistingKeyOnlyFillInToChangeIt')}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                      OpenAI Model
+                      {t('lit.openaiModel')}
                     </label>
                     <select
                       value={settings.openAIModel || 'gpt-4o-mini'}
                       onChange={(e) => handleChange('openAIModel', e.target.value)}
                       className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                     >
-                      <option value="gpt-4o-mini">gpt-4o-mini (default)</option>
-                      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                      <option value="gpt-4.1">gpt-4.1</option>
-                      <option value="o4-mini">o4-mini</option>
+                      <option value="gpt-4o-mini">{t('lit.gpt4oMiniDefault')}</option>
+                      <option value="gpt-4.1-mini">{t('lit.gpt41Mini')}</option>
+                      <option value="gpt-4.1">{t('lit.gpt41')}</option>
+                      <option value="o4-mini">{t('lit.o4Mini')}</option>
                     </select>
                     <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                      Select the model used by the AI assistant backend.
+                      {t('lit.selectTheModelUsedByTheAiAssistantBackend')}
                     </p>
                   </div>
                   </div>
@@ -1200,22 +1214,22 @@ export default function SystemSettings({
 
                 <div>
                     <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                      Assistant Behavior
+                      {t('lit.assistantBehavior')}
                     </label>
                     <textarea
                       value={settings.openAIBehavior || ''}
                       onChange={(e) => handleChange('openAIBehavior', e.target.value)}
                       rows={3}
-                      placeholder="Example: Be concise, use bullet points, and include actionable next steps."
+                      placeholder={t('lit.exampleBeConciseUseBulletPointsAndIncludeActionableNextSteps')}
                       className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                     <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                      Optional custom instruction appended to assistant system behavior.
+                      {t('lit.optionalCustomInstructionAppendedToAssistantSystemBehavior')}
                     </p>
                 </div>
 
                 <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">AI Data Views</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.aiDataViews')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     The AI assistant reads data exclusively from these database views. You can customise the SELECT body for each view below (leave empty to use the built-in default).
                   </p>
@@ -1229,10 +1243,10 @@ export default function SystemSettings({
                     />
                     <div>
                       <div className="text-sm font-medium text-[var(--pm-text)]">
-                        Auto-create/sync AI Views on Server Startup
+                        {t('lit.autoCreateSyncAiViewsOnServerStartup')}
                       </div>
                       <div className="text-[11px] text-[var(--pm-muted)]">
-                        When enabled, startup ensures AI views exist and applies the SQL definitions below.
+                        {t('lit.whenEnabledStartupEnsuresAiViewsExistAndAppliesTheSqlDefinitionsBelow')}
                       </div>
                     </div>
                   </label>
@@ -1240,21 +1254,21 @@ export default function SystemSettings({
                   <div className="grid grid-cols-1 gap-3">
                     {(
                       [
-                        { key: 'aiViewSql_vAI_ProjectOpenTasks', label: 'vAI_ProjectOpenTasks' },
-                        { key: 'aiViewSql_vAI_UserOpenTasks',    label: 'vAI_UserOpenTasks' },
-                        { key: 'aiViewSql_vAI_UserWorkloadBase', label: 'vAI_UserWorkloadBase' },
-                        { key: 'aiViewSql_vAI_UserAllocations',  label: 'vAI_UserAllocations' },
+                        { key: 'aiViewSql_vAI_ProjectOpenTasks', label: t('lit.vaiProjectopentasks') },
+                        { key: 'aiViewSql_vAI_UserOpenTasks',    label: t('lit.vaiUseropentasks') },
+                        { key: 'aiViewSql_vAI_UserWorkloadBase', label: t('lit.vaiUserworkloadbase') },
+                        { key: 'aiViewSql_vAI_UserAllocations',  label: t('lit.vaiUserallocations') },
                       ] as { key: keyof SystemSettings; label: string }[]
                     ).map(({ key, label }) => (
                       <div key={key}>
                         <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                          SQL for <code className="rounded bg-[var(--pm-panel)] px-1 font-mono text-[11px]">{label}</code>
+                          {t('lit.sqlFor')} <code className="rounded bg-[var(--pm-panel)] px-1 font-mono text-[11px]">{label}</code>
                         </label>
                         <textarea
                           value={(settings[key] as string) || ''}
                           onChange={(e) => handleChange(key, e.target.value)}
                           rows={5}
-                          placeholder="Leave empty to use the built-in default SELECT…"
+                          placeholder={t('lit.leaveEmptyToUseTheBuiltInDefaultSelect')}
                           className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 font-mono text-xs text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                         />
                       </div>
@@ -1282,16 +1296,16 @@ export default function SystemSettings({
           <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
             <div>
               <h3 className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
-                Maintenance
+                {t('lit.maintenance')}
               </h3>
               <p className="text-[11px] text-[var(--pm-muted)]">
-                Administrative utilities for data consistency and migrations.
+                {t('lit.administrativeUtilitiesForDataConsistencyAndMigrations')}
               </p>
             </div>
 
             <div className="flex flex-col gap-3 rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] p-3 sm:flex-row sm:items-start">
               <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-medium text-[var(--pm-text)]">Create System Permission Groups</h4>
+                <h4 className="text-sm font-medium text-[var(--pm-text)]">{t('lit.createSystemPermissionGroups')}</h4>
                 <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
                   Creates the default Developer, Support, and Manager permission groups for any organization that is missing them.
                   Safe to run multiple times — existing groups are not modified.
@@ -1311,7 +1325,7 @@ export default function SystemSettings({
                 disabled={isMigrating}
                 className="h-10 shrink-0 rounded-lg bg-amber-600 px-4 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:bg-amber-400"
               >
-                {isMigrating ? 'Running…' : 'Run Migration'}
+                {isMigrating ? 'Running…' : t('lit.runMigration')}
               </button>
             </div>
           </div>
@@ -1327,7 +1341,7 @@ export default function SystemSettings({
                 disabled={isSyncingAiViews || isSaving}
                 className="h-10 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-surface)] px-4 text-sm font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
               >
-                {isSyncingAiViews ? 'Syncing…' : 'Sync AI Views Now'}
+                {isSyncingAiViews ? 'Syncing…' : t('lit.syncAiViewsNow')}
               </button>
             )}
             <button
@@ -1335,7 +1349,7 @@ export default function SystemSettings({
               disabled={isSaving}
               className="h-10 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-blue-400"
             >
-              {isSaving ? 'Saving…' : 'Save Settings'}
+              {isSaving ? t('lit.saving2') : t('lit.saveSettings')}
             </button>
           </div>
         )}

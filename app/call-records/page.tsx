@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect } from 'react';
@@ -43,6 +44,8 @@ interface ImportCallRecordRow {
 type TeamsImportPeriod = '7d' | '30d' | 'custom';
 
 export default function CallRecordsPage() {
+  const { t } = useI18n();
+
   const { user, isLoading, token } = useAuth();
   const router = useRouter();
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
@@ -112,7 +115,7 @@ export default function CallRecordsPage() {
         : `${getApiUrl()}/api/call-records`;
 
       const response = await fetch(url, {
-        method: editingRecord ? 'PUT' : 'POST',
+        method: editingRecord ? 'PUT' : t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -133,10 +136,10 @@ export default function CallRecordsPage() {
         await loadCallRecords();
       } else {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to save call record');
+        throw new Error(data.message || t('lit.failedToSaveCallRecord'));
       }
     } catch (err) {
-      throw err instanceof Error ? err : new Error('Error saving call record');
+      throw err instanceof Error ? err : new Error(t('lit.errorSavingCallRecord'));
     } finally {
       setIsSavingForm(false);
     }
@@ -151,8 +154,8 @@ export default function CallRecordsPage() {
   const handleDelete = (id: number) => {
     setConfirmModal({
       show: true,
-      title: 'Delete Call Record',
-      message: 'Are you sure you want to delete this call record? This action cannot be undone.',
+      title: t('lit.deleteCallRecord'),
+      message: t('lit.areYouSureYouWantToDeleteThisCallRecordThisActionCannotBeUndone'),
       onConfirm: async () => {
         setConfirmModal(null);
         try {
@@ -164,12 +167,12 @@ export default function CallRecordsPage() {
           });
 
           if (response.ok) {
-            setMessage('Call record deleted');
+            setMessage(t('lit.callRecordDeleted'));
             setTimeout(() => setMessage(''), 3000);
             loadCallRecords();
           }
         } catch (_err) {
-          setError('Error deleting call record');
+          setError(t('lit.errorDeletingCallRecord'));
         }
       },
     });
@@ -206,11 +209,11 @@ export default function CallRecordsPage() {
 
     if (teamsImportPeriod === 'custom') {
       if (!teamsCustomStartDate || !teamsCustomEndDate) {
-        setError('Please select both start and end dates for custom period.');
+        setError(t('lit.pleaseSelectBothStartAndEndDatesForCustomPeriod'));
         return;
       }
       if (teamsCustomEndDate < teamsCustomStartDate) {
-        setError('End date must be after or equal to start date.');
+        setError(t('lit.endDateMustBeAfterOrEqualToStartDate'));
         return;
       }
     }
@@ -241,7 +244,7 @@ export default function CallRecordsPage() {
 
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || 'Failed to import Teams calls');
+        throw new Error(data?.message || t('lit.failedToImportTeamsCalls'));
       }
 
       const imported = Number(data.imported || 0);
@@ -255,7 +258,7 @@ export default function CallRecordsPage() {
       await loadCallRecords();
     } catch (err: any) {
       setTeamsImportProgress('');
-      setError(err?.message || 'Error importing Teams calls');
+      setError(err?.message || t('lit.errorImportingTeamsCalls'));
     } finally {
       setIsImportingTeams(false);
     }
@@ -279,7 +282,7 @@ export default function CallRecordsPage() {
       
       if (lines.length < 2) {
         setImportProgress('');
-        setError('CSV file must have a header row and at least one data row');
+        setError(t('lit.csvFileMustHaveAHeaderRowAndAtLeastOneDataRow'));
         return;
       }
 
@@ -295,7 +298,7 @@ export default function CallRecordsPage() {
           if (header.includes('date')) record.callDate = value;
           else if (header.includes('time') && !header.includes('duration')) record.startTime = value;
           else if (header.includes('duration')) record.durationMinutes = parseInt(value) || 30;
-          else if (header.includes('type')) record.callType = value || 'Teams';
+          else if (header.includes('type')) record.callType = value || t('lit.teams');
           else if (header.includes('participant')) record.participants = value;
           else if (header.includes('subject')) record.subject = value;
           else if (header.includes('note')) record.notes = value;
@@ -306,7 +309,7 @@ export default function CallRecordsPage() {
             callDate: record.callDate,
             startTime: record.startTime || '09:00',
             durationMinutes: record.durationMinutes || 30,
-            callType: record.callType || 'Teams',
+            callType: record.callType || t('lit.teams'),
             participants: record.participants || '',
             subject: record.subject || '',
             notes: record.notes || '',
@@ -316,7 +319,7 @@ export default function CallRecordsPage() {
 
       if (records.length === 0) {
         setImportProgress('');
-        setError('No valid records found in CSV');
+        setError(t('lit.noValidRecordsFoundInCsv'));
         return;
       }
 
@@ -331,7 +334,7 @@ export default function CallRecordsPage() {
 
   const handleImportCSV = async () => {
     if (!importRecords.length) {
-      setError('Select a CSV file first.');
+      setError(t('lit.selectACsvFileFirst'));
       return;
     }
 
@@ -349,7 +352,7 @@ export default function CallRecordsPage() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.message || 'Failed to import CSV');
+        throw new Error(data?.message || t('lit.failedToImportCsv'));
       }
 
       const data = await response.json();
@@ -360,7 +363,7 @@ export default function CallRecordsPage() {
       await loadCallRecords();
     } catch (err) {
       setImportProgress('');
-      setError(err instanceof Error ? err.message : 'Error importing CSV');
+      setError(err instanceof Error ? err.message : t('lit.errorImportingCsv'));
     } finally {
       setIsImporting(false);
     }
@@ -375,7 +378,7 @@ export default function CallRecordsPage() {
       <main className="w-full mx-auto px-4 py-4 sm:py-6 space-y-2 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">
-            Call Records
+            {t('nav.callRecords')}
           </h1>
           <div className="flex flex-wrap gap-2">
             <button
@@ -385,7 +388,7 @@ export default function CallRecordsPage() {
               }}
               className="h-10 px-3 sm:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Import Teams Calls
+              {t('lit.importTeamsCalls')}
             </button>
             <button
               onClick={() => {
@@ -394,7 +397,7 @@ export default function CallRecordsPage() {
               }}
               className="h-10 px-3 sm:px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
             >
-              Import CSV
+              {t('lit.importCsv')}
             </button>
             <button
               onClick={() => {
@@ -425,13 +428,13 @@ export default function CallRecordsPage() {
           isOpen={showForm && !!token}
           token={token || ''}
           title={editingRecord ? '📞 Edit Call Record' : '📞 Add Call Record'}
-          submitLabel={editingRecord ? 'Update Call' : 'Add Call'}
+          submitLabel={editingRecord ? t('lit.updateCall') : t('lit.addCall')}
           isSubmitting={isSavingForm}
           initialData={editingRecord ? {
             callDate: editingRecord.CallDate ? editingRecord.CallDate.split('T')[0] : '',
             startTime: editingRecord.StartTime ? editingRecord.StartTime.substring(0, 5) : '09:00',
             durationMinutes: editingRecord.DurationMinutes || 30,
-            callType: editingRecord.CallType || 'Teams',
+            callType: editingRecord.CallType || t('lit.teams'),
             participants: editingRecord.Participants || '',
             subject: editingRecord.Subject || '',
             notes: editingRecord.Notes || '',
@@ -449,12 +452,12 @@ export default function CallRecordsPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4 gap-4">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Import Call Records from CSV</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.importCallRecordsFromCsv')}</h2>
                   <button
                     onClick={closeImportModal}
                     className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    aria-label="Close"
-                    title="Close"
+                    aria-label={t('common.close')}
+                    title={t('common.close')}
                   >
                     ✕
                   </button>
@@ -463,21 +466,21 @@ export default function CallRecordsPage() {
                 <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">📄 CSV Format</h3>
                   <p className="text-sm text-blue-800 dark:text-blue-400 mb-2">
-                    Your CSV should have the following columns (header required):
+                    {t('lit.yourCsvShouldHaveTheFollowingColumnsHeaderRequired')}
                   </p>
                   <code className="text-xs bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded block overflow-x-auto">
-                    callDate,startTime,durationMinutes,callType,participants,subject,notes
+                    {t('lit.calldateStarttimeDurationminutesCalltypeParticipantsSubjectNotes')}
                   </code>
                   <p className="text-xs text-blue-800 dark:text-blue-400 mt-2">
-                    Example: 2026-02-03,14:30,45,Teams,"John, Mary",Project Meeting,Discussed requirements
+                    {t('lit.example20260203143045TeamsJohnMaryProjectMeetingDiscussedRequirements')}
                   </p>
                   <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
-                    <a href="/templates/call_records_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">Download template CSV</a>
+                    <a href="/templates/call_records_import_template.csv" download className="underline hover:text-blue-600 dark:hover:text-blue-200">{t('lit.downloadTemplateCsv')}</a>
                   </p>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select CSV File</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.selectCsvFile')}</label>
                   <input
                     type="file"
                     accept=".csv"
@@ -501,17 +504,17 @@ export default function CallRecordsPage() {
 
                 {importPreview.length > 0 && (
                   <div className="mb-5">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Preview (first 5 rows)</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{t('lit.previewFirst5Rows')}</h3>
                     <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Start Time</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Duration</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Type</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Participants</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Subject</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('common.date')}</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.startTime')}</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.duration')}</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('common.type')}</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.participants')}</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">{t('lit.subject')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -544,14 +547,14 @@ export default function CallRecordsPage() {
                     onClick={closeImportModal}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                   <button
                     onClick={handleImportCSV}
                     disabled={isImporting || importRecords.length === 0}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
                   >
-                    {isImporting ? 'Importing...' : 'Import CSV'}
+                    {isImporting ? 'Importing...' : t('lit.importCsv')}
                   </button>
                 </div>
               </div>
@@ -564,12 +567,12 @@ export default function CallRecordsPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 border border-gray-200 dark:border-gray-700">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4 gap-4">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Import Recent Teams Calls</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.importRecentTeamsCalls')}</h2>
                   <button
                     onClick={closeTeamsImportModal}
                     className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    aria-label="Close"
-                    title="Close"
+                    aria-label={t('common.close')}
+                    title={t('common.close')}
                   >
                     ✕
                   </button>
@@ -577,22 +580,22 @@ export default function CallRecordsPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.period')}</label>
                     <select
                       value={teamsImportPeriod}
                       onChange={(e) => setTeamsImportPeriod(e.target.value as TeamsImportPeriod)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      <option value="7d">Last 7 days</option>
-                      <option value="30d">Last 30 days</option>
-                      <option value="custom">Custom range</option>
+                      <option value="7d">{t('lit.last7Days')}</option>
+                      <option value="30d">{t('lit.last30Days')}</option>
+                      <option value="custom">{t('lit.customRange')}</option>
                     </select>
                   </div>
 
                   {teamsImportPeriod === 'custom' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.startDate')}</label>
                         <input
                           type="date"
                           value={teamsCustomStartDate}
@@ -603,7 +606,7 @@ export default function CallRecordsPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.endDate')}</label>
                         <input
                           type="date"
                           value={teamsCustomEndDate}
@@ -638,7 +641,7 @@ export default function CallRecordsPage() {
                       onClick={closeTeamsImportModal}
                       className="h-10 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
                     >
-                      Close
+                      {t('common.close')}
                     </button>
                     <button
                       type="button"
@@ -646,7 +649,7 @@ export default function CallRecordsPage() {
                       disabled={isImportingTeams}
                       className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
                     >
-                      {isImportingTeams ? 'Importing...' : 'Import'}
+                      {isImportingTeams ? 'Importing...' : t('lit.import')}
                     </button>
                   </div>
                 </div>
@@ -659,32 +662,32 @@ export default function CallRecordsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-x-auto">
           {isLoadingRecords ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              Loading call records...
+              {t('lit.loadingCallRecords')}
             </div>
           ) : callRecords.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <div className="mb-3 flex justify-center text-[var(--pm-muted)] opacity-70">
                 <NavModuleIcon href="/call-records" size={40} />
               </div>
-              <p className="text-lg">No call records yet.</p>
-              <p className="text-sm">Add calls manually or import from CSV.</p>
+              <p className="text-lg">{t('lit.noCallRecordsYet')}</p>
+              <p className="text-sm">{t('lit.addCallsManuallyOrImportFromCsv')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Time</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Duration</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Subject</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Organization</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Project</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Task</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Participants</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('common.date')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('lit.time')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('lit.duration')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('common.type')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('lit.subject')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('common.organization')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('common.project')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('common.task')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{t('lit.participants')}</th>
                     <th scope="col" className="relative px-4 py-3">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -730,8 +733,8 @@ export default function CallRecordsPage() {
                         <button
                           onClick={() => handleEdit(record)}
                           className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
-                          title="Edit"
-                          aria-label="Edit"
+                          title={t('common.edit')}
+                          aria-label={t('common.edit')}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M16.5 3.5a2.121 2.121 0 113 3L12 14l-4 1 1-4 7.5-7.5z" />
@@ -740,8 +743,8 @@ export default function CallRecordsPage() {
                         <button
                           onClick={() => handleDelete(record.Id)}
                           className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
-                          title="Delete"
-                          aria-label="Delete"
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -769,13 +772,13 @@ export default function CallRecordsPage() {
                 onClick={() => setConfirmModal(null)}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmModal.onConfirm}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

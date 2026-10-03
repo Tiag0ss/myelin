@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
 
@@ -32,6 +34,19 @@ import ExpenseTaxonomyManager from '@/components/ExpenseTaxonomyManager';
 import OrganizationIntegrationsPanel from '@/components/OrganizationIntegrationsPanel';
 import { useUrlTab } from '@/hooks/useUrlTab';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return readLocaleStorage() ?? 'en';
+}
+
+/** Path translate without hook — for nested helpers/components that cannot call useI18n. */
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
 const ORGANIZATION_DETAIL_TABS = [
   'overview',
   'members',
@@ -61,6 +76,7 @@ export default function OrganizationDetailPage(props: { params: Promise<{ id: st
   );
 }
 function OrganizationDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useI18n();
   const resolvedParams = use(params);
   const orgId = parseInt(resolvedParams.id);
   
@@ -165,7 +181,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
       setOrganization(response.organization);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load organization');
+      setError(err.message || t('lit.failedToLoadOrganization'));
     } finally {
       setIsLoading(false);
     }
@@ -196,13 +212,13 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to update organization');
+        throw new Error(data.message || t('lit.failedToUpdateOrganization'));
       }
 
       await loadOrganization();
       setShowEditModal(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to update organization');
+      setError(err.message || t('lit.failedToUpdateOrganization'));
     } finally {
       setIsSaving(false);
     }
@@ -236,7 +252,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
     
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      setError('File size must be less than 10MB');
+      setError(t('lit.fileSizeMustBeLessThan10mb'));
       return;
     }
     
@@ -250,7 +266,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      setError('File type not allowed. Allowed: images, PDF, Word, Excel, ZIP, TXT');
+      setError(t('lit.fileTypeNotAllowedAllowedImagesPdfWordExcelZipTxt'));
       return;
     }
     
@@ -285,13 +301,13 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
           e.target.value = '';
         } else {
           const data = await response.json();
-          setError(data.message || 'Failed to upload file');
+          setError(data.message || t('lit.failedToUploadFile'));
         }
       };
       
       reader.readAsDataURL(file);
     } catch (err: any) {
-      setError(err.message || 'An error occurred during upload');
+      setError(err.message || t('lit.anErrorOccurredDuringUpload'));
     } finally {
       setUploadingFile(false);
     }
@@ -301,7 +317,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
     if (!token) return;
     
     showConfirm(
-      'Delete Attachment',
+      t('lit.deleteAttachment'),
       'Are you sure you want to delete this attachment?',
       async () => {
         try {
@@ -319,10 +335,10 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
             await loadAttachments();
           } else {
             const data = await response.json();
-            setError(data.message || 'Failed to delete attachment');
+            setError(data.message || t('lit.failedToDeleteAttachment'));
           }
         } catch (err: any) {
-          setError(err.message || 'An error occurred');
+          setError(err.message || t('lit.anErrorOccurred'));
         }
       }
     );
@@ -344,23 +360,23 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
     Number(organization.CanManageSettings || 0) === 1;
 
   const organizationTabs = [
-    { id: 'overview' as const, label: 'Overview' },
-    { id: 'members' as const, label: 'Members' },
-    { id: 'projects' as const, label: 'Projects' },
-    { id: 'permissions' as const, label: 'Permission Groups' },
-    { id: 'statuses' as const, label: 'Status & Priorities' },
-    { id: 'expense-categories' as const, label: 'Expense Categories' },
-    { id: 'tags' as const, label: 'Tags' },
+    { id: 'overview' as const, label: t('lit.overview') },
+    { id: 'members' as const, label: t('lit.members') },
+    { id: 'projects' as const, label: t('lit.projects') },
+    { id: 'permissions' as const, label: t('lit.permissionGroups') },
+    { id: 'statuses' as const, label: t('lit.statusPriorities') },
+    { id: 'expense-categories' as const, label: t('lit.expenseCategories') },
+    { id: 'tags' as const, label: t('lit.tags') },
     ...(canManageSettings
       ? [
-          { id: 'integrations' as const, label: 'Integrations' },
-          { id: 'sla' as const, label: 'SLA Rules' },
-          { id: 'workflow-policies' as const, label: 'Workflow Transition Policies (DoR/DoD)' },
-          { id: 'task-form' as const, label: 'Task Form' },
+          { id: 'integrations' as const, label: t('lit.integrations') },
+          { id: 'sla' as const, label: t('lit.slaRules') },
+          { id: 'workflow-policies' as const, label: t('lit.workflowTransitionPoliciesDorDod') },
+          { id: 'task-form' as const, label: t('lit.taskForm') },
         ]
       : []),
-    { id: 'attachments' as const, label: 'Attachments' },
-    { id: 'history' as const, label: 'History' },
+    { id: 'attachments' as const, label: t('lit.attachments') },
+    { id: 'history' as const, label: t('lit.history') },
   ];
 
   return (
@@ -379,7 +395,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                 }}
                 className="mt-1 text-sm text-[var(--pm-accent)] hover:underline"
               >
-                Edit
+                {t('common.edit')}
               </button>
             )}
           </div>
@@ -445,10 +461,10 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                 onActionsStateChange={setTaskFormActions}
                 onRequestSyncConfirm={(onConfirm) => {
                   showConfirm(
-                    'Sync from global',
+                    t('lit.syncFromGlobal'),
                     'This will overwrite this organization\'s task form visibility with the global template. Continue?',
                     onConfirm,
-                    { confirmLabel: 'Sync', confirmVariant: 'primary' }
+                    { confirmLabel: t('lit.sync'), confirmVariant: 'primary' }
                   );
                 }}
               />
@@ -479,7 +495,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
             disabled={taskFormActions.saving || taskFormActions.syncing}
             className={pageActionButtonClass.secondary}
           >
-            {taskFormActions.syncing ? 'Syncing…' : 'Sync from global'}
+            {taskFormActions.syncing ? 'Syncing…' : t('lit.syncFromGlobal')}
           </button>
           <button
             type="button"
@@ -487,7 +503,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
             disabled={taskFormActions.saving || taskFormActions.syncing}
             className={pageActionButtonClass.primary}
           >
-            {taskFormActions.saving ? 'Saving…' : 'Save'}
+            {taskFormActions.saving ? t('lit.saving2') : t('common.save')}
           </button>
         </PageStickyActions>
       )}
@@ -498,13 +514,13 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Edit Organization
+                {t('lit.editOrganization2')}
               </h2>
             </div>
             <form onSubmit={handleSaveOrganization} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Name *
+                  {t('lit.name')}
                 </label>
                 <input
                   type="text"
@@ -516,7 +532,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
+                  {t('common.description')}
                 </label>
                 <textarea
                   value={editForm.description}
@@ -531,14 +547,14 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                   onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? t('lit.saving') : t('lit.saveChanges')}
                 </button>
               </div>
             </form>
@@ -590,11 +606,11 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
         },
       });
 
-      if (!response.ok) throw new Error('Failed to load projects');
+      if (!response.ok) throw new Error(t('lit.failedToLoadProjects'));
       const data = await response.json();
       setProjects(data.projects || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load projects');
+      setError(err.message || t('lit.failedToLoadProjects'));
     } finally {
       setIsLoading(false);
     }
@@ -713,10 +729,10 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
   }, [projects]);
 
   const projectStatusCards = [
-    { label: 'Active', value: activeProjects, tone: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' },
-    { label: 'Completed', value: completedProjects, tone: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' },
-    { label: 'On Hold', value: onHoldProjects, tone: 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' },
-    { label: 'Cancelled', value: cancelledProjects, tone: 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/60' },
+    { label: t('lit.active2'), value: activeProjects, tone: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' },
+    { label: t('lit.completed'), value: completedProjects, tone: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' },
+    { label: t('lit.onHold'), value: onHoldProjects, tone: 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' },
+    { label: t('lit.cancelled'), value: cancelledProjects, tone: 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/60' },
   ];
 
   return (
@@ -742,11 +758,11 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-gray-500 dark:text-gray-400">Created by</div>
-                <div className="font-medium text-gray-900 dark:text-white">{organization.CreatorName || 'Unknown'}</div>
+                <div className="text-gray-500 dark:text-gray-400">{t('lit.createdBy')}</div>
+                <div className="font-medium text-gray-900 dark:text-white">{organization.CreatorName || t('lit.unknown')}</div>
               </div>
               <div>
-                <div className="text-gray-500 dark:text-gray-400">Created on</div>
+                <div className="text-gray-500 dark:text-gray-400">{t('lit.createdOn')}</div>
                 <div className="font-medium text-gray-900 dark:text-white">{new Date(organization.CreatedAt).toLocaleDateString()}</div>
               </div>
             </div>
@@ -754,24 +770,24 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
 
           <div className="grid grid-cols-2 gap-3 min-w-full lg:min-w-[320px] lg:max-w-[360px]">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Customer Visible</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.customerVisible')}</div>
               <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{customerVisibleProjects}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">projects visible in portal</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.projectsVisibleInPortal')}</div>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Global</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.global')}</div>
               <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{globalProjects}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">shared projects</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.sharedProjects')}</div>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Overdue Tasks</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.overdueTasks')}</div>
               <div className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{overdueTasks}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">across all projects</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.acrossAllProjects')}</div>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Unplanned Tasks</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.unplannedTasks')}</div>
               <div className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{unplannedTasks}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">need planning</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.needPlanning')}</div>
             </div>
           </div>
         </div>
@@ -793,29 +809,29 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
         <>
           <div className={`grid grid-cols-1 md:grid-cols-2 ${internalTicketsEnabled ? 'xl:grid-cols-5' : 'xl:grid-cols-4'} gap-4`}>
             <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border-l-4 border-blue-500">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Projects</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">{t('common.projects')}</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalProjects}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activeProjects} active · {completedProjects} completed</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border-l-4 border-purple-500">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Tasks</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">{t('common.tasks')}</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalTasks}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{completedTasks} completed · {overallProgress}% progress</div>
             </div>
             {internalTicketsEnabled && (
               <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border-l-4 border-indigo-500">
-                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Tickets</div>
+                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">{t('common.tickets')}</div>
                 <div className="text-3xl font-bold text-gray-900 dark:text-white">{totalTickets}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{unresolvedTickets} open · {urgentTickets} urgent/high</div>
               </div>
             )}
             <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border-l-4 border-orange-500">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Estimated Hours</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">{t('lit.estimatedHours')}</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">{decimalHoursToHMS(totalEstimated)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">planned across project totals</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('lit.plannedAcrossProjectTotals')}</div>
             </div>
             <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow border-l-4 border-green-500">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Hours Worked</div>
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">{t('lit.hoursWorked')}</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">{decimalHoursToHMS(totalWorked)}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hoursProgress}% of estimated effort</div>
             </div>
@@ -823,11 +839,11 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Delivery Progress</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.deliveryProgress')}</h3>
               <div className="space-y-5">
                 <div>
                   <div className="flex justify-between items-center text-sm mb-1">
-                    <span className="text-gray-600 dark:text-gray-400">Tasks completed</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('lit.tasksCompleted')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">{completedTasks}/{totalTasks} ({overallProgress}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -836,7 +852,7 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
                 </div>
                 <div>
                   <div className="flex justify-between items-center text-sm mb-1">
-                    <span className="text-gray-600 dark:text-gray-400">Hours progress</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('lit.hoursProgress')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">{decimalHoursToHMS(totalWorked)} / {decimalHoursToHMS(totalEstimated)}</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -855,17 +871,17 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Portfolio Mix</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.portfolioMix')}</div>
                     <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">{workProjects} work projects</div>
                     <div className="text-sm text-gray-700 dark:text-gray-300">{hobbyProjects} hobby projects</div>
                   </div>
                   <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Task Risks</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.taskRisks')}</div>
                     <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">{overdueTasks} overdue tasks</div>
                     <div className="text-sm text-gray-700 dark:text-gray-300">{unplannedTasks} unplanned tasks</div>
                   </div>
                   <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Support Load</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('lit.supportLoad')}</div>
                     <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">{openTickets} open tickets</div>
                     <div className="text-sm text-gray-700 dark:text-gray-300">{waitingTickets} waiting · {inProgressTickets} in progress</div>
                   </div>
@@ -874,15 +890,15 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
             </div>
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attention Areas</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.attentionAreas')}</h3>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-red-600 dark:text-red-400">Overdue Projects</h4>
+                    <h4 className="text-sm font-medium text-red-600 dark:text-red-400">{t('lit.overdueProjects')}</h4>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{overdueProjects.length}</span>
                   </div>
                   {overdueProjects.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No overdue projects.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noOverdueProjects')}</p>
                   ) : (
                     <div className="space-y-2">
                       {overdueProjects.slice(0, 4).map((project) => {
@@ -901,11 +917,11 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
 
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-amber-600 dark:text-amber-400">Upcoming Deadlines</h4>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">next 14 days</span>
+                    <h4 className="text-sm font-medium text-amber-600 dark:text-amber-400">{t('lit.upcomingDeadlines')}</h4>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{t('lit.next14Days')}</span>
                   </div>
                   {upcomingProjects.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No upcoming deadlines.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noUpcomingDeadlines')}</p>
                   ) : (
                     <div className="space-y-2">
                       {upcomingProjects.slice(0, 4).map((project) => {
@@ -914,7 +930,7 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
                         return (
                           <div key={project.Id} className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 p-3">
                             <div className="text-sm font-medium text-gray-900 dark:text-white">{project.ProjectName}</div>
-                            <div className="text-xs text-amber-700 dark:text-amber-300 mt-1">{daysLeft === 0 ? 'Due today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}</div>
+                            <div className="text-xs text-amber-700 dark:text-amber-300 mt-1">{daysLeft === 0 ? t('lit.dueToday') : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}</div>
                           </div>
                         );
                       })}
@@ -928,11 +944,11 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Project Activity</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Most recently updated projects in this organization.</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.recentProjectActivity')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.mostRecentlyUpdatedProjectsInThisOrganization')}</p>
               </div>
               {recentProjects.length === 0 ? (
-                <div className="p-6 text-sm text-gray-500 dark:text-gray-400">No projects found.</div>
+                <div className="p-6 text-sm text-gray-500 dark:text-gray-400">{t('lit.noProjectsFound')}</div>
               ) : (
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                   {recentProjects.map((project) => {
@@ -951,19 +967,19 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
                               )}
                               {Number(project.IsHobby || 0) === 1 && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                  Hobby
+                                  {t('lit.hobby')}
                                 </span>
                               )}
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                              <span>{project.CustomerName || 'Internal / no customer'}</span>
+                              <span>{project.CustomerName || t('lit.internalNoCustomer')}</span>
                               <span>{Number(project.TotalTasks || 0)} tasks</span>
                               <span>{Number(project.TotalWorkedHours || 0).toFixed(1) !== '0.0' ? decimalHoursToHMS(Number(project.TotalWorkedHours || 0)) : '00:00:00'} worked</span>
                               <span>Updated {new Date(project.UpdatedAt).toLocaleDateString()}</span>
                             </div>
                             <div className="mt-3">
                               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                <span>Task progress</span>
+                                <span>{t('lit.taskProgress')}</span>
                                 <span>{progress}%</span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -972,7 +988,7 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
                             </div>
                           </div>
                           <Link href={`/projects/${project.Id}`} className="text-sm text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
-                            Open project
+                            {t('lit.openProject')}
                           </Link>
                         </div>
                       </div>
@@ -983,10 +999,10 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Top Customers</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">Customers with the most active portfolio footprint.</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.topCustomers')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">{t('lit.customersWithTheMostActivePortfolioFootprint')}</p>
               {customerSummaries.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No customer-linked projects yet.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noCustomerLinkedProjectsYet')}</p>
               ) : (
                 <div className="space-y-3">
                   {customerSummaries.map((customer) => (
@@ -1005,33 +1021,33 @@ function OverviewTab({ organization, orgId, token, internalTicketsEnabled }: { o
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ticket Snapshot</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Current support load inside this organization.</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.ticketSnapshot')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('lit.currentSupportLoadInsideThisOrganization')}</p>
                 </div>
                 <Link href={`/tickets?organizationId=${orgId}`} className="text-sm text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
-                  View tickets
+                  {t('lit.viewTickets')}
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-700/60 p-4 text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalTickets}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Total</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.total')}</div>
                 </div>
                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{openTickets}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Open</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.open')}</div>
                 </div>
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-center">
                   <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{waitingTickets}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Waiting</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.waiting2')}</div>
                 </div>
                 <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 p-4 text-center">
                   <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{inProgressTickets}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">In Progress</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.inProgress3')}</div>
                 </div>
                 <div className="rounded-lg bg-green-50 dark:bg-green-900/20 p-4 text-center">
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">{resolvedTickets}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Resolved</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.resolved2')}</div>
                 </div>
               </div>
             </div>
@@ -1061,6 +1077,8 @@ function MembersTab({
     }
   ) => void;
 }) {
+  const { t } = useI18n();
+
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [groups, setGroups] = useState<PermissionGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1080,7 +1098,7 @@ function MembersTab({
       setMembers(response.members || []);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load members');
+      setError(err.message || t('lit.failedToLoadMembers'));
     } finally {
       setIsLoading(false);
     }
@@ -1096,30 +1114,30 @@ function MembersTab({
   };
 
   const handleRemove = async (memberId: number) => {
-    showConfirm('Remove Member', 'Are you sure you want to remove this member?', async () => {
+    showConfirm(t('lit.removeMember2'), 'Are you sure you want to remove this member?', async () => {
       try {
         await organizationsApi.removeMember(orgId, memberId, token);
         await loadMembers();
       } catch (err: any) {
-        setError(err.message || 'Failed to remove member');
+        setError(err.message || t('lit.failedToRemoveMember'));
       }
     });
   };
 
   if (isLoading) {
-    return <div className="text-gray-500 dark:text-gray-400">Loading members...</div>;
+    return <div className="text-gray-500 dark:text-gray-400">{t('lit.loadingMembers')}</div>;
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Organization Members</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.organizationMembers')}</h3>
         {canManage && (
           <button
             onClick={() => setShowAddModal(true)}
             className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white transition-colors"
           >
-            Add Member
+            {t('lit.addMember')}
           </button>
         )}
       </div>
@@ -1135,14 +1153,14 @@ function MembersTab({
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Email</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Role</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Permission Group</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Joined</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.user')}</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('auth.email')}</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.role')}</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.permissionGroup')}</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.joined')}</th>
                 {canManage && (
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -1162,8 +1180,8 @@ function MembersTab({
                           <button
                             onClick={() => setEditingMember(member)}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400"
-                            title="Edit member"
-                            aria-label="Edit member"
+                            title={t('lit.editMember')}
+                            aria-label={t('lit.editMember')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1172,8 +1190,8 @@ function MembersTab({
                           <button
                             onClick={() => handleRemove(member.Id)}
                             className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400"
-                            title="Remove member"
-                            aria-label="Remove member"
+                            title={t('lit.removeMember')}
+                            aria-label={t('lit.removeMember')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8" />
@@ -1188,7 +1206,7 @@ function MembersTab({
               {members.length === 0 && (
                 <tr>
                   <td colSpan={canManage ? 6 : 5} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No members found.
+                    {t('lit.noMembersFound')}
                   </td>
                 </tr>
               )}
@@ -1234,6 +1252,7 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
   onAdded: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
   const [availableUsers, setAvailableUsers] = useState<Array<{ Id: number; Username: string; Email: string; FirstName?: string; LastName?: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [formData, setFormData] = useState<{ userId?: number; role: string; permissionGroupId?: number }>({
@@ -1254,7 +1273,7 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
           setFormData((prev) => ({ ...prev, userId: users[0].Id }));
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to load available users');
+        setError(err.message || t('lit.failedToLoadAvailableUsers'));
       } finally {
         setLoadingUsers(false);
       }
@@ -1267,7 +1286,7 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
     e.preventDefault();
 
     if (!formData.userId) {
-      setError('Please select a user');
+      setError(t('lit.pleaseSelectAUser'));
       return;
     }
 
@@ -1278,7 +1297,7 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
       await organizationsApi.addMember(orgId, formData, token);
       onAdded();
     } catch (err: any) {
-      setError(err.message || 'Failed to add member');
+      setError(err.message || t('lit.failedToAddMember'));
     } finally {
       setIsLoading(false);
     }
@@ -1289,7 +1308,7 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
         <div className="p-6 overflow-y-auto max-h-[90vh]">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add Member</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.addMember')}</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">×</button>
           </div>
 
@@ -1301,37 +1320,37 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">User *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.user')}</label>
               <SearchableSelect
                 value={formData.userId || ''}
                 onChange={(value) => setFormData({ ...formData, userId: value ? parseInt(String(value), 10) : undefined })}
                 options={availableUsers.map((userItem) => ({ value: userItem.Id, label: `${userItem.Username} (${userItem.Email})` }))}
-                placeholder="User"
-                emptyText={loadingUsers ? 'Loading users...' : (availableUsers.length === 0 ? 'No available users' : 'Select user')}
+                placeholder={t('common.user')}
+                emptyText={loadingUsers ? 'Loading users...' : (availableUsers.length === 0 ? t('lit.noAvailableUsers') : t('lit.selectUser'))}
                 disabled={loadingUsers || availableUsers.length === 0}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.role')}</label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="Member">Member</option>
-                <option value="Admin">Admin</option>
+                <option value="Member">{t('lit.member')}</option>
+                <option value="Admin">{t('nav.sectionAdmin')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Permission Group (Optional)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.permissionGroupOptional')}</label>
               <select
                 value={formData.permissionGroupId || ''}
                 onChange={(e) => setFormData({ ...formData, permissionGroupId: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">None</option>
+                <option value="">{t('common.none')}</option>
                 {groups.map((group) => (
                   <option key={group.Id} value={group.Id}>{group.GroupName}</option>
                 ))}
@@ -1339,9 +1358,9 @@ function AddMemberModal({ orgId, groups, onClose, onAdded, token }: {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button type="button" onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
+              <button type="button" onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium">{t('common.cancel')}</button>
               <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium">
-                {isLoading ? 'Adding...' : 'Add Member'}
+                {isLoading ? 'Adding...' : t('lit.addMember')}
               </button>
             </div>
           </form>
@@ -1375,7 +1394,7 @@ function EditMemberModal({ orgId, member, groups, onClose, onUpdated, token }: {
       await organizationsApi.updateMember(orgId, member.Id, formData, token);
       onUpdated();
     } catch (err: any) {
-      setError(err.message || 'Failed to update member');
+      setError(err.message || t('lit.failedToUpdateMember'));
     } finally {
       setIsLoading(false);
     }
@@ -1386,7 +1405,7 @@ function EditMemberModal({ orgId, member, groups, onClose, onUpdated, token }: {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Member</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.editMember2')}</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">×</button>
           </div>
 
@@ -1397,32 +1416,32 @@ function EditMemberModal({ orgId, member, groups, onClose, onUpdated, token }: {
           )}
 
           <div className="mb-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">User</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.user')}</div>
             <div className="text-lg font-medium text-gray-900 dark:text-white">{member.Username}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">{member.Email}</div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.role')}</label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="Member">Member</option>
-                <option value="Admin">Admin</option>
+                <option value="Member">{t('lit.member')}</option>
+                <option value="Admin">{t('nav.sectionAdmin')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Permission Group (Optional)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.permissionGroupOptional')}</label>
               <select
                 value={formData.permissionGroupId || ''}
                 onChange={(e) => setFormData({ ...formData, permissionGroupId: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">None</option>
+                <option value="">{t('common.none')}</option>
                 {groups.map((group) => (
                   <option key={group.Id} value={group.Id}>{group.GroupName}</option>
                 ))}
@@ -1430,9 +1449,9 @@ function EditMemberModal({ orgId, member, groups, onClose, onUpdated, token }: {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button type="button" onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium">Cancel</button>
+              <button type="button" onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium">{t('common.cancel')}</button>
               <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium">
-                {isLoading ? 'Updating...' : 'Update Member'}
+                {isLoading ? 'Updating...' : t('lit.updateMember')}
               </button>
             </div>
           </form>
@@ -1443,30 +1462,30 @@ function EditMemberModal({ orgId, member, groups, onClose, onUpdated, token }: {
 }
 
 const PERMISSION_GROUP_FLAGS = [
-  { field: 'CanManageProjects', formKey: 'canManageProjects', label: 'Manage Projects' },
-  { field: 'CanCreateProjects', formKey: 'canCreateProjects', label: 'Create Projects' },
-  { field: 'CanDeleteProjects', formKey: 'canDeleteProjects', label: 'Delete Projects' },
-  { field: 'CanManageTasks', formKey: 'canManageTasks', label: 'Manage Tasks' },
-  { field: 'CanCreateTasks', formKey: 'canCreateTasks', label: 'Create Tasks' },
-  { field: 'CanDeleteTasks', formKey: 'canDeleteTasks', label: 'Delete Tasks' },
-  { field: 'CanAssignTasks', formKey: 'canAssignTasks', label: 'Assign Tasks' },
-  { field: 'CanPlanTasks', formKey: 'canPlanTasks', label: 'Plan Tasks' },
-  { field: 'CanManageTimeEntries', formKey: 'canManageTimeEntries', label: 'Manage Time Entries' },
-  { field: 'CanViewReports', formKey: 'canViewReports', label: 'View Reports' },
-  { field: 'CanViewBudgetInfo', formKey: 'canViewBudgetInfo', label: 'View Budget Info' },
-  { field: 'CanManageTickets', formKey: 'canManageTickets', label: 'Manage Tickets' },
-  { field: 'CanCreateTickets', formKey: 'canCreateTickets', label: 'Create Tickets' },
-  { field: 'CanDeleteTickets', formKey: 'canDeleteTickets', label: 'Delete Tickets' },
-  { field: 'CanAssignTickets', formKey: 'canAssignTickets', label: 'Assign Tickets' },
-  { field: 'CanCreateTaskFromTicket', formKey: 'canCreateTaskFromTicket', label: 'Create Task from Ticket' },
-  { field: 'CanViewOthersPlanning', formKey: 'canViewOthersPlanning', label: 'View Others Planning' },
-  { field: 'CanViewApplications', formKey: 'canViewApplications', label: 'View Applications' },
-  { field: 'CanManageMembers', formKey: 'canManageMembers', label: 'Manage Members' },
-  { field: 'CanManageSettings', formKey: 'canManageSettings', label: 'Manage Settings' },
-  { field: 'CanManageApplications', formKey: 'canManageApplications', label: 'Manage Applications' },
-  { field: 'CanCreateApplications', formKey: 'canCreateApplications', label: 'Create Applications' },
-  { field: 'CanDeleteApplications', formKey: 'canDeleteApplications', label: 'Delete Applications' },
-  { field: 'CanManageReleases', formKey: 'canManageReleases', label: 'Manage Releases' },
+  { field: 'CanManageProjects', formKey: 'canManageProjects', label: t('lit.manageProjects') },
+  { field: 'CanCreateProjects', formKey: 'canCreateProjects', label: t('lit.createProjects') },
+  { field: 'CanDeleteProjects', formKey: 'canDeleteProjects', label: t('lit.deleteProjects') },
+  { field: 'CanManageTasks', formKey: 'canManageTasks', label: t('lit.manageTasks') },
+  { field: 'CanCreateTasks', formKey: 'canCreateTasks', label: t('lit.createTasks') },
+  { field: 'CanDeleteTasks', formKey: 'canDeleteTasks', label: t('lit.deleteTasks') },
+  { field: 'CanAssignTasks', formKey: 'canAssignTasks', label: t('lit.assignTasks') },
+  { field: 'CanPlanTasks', formKey: 'canPlanTasks', label: t('lit.planTasks') },
+  { field: 'CanManageTimeEntries', formKey: 'canManageTimeEntries', label: t('lit.manageTimeEntries') },
+  { field: 'CanViewReports', formKey: 'canViewReports', label: t('lit.viewReports') },
+  { field: 'CanViewBudgetInfo', formKey: 'canViewBudgetInfo', label: t('lit.viewBudgetInfo') },
+  { field: 'CanManageTickets', formKey: 'canManageTickets', label: t('lit.manageTickets') },
+  { field: 'CanCreateTickets', formKey: 'canCreateTickets', label: t('lit.createTickets') },
+  { field: 'CanDeleteTickets', formKey: 'canDeleteTickets', label: t('lit.deleteTickets') },
+  { field: 'CanAssignTickets', formKey: 'canAssignTickets', label: t('lit.assignTickets') },
+  { field: 'CanCreateTaskFromTicket', formKey: 'canCreateTaskFromTicket', label: t('lit.createTaskFromTicket') },
+  { field: 'CanViewOthersPlanning', formKey: 'canViewOthersPlanning', label: t('lit.viewOthersPlanning') },
+  { field: 'CanViewApplications', formKey: 'canViewApplications', label: t('lit.viewApplications') },
+  { field: 'CanManageMembers', formKey: 'canManageMembers', label: t('lit.manageMembers') },
+  { field: 'CanManageSettings', formKey: 'canManageSettings', label: t('lit.manageSettings') },
+  { field: 'CanManageApplications', formKey: 'canManageApplications', label: t('lit.manageApplications') },
+  { field: 'CanCreateApplications', formKey: 'canCreateApplications', label: t('lit.createApplications') },
+  { field: 'CanDeleteApplications', formKey: 'canDeleteApplications', label: t('lit.deleteApplications') },
+  { field: 'CanManageReleases', formKey: 'canManageReleases', label: t('lit.manageReleases') },
 ] as const;
 
 type PermissionGroupFlagField = (typeof PERMISSION_GROUP_FLAGS)[number]['field'];
@@ -1496,6 +1515,8 @@ function PermissionsTab({
     }
   ) => void;
 }) {
+  const { t } = useI18n();
+
   const [groups, setGroups] = useState<PermissionGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1513,7 +1534,7 @@ function PermissionsTab({
       setGroups(response.groups);
       setError('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load permission groups');
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadPermissionGroups'));
     } finally {
       setIsLoading(false);
     }
@@ -1528,7 +1549,7 @@ function PermissionsTab({
           await permissionGroupsApi.delete(id, token);
           await loadGroups();
         } catch (err: unknown) {
-          setError(err instanceof Error ? err.message : 'Failed to delete permission group');
+          setError(err instanceof Error ? err.message : t('lit.failedToDeletePermissionGroup'));
         }
       }
     );
@@ -1543,18 +1564,18 @@ function PermissionsTab({
           await permissionGroupsApi.syncFromGlobal(group.Id, token);
           await loadGroups();
         } catch (err: unknown) {
-          setError(err instanceof Error ? err.message : 'Failed to sync permission group');
+          setError(err instanceof Error ? err.message : t('lit.failedToSyncPermissionGroup'));
         }
       },
       {
-        confirmLabel: 'Sync',
+        confirmLabel: t('lit.sync'),
         confirmVariant: 'primary',
       }
     );
   };
 
   if (isLoading) {
-    return <div className="py-4 text-sm text-gray-500 dark:text-gray-400">Loading permission groups…</div>;
+    return <div className="py-4 text-sm text-gray-500 dark:text-gray-400">{t('lit.loadingPermissionGroups')}</div>;
   }
 
   return (
@@ -1568,7 +1589,7 @@ function PermissionsTab({
             onClick={() => setShowCreateModal(true)}
             className="inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            Create Group
+            {t('lit.createGroup')}
           </button>
         )}
       </div>
@@ -1581,7 +1602,7 @@ function PermissionsTab({
 
       {groups.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-          No permission groups yet.
+          {t('lit.noPermissionGroupsYet')}
         </div>
       ) : (
         <div className="overflow-x-auto overflow-hidden rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
@@ -1589,17 +1610,17 @@ function PermissionsTab({
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Group
+                  {t('lit.group')}
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Members
+                  {t('lit.members')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Granted permissions
+                  {t('lit.grantedPermissions')}
                 </th>
                 {canManage && (
                   <th scope="col" className="relative px-3 py-2">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -1636,7 +1657,7 @@ function PermissionsTab({
                         {granted.length} of {PERMISSION_GROUP_FLAGS.length} enabled
                       </div>
                       {granted.length === 0 ? (
-                        <span className="text-xs italic text-gray-400">No permissions granted</span>
+                        <span className="text-xs italic text-gray-400">{t('lit.noPermissionsGranted')}</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {granted.map((label) => (
@@ -1655,8 +1676,8 @@ function PermissionsTab({
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setEditingGroup(group)}
-                            title="Edit permission group"
-                            aria-label="Edit permission group"
+                            title={t('lit.editPermissionGroup')}
+                            aria-label={t('lit.editPermissionGroup')}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1677,8 +1698,8 @@ function PermissionsTab({
                           ) : (
                             <button
                               onClick={() => handleDelete(group.Id)}
-                              title="Delete permission group"
-                              aria-label="Delete permission group"
+                              title={t('lit.deletePermissionGroup')}
+                              aria-label={t('lit.deletePermissionGroup')}
                               className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1738,6 +1759,8 @@ function PermissionGroupModal({
   onSaved: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const [formData, setFormData] = useState<CreatePermissionGroupData>({
     organizationId: orgId,
     groupName: group?.GroupName || '',
@@ -1783,7 +1806,7 @@ function PermissionGroupModal({
       }
       onSaved();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save permission group');
+      setError(err instanceof Error ? err.message : t('lit.failedToSavePermissionGroup'));
     } finally {
       setIsLoading(false);
     }
@@ -1796,18 +1819,18 @@ function PermissionGroupModal({
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {group ? 'Edit' : 'Create'} Permission Group
+                {group ? t('common.edit') : t('lit.create')} Permission Group
               </h2>
               {!!group?.IsSystemGroup && group?.LinkedRole && (
                 <p className="mt-1 text-sm text-purple-600 dark:text-purple-400">
-                  Linked to global <strong>{group.LinkedRole}</strong> role — editing overrides org defaults
+                  {t('lit.linkedToGlobal')} <strong>{group.LinkedRole}</strong> {t('lit.roleEditingOverridesOrgDefaults')}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
               className="text-2xl leading-none text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              aria-label="Close"
+              aria-label={t('common.close')}
             >
               ×
             </button>
@@ -1822,7 +1845,7 @@ function PermissionGroupModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Group Name *
+                {t('lit.groupName')}
               </label>
               <input
                 type="text"
@@ -1836,7 +1859,7 @@ function PermissionGroupModal({
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
+                {t('common.description')}
               </label>
               <textarea
                 value={formData.description}
@@ -1848,7 +1871,7 @@ function PermissionGroupModal({
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Permissions
+                {t('lit.permissions')}
               </label>
               <div className="max-h-72 overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1876,14 +1899,14 @@ function PermissionGroupModal({
                 onClick={onClose}
                 className="flex-1 rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-blue-400"
               >
-                {isLoading ? 'Saving…' : group ? 'Update' : 'Create'}
+                {isLoading ? t('lit.saving2') : group ? t('lit.update') : t('lit.create')}
               </button>
             </div>
           </form>
@@ -1894,14 +1917,14 @@ function PermissionGroupModal({
 }
 
 const MILESTONE_TYPE_ICON_OPTIONS = [
-  { value: 'flag', label: 'Flag' },
-  { value: 'target', label: 'Target' },
-  { value: 'rocket', label: 'Rocket' },
-  { value: 'calendar', label: 'Calendar' },
-  { value: 'star', label: 'Star' },
-  { value: 'trophy', label: 'Trophy' },
-  { value: 'check-circle', label: 'Check Circle' },
-  { value: 'milestone', label: 'Milestone' },
+  { value: 'flag', label: t('lit.flag') },
+  { value: 'target', label: t('lit.target') },
+  { value: 'rocket', label: t('lit.rocket') },
+  { value: 'calendar', label: t('lit.calendar') },
+  { value: 'star', label: t('lit.star') },
+  { value: 'trophy', label: t('lit.trophy') },
+  { value: 'check-circle', label: t('lit.checkCircle') },
+  { value: 'milestone', label: t('lit.milestone') },
 ];
 
 function renderMilestoneTypeIcon(iconSvg: string | undefined, className: string = 'w-4 h-4') {
@@ -1947,6 +1970,8 @@ function StatusesTab({
   ) => void;
   internalTicketsEnabled: boolean;
 }) {
+  const { t } = useI18n();
+
   const [projectStatuses, setProjectStatuses] = useState<StatusValue[]>([]);
   const [taskStatuses, setTaskStatuses] = useState<StatusValue[]>([]);
   const [taskPriorities, setTaskPriorities] = useState<StatusValue[]>([]);
@@ -2000,7 +2025,7 @@ function StatusesTab({
       setTicketPriorities(ticketPriRes.priorities || []);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load status values');
+      setError(err.message || t('lit.failedToLoadStatusValues'));
     } finally {
       setIsLoading(false);
     }
@@ -2036,24 +2061,24 @@ function StatusesTab({
           }
           await loadStatuses();
         } catch (err: any) {
-          setError(err.message || 'Failed to delete ' + itemType);
+          setError(err.message || t('lit.failedToDelete2') + itemType);
         }
       }
     );
   };
 
-  if (isLoading) return <div className="text-[var(--pm-muted)]">Loading status values...</div>;
+  if (isLoading) return <div className="text-[var(--pm-muted)]">{t('lit.loadingStatusValues')}</div>;
 
   const statusSubTabs = [
-    { id: 'project' as const, label: 'Project Statuses' },
-    { id: 'task' as const, label: 'Task Statuses' },
-    { id: 'priority' as const, label: 'Task Priorities' },
-    { id: 'type' as const, label: 'Task Types' },
-    { id: 'milestone-type' as const, label: 'Milestone Types' },
+    { id: 'project' as const, label: t('lit.projectStatuses') },
+    { id: 'task' as const, label: t('lit.taskStatuses') },
+    { id: 'priority' as const, label: t('lit.taskPriorities') },
+    { id: 'type' as const, label: t('lit.taskTypes') },
+    { id: 'milestone-type' as const, label: t('lit.milestoneTypes') },
     ...(internalTicketsEnabled
       ? [
-          { id: 'ticket' as const, label: 'Ticket Statuses' },
-          { id: 'ticket-priority' as const, label: 'Ticket Priorities' },
+          { id: 'ticket' as const, label: t('lit.ticketStatuses') },
+          { id: 'ticket-priority' as const, label: t('lit.ticketPriorities') },
         ]
       : []),
   ];
@@ -2065,7 +2090,7 @@ function StatusesTab({
     : activeType === 'milestone-type' ? milestoneTypes
     : activeType === 'ticket' ? ticketStatuses
     : ticketPriorities;
-  const buttonLabel = (activeType === 'priority' || activeType === 'ticket-priority') ? 'Add Priority' : (activeType === 'type' || activeType === 'milestone-type') ? 'Add Type' : 'Add Status';
+  const buttonLabel = (activeType === 'priority' || activeType === 'ticket-priority') ? t('lit.addPriority') : (activeType === 'type' || activeType === 'milestone-type') ? t('lit.addType') : t('lit.addStatus');
   const isPriority = activeType === 'priority' || activeType === 'ticket-priority';
   const isType = activeType === 'type' || activeType === 'milestone-type';
 
@@ -2109,20 +2134,20 @@ function StatusesTab({
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Color
+                  {t('lit.color')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Name
+                  {t('common.name')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Flags
+                  {t('lit.flags')}
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  Order
+                  {t('lit.order')}
                 </th>
                 {canManage && (
                   <th scope="col" className="relative px-3 py-2">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -2168,22 +2193,22 @@ function StatusesTab({
                       <div className="flex flex-wrap gap-1">
                         {!!status.IsDefault && (
                           <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                            Default
+                            {t('lit.default')}
                           </span>
                         )}
                         {!!status.IsClosed && (
                           <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                            Closed
+                            {t('lit.closed')}
                           </span>
                         )}
                         {!!status.IsCancelled && (
                           <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">
-                            Cancelled
+                            {t('lit.cancelled')}
                           </span>
                         )}
                         {!!status.HideFromPlanningAndStatistics && (
                           <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            Hidden in Planning/Stats
+                            {t('lit.hiddenInPlanningStats')}
                           </span>
                         )}
                         {!status.IsDefault && !status.IsClosed && !status.IsCancelled && !status.HideFromPlanningAndStatistics && (
@@ -2200,8 +2225,8 @@ function StatusesTab({
                           <button
                             type="button"
                             onClick={() => setEditingStatus(status)}
-                            title="Edit value"
-                            aria-label="Edit value"
+                            title={t('lit.editValue')}
+                            aria-label={t('lit.editValue')}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2211,8 +2236,8 @@ function StatusesTab({
                           <button
                             type="button"
                             onClick={() => handleDelete(status.Id, activeType)}
-                            title="Delete value"
-                            aria-label="Delete value"
+                            title={t('lit.deleteValue')}
+                            aria-label={t('lit.deleteValue')}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2279,6 +2304,8 @@ function WorkflowPoliciesTab({
     }
   ) => void;
 }) {
+  const { t } = useI18n();
+
   const [taskStatuses, setTaskStatuses] = useState<StatusValue[]>([]);
   const [workflowPolicies, setWorkflowPolicies] = useState<WorkflowTransitionPolicy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -2302,7 +2329,7 @@ function WorkflowPoliciesTab({
       setWorkflowPolicies(workflowPolicyRes.policies || []);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load workflow transition policies');
+      setError(err.message || t('lit.failedToLoadWorkflowTransitionPolicies'));
     } finally {
       setIsLoading(false);
     }
@@ -2317,26 +2344,26 @@ function WorkflowPoliciesTab({
           await workflowTransitionPoliciesApi.delete(policyId, token);
           await loadWorkflowPolicies();
         } catch (err: any) {
-          setError(err.message || 'Failed to delete workflow transition policy');
+          setError(err.message || t('lit.failedToDeleteWorkflowTransitionPolicy'));
         }
       }
     );
   };
 
   if (isLoading) {
-    return <div>Loading workflow transition policies...</div>;
+    return <div>{t('lit.loadingWorkflowTransitionPolicies')}</div>;
   }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Validate required fields when moving tasks between statuses.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.validateRequiredFieldsWhenMovingTasksBetweenStatuses')}</p>
         {canManage && (
           <button
             onClick={() => setShowPolicyModal(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
-            Add Policy
+            {t('lit.addPolicy')}
           </button>
         )}
       </div>
@@ -2350,16 +2377,16 @@ function WorkflowPoliciesTab({
       <div className="space-y-2">
         {workflowPolicies.length === 0 ? (
           <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-            No workflow transition policies configured yet.
+            {t('lit.noWorkflowTransitionPoliciesConfiguredYet')}
           </div>
         ) : workflowPolicies.map((policy) => {
           const requiredFields = [
-            policy.RequireDescription ? 'Description' : null,
-            policy.RequireAssignee ? 'Assignee' : null,
-            policy.RequireDueDate ? 'Due Date' : null,
-            policy.RequireEstimatedHours ? 'Estimated Hours' : null,
-            policy.RequireStoryPoints ? 'Story Points' : null,
-            policy.RequirePlannedDates ? 'Planned Dates' : null,
+            policy.RequireDescription ? t('lit.description2') : null,
+            policy.RequireAssignee ? t('lit.assignee') : null,
+            policy.RequireDueDate ? t('lit.dueDate') : null,
+            policy.RequireEstimatedHours ? t('lit.estimatedHours') : null,
+            policy.RequireStoryPoints ? t('lit.storyPoints') : null,
+            policy.RequirePlannedDates ? t('lit.plannedDates') : null,
           ].filter(Boolean);
 
           return (
@@ -2367,16 +2394,16 @@ function WorkflowPoliciesTab({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-gray-900 dark:text-white">{policy.PolicyName}</span>
-                  <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full">{policy.RuleType || 'Custom'}</span>
+                  <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-full">{policy.RuleType || t('lit.custom')}</span>
                   {!policy.IsActive && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full">Inactive</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full">{t('common.inactive')}</span>
                   )}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                   {policy.FromStatusName || `#${policy.FromStatusId}`} → {policy.ToStatusName || `#${policy.ToStatusId}`}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Required: {requiredFields.length > 0 ? requiredFields.join(', ') : 'None'}
+                  Required: {requiredFields.length > 0 ? requiredFields.join(', ') : t('lit.none2')}
                 </div>
               </div>
 
@@ -2384,16 +2411,16 @@ function WorkflowPoliciesTab({
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEditingPolicy(policy)}
-                    title="Edit policy"
-                    aria-label="Edit policy"
+                    title={t('lit.editPolicy')}
+                    aria-label={t('lit.editPolicy')}
                     className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 px-3 py-1"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleDeletePolicy(policy.Id)}
-                    title="Delete policy"
-                    aria-label="Delete policy"
+                    title={t('lit.deletePolicy')}
+                    aria-label={t('lit.deletePolicy')}
                     className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 px-3 py-1"
                   >
                     🗑️
@@ -2450,12 +2477,14 @@ function WorkflowPolicyModal({
   onSaved: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const [formData, setFormData] = useState<UpsertWorkflowTransitionPolicyData>({
     organizationId: orgId,
     fromStatusId: policy?.FromStatusId || 0,
     toStatusId: policy?.ToStatusId || 0,
     policyName: policy?.PolicyName || '',
-    ruleType: policy?.RuleType || 'Custom',
+    ruleType: policy?.RuleType || t('lit.custom'),
     requireDescription: !!policy?.RequireDescription,
     requireAssignee: !!policy?.RequireAssignee,
     requireDueDate: !!policy?.RequireDueDate,
@@ -2472,7 +2501,7 @@ function WorkflowPolicyModal({
     setError('');
 
     if (!formData.fromStatusId || !formData.toStatusId) {
-      setError('From status and to status are required');
+      setError(t('lit.fromStatusAndToStatusAreRequired'));
       return;
     }
 
@@ -2485,7 +2514,7 @@ function WorkflowPolicyModal({
       }
       onSaved();
     } catch (err: any) {
-      setError(err.message || 'Failed to save workflow policy');
+      setError(err.message || t('lit.failedToSaveWorkflowPolicy'));
     } finally {
       setIsLoading(false);
     }
@@ -2497,7 +2526,7 @@ function WorkflowPolicyModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {policy ? 'Edit Workflow Policy' : 'Create Workflow Policy'}
+              {policy ? t('lit.editWorkflowPolicy') : t('lit.createWorkflowPolicy')}
             </h2>
             <button
               onClick={onClose}
@@ -2515,39 +2544,39 @@ function WorkflowPolicyModal({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Policy Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.policyName')}</label>
               <input
                 type="text"
                 value={formData.policyName || ''}
                 onChange={(e) => setFormData({ ...formData, policyName: e.target.value })}
-                placeholder="e.g., DoD before Done"
+                placeholder={t('lit.eGDodBeforeDone')}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rule Type</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.ruleType')}</label>
               <select
-                value={formData.ruleType || 'Custom'}
+                value={formData.ruleType || t('lit.custom')}
                 onChange={(e) => setFormData({ ...formData, ruleType: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="DoR">DoR</option>
-                <option value="DoD">DoD</option>
-                <option value="Custom">Custom</option>
+                <option value="DoR">{t('lit.dor')}</option>
+                <option value="DoD">{t('lit.dod')}</option>
+                <option value="Custom">{t('lit.custom')}</option>
               </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">From Status *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.fromStatus')}</label>
                 <select
                   value={formData.fromStatusId || ''}
                   onChange={(e) => setFormData({ ...formData, fromStatusId: Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
-                  <option value="">Select status</option>
+                  <option value="">{t('lit.selectStatus')}</option>
                   {taskStatuses.map((status) => (
                     <option key={status.Id} value={status.Id}>{status.StatusName}</option>
                   ))}
@@ -2555,14 +2584,14 @@ function WorkflowPolicyModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">To Status *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.toStatus')}</label>
                 <select
                   value={formData.toStatusId || ''}
                   onChange={(e) => setFormData({ ...formData, toStatusId: Number(e.target.value) })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
-                  <option value="">Select status</option>
+                  <option value="">{t('lit.selectStatus')}</option>
                   {taskStatuses.map((status) => (
                     <option key={status.Id} value={status.Id}>{status.StatusName}</option>
                   ))}
@@ -2571,7 +2600,7 @@ function WorkflowPolicyModal({
             </div>
 
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Required fields for this transition</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('lit.requiredFieldsForThisTransition')}</p>
 
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2580,7 +2609,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requireDescription: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Description
+                {t('common.description')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2589,7 +2618,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requireAssignee: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Assignee
+                {t('lit.assignee')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2598,7 +2627,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requireDueDate: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Due Date
+                {t('lit.dueDate')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2607,7 +2636,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requireEstimatedHours: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Estimated Hours
+                {t('lit.estimatedHours')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2616,7 +2645,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requireStoryPoints: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Story Points
+                {t('lit.storyPoints')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                 <input
@@ -2625,7 +2654,7 @@ function WorkflowPolicyModal({
                   onChange={(e) => setFormData({ ...formData, requirePlannedDates: e.target.checked })}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Planned Start and End Dates
+                {t('lit.plannedStartAndEndDates')}
               </label>
             </div>
 
@@ -2636,7 +2665,7 @@ function WorkflowPolicyModal({
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              Policy is active
+              {t('lit.policyIsActive')}
             </label>
 
             <div className="flex gap-3 mt-6">
@@ -2645,14 +2674,14 @@ function WorkflowPolicyModal({
                 onClick={onClose}
                 className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Saving...' : policy ? 'Update' : 'Create'}
+                {isLoading ? t('lit.saving') : policy ? t('lit.update') : t('lit.create')}
               </button>
             </div>
           </form>
@@ -2676,12 +2705,12 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
   const isTaskTypeOnly = type === 'type';
   const isTicketStatus = type === 'ticket';
   const STATUS_TYPE_OPTIONS = [
-    { value: 'open',        label: 'Open — new tickets awaiting action' },
-    { value: 'in_progress', label: 'In Progress — actively being worked' },
-    { value: 'waiting',     label: 'Waiting — awaiting customer response' },
-    { value: 'resolved',    label: 'Resolved — work done, pending confirmation' },
-    { value: 'closed',      label: 'Closed — fully closed' },
-    { value: 'other',       label: 'Other' },
+    { value: 'open',        label: t('lit.openNewTicketsAwaitingAction') },
+    { value: 'in_progress', label: t('lit.inProgressActivelyBeingWorked') },
+    { value: 'waiting',     label: t('lit.waitingAwaitingCustomerResponse') },
+    { value: 'resolved',    label: t('lit.resolvedWorkDonePendingConfirmation') },
+    { value: 'closed',      label: t('lit.closedFullyClosed') },
+    { value: 'other',       label: t('lit.other') },
   ];
   const [formData, setFormData] = useState<CreateStatusValueData & { statusType: string }>({
     organizationId: orgId,
@@ -2737,7 +2766,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(ticketPayload),
           });
-          if (!res.ok) throw new Error('Failed to update');
+          if (!res.ok) throw new Error(t('lit.failedToUpdate'));
         }
       } else {
         if (type === 'project') {
@@ -2757,12 +2786,12 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(ticketPayload),
           });
-          if (!res.ok) throw new Error('Failed to create');
+          if (!res.ok) throw new Error(t('lit.failedToCreate'));
         }
       }
       onSaved();
     } catch (err: any) {
-      setError(err.message || 'Failed to save ' + (isPriority ? 'priority' : isTaskType ? 'type value' : 'status value'));
+      setError(err.message || t('lit.failedToSave') + (isPriority ? 'priority' : isTaskType ? 'type value' : 'status value'));
     } finally {
       setIsLoading(false);
     }
@@ -2774,7 +2803,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {status ? 'Edit' : 'Create'} {type === 'ticket-priority' ? 'Ticket Priority' : type === 'ticket' ? 'Ticket Status' : type === 'priority' ? 'Task Priority' : type === 'type' ? 'Task Type' : type === 'milestone-type' ? 'Milestone Type' : type === 'project' ? 'Project Status' : 'Task Status'}
+              {status ? t('common.edit') : t('lit.create')} {type === 'ticket-priority' ? t('lit.ticketPriority') : type === 'ticket' ? t('lit.ticketStatus') : type === 'priority' ? t('lit.taskPriority') : type === 'type' ? t('lit.taskType') : type === 'milestone-type' ? t('lit.milestoneType') : type === 'project' ? t('lit.projectStatus') : t('lit.taskStatus')}
             </h2>
             <button
               onClick={onClose}
@@ -2793,7 +2822,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {isPriority ? 'Priority' : isTaskType ? 'Type' : 'Status'} Name *
+                {isPriority ? t('lit.priority') : isTaskType ? t('lit.type2') : t('lit.status')} Name *
               </label>
               <input
                 type="text"
@@ -2807,7 +2836,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Color
+                {t('lit.color')}
               </label>
               <input
                 type="color"
@@ -2820,7 +2849,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
             {isTaskTypeOnly && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Icon
+                  {t('lit.icon')}
                 </label>
                 <TaskTypeIconPicker
                   value={formData.iconSvg || ''}
@@ -2833,7 +2862,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
             {isMilestoneType && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  SVG Icon
+                  {t('lit.svgIcon')}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {MILESTONE_TYPE_ICON_OPTIONS.map((iconOption) => {
@@ -2862,7 +2891,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sort Order
+                {t('lit.sortOrder2')}
               </label>
               <input
                 type="number"
@@ -2891,7 +2920,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
                     onChange={(e) => setFormData({ ...formData, isClosed: e.target.checked })}
                     className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Mark as closed status</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.markAsClosedStatus')}</span>
                 </label>
 
                 {type !== 'ticket' && (
@@ -2902,7 +2931,7 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
                       onChange={(e) => setFormData({ ...formData, isCancelled: e.target.checked })}
                       className="w-4 h-4 text-red-600 rounded focus:ring-2 focus:ring-red-500"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Mark as cancelled status</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.markAsCancelledStatus')}</span>
                   </label>
                 )}
 
@@ -2915,9 +2944,9 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
                       className="w-4 h-4 mt-0.5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">
-                      <span className="font-medium">In Progress status</span>
+                      <span className="font-medium">{t('lit.inProgressStatus')}</span>
                       <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Used by the IDE Kanban “Send to AI” action when no explicit status Id is set in editor settings.
+                        {t('lit.usedByTheIdeKanbanSendToAiActionWhenNoExplicitStatusIdIsSetInEditorSettings')}
                       </span>
                     </span>
                   </label>
@@ -2931,14 +2960,14 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
                       onChange={(e) => setFormData({ ...formData, hideFromPlanningAndStatistics: e.target.checked })}
                       className="w-4 h-4 text-slate-600 rounded focus:ring-2 focus:ring-slate-500"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Hide from planning and statistics</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.hideFromPlanningAndStatistics')}</span>
                   </label>
                 )}
 
                 {isTicketStatus && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Status Type <span className="text-xs text-gray-500">(used for statistics & automation)</span>
+                      {t('lit.statusType')} <span className="text-xs text-gray-500">(used for statistics & automation)</span>
                     </label>
                     <select
                       value={formData.statusType}
@@ -2960,14 +2989,14 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Saving...' : status ? 'Update' : 'Create'}
+                {isLoading ? t('lit.saving') : status ? t('lit.update') : t('lit.create')}
               </button>
             </div>
           </form>
@@ -3007,11 +3036,11 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to load projects');
+      if (!response.ok) throw new Error(data.message || t('lit.failedToLoadProjects'));
       setProjects(data.projects || []);
       setError('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load projects');
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadProjects'));
     } finally {
       setIsLoading(false);
     }
@@ -3038,7 +3067,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
       setSelectedOrgId(0);
       await loadProjects();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to transfer project');
+      setError(err instanceof Error ? err.message : t('lit.failedToTransferProject'));
     }
   };
 
@@ -3103,6 +3132,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
   };
 
   const healthDot = (status?: string) => {
+  const { t } = useI18n();
     if (status === 'red') return 'bg-red-500';
     if (status === 'amber') return 'bg-amber-500';
     if (status === 'green') return 'bg-green-500';
@@ -3110,7 +3140,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
   };
 
   if (isLoading) {
-    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">Loading projects…</div>;
+    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">{t('lit.loadingProjects')}</div>;
   }
 
   return (
@@ -3132,7 +3162,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
       {projects.length > 0 && (
         <CollapsibleFilterPanel
           className="mb-2"
-          title="Project filters"
+          title={t('lit.projectFilters')}
           activeCount={activeFilterCount}
           onClear={clearProjectFilters}
           headerExtra={
@@ -3150,7 +3180,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                 type="text"
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
-                placeholder="Search projects…"
+                placeholder={t('lit.searchProjects2')}
                 className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </div>
@@ -3159,7 +3189,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
               onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">All statuses</option>
+              <option value="">{t('lit.allStatuses')}</option>
               {statusOptions.map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
@@ -3169,7 +3199,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
               onChange={(e) => setFilterCustomer(e.target.value)}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">All customers</option>
+              <option value="">{t('lit.allCustomers')}</option>
               {customerOptions.map((customer) => (
                 <option key={customer} value={customer}>{customer}</option>
               ))}
@@ -3181,7 +3211,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                 onChange={(e) => setHideCompleted(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              Hide completed / cancelled
+              {t('lit.hideCompletedCancelled')}
             </label>
             {activeFilterCount > 0 && (
               <div className="sm:col-span-2 lg:col-span-4">
@@ -3190,7 +3220,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                   onClick={clearProjectFilters}
                   className="rounded-lg bg-gray-200 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                 >
-                  Clear filters
+                  {t('lit.clearFilters')}
                 </button>
               </div>
             )}
@@ -3200,17 +3230,17 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
 
       {projects.length === 0 ? (
         <div className="rounded-lg bg-gray-50 py-12 text-center dark:bg-gray-700/50">
-          <div className="text-gray-500 dark:text-gray-400">No projects in this organization</div>
+          <div className="text-gray-500 dark:text-gray-400">{t('lit.noProjectsInThisOrganization')}</div>
         </div>
       ) : filteredProjects.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center dark:border-gray-600">
-          <p className="text-sm text-gray-500 dark:text-gray-400">No projects match the current filters.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noProjectsMatchTheCurrentFilters')}</p>
           <button
             type="button"
             onClick={clearProjectFilters}
             className="mt-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
-            Clear filters
+            {t('lit.clearFilters')}
           </button>
         </div>
       ) : (
@@ -3218,15 +3248,15 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Project</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Health</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Progress</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Hours</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Tickets</th>
-                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Dates</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('common.project')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('lit.health')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('common.status')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('lit.progress')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('common.hours')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('common.tickets')}</th>
+                <th className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">{t('lit.dates')}</th>
                 <th scope="col" className="relative px-3 py-2">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('common.actions')}</span>
                 </th>
               </tr>
             </thead>
@@ -3256,17 +3286,17 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                           {project.CustomerName ? (
                             <span>{project.CustomerName}</span>
                           ) : (
-                            <span className="italic">No customer</span>
+                            <span className="italic">{t('lit.noCustomer')}</span>
                           )}
-                          {Number(project.IsHobby || 0) === 1 && <span className="text-amber-600 dark:text-amber-400">Hobby</span>}
-                          {Number(project.IsGlobal || 0) === 1 && <span>Global</span>}
+                          {Number(project.IsHobby || 0) === 1 && <span className="text-amber-600 dark:text-amber-400">{t('lit.hobby')}</span>}
+                          {Number(project.IsGlobal || 0) === 1 && <span>{t('lit.global')}</span>}
                         </div>
                       </div>
                     </td>
                     <td className="px-3 py-3 text-center">
                       <span
                         className={`inline-block h-2.5 w-2.5 rounded-full ${healthDot(project.HealthStatus)}`}
-                        title={project.HealthReasons?.join(' · ') || project.HealthStatus || 'Unknown'}
+                        title={project.HealthReasons?.join(' · ') || project.HealthStatus || t('lit.unknown')}
                       />
                     </td>
                     <td className="px-3 py-3 text-center">
@@ -3274,7 +3304,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                         className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
                         style={pillStyle(project.StatusColor || '#6b7280', { alpha: '25', borderAlpha: '50' }) ?? undefined}
                       >
-                        {project.StatusName || 'Unknown'}
+                        {project.StatusName || t('lit.unknown')}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -3315,8 +3345,8 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => router.push(`/projects/${project.Id}`)}
-                          title="View project"
-                          aria-label="View project"
+                          title={t('lit.viewProject')}
+                          aria-label={t('lit.viewProject')}
                           className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3327,8 +3357,8 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                         {canManage && organizations.length > 0 && (
                           <button
                             onClick={() => setTransferringProject(project)}
-                            title="Transfer project"
-                            aria-label="Transfer project"
+                            title={t('lit.transferProject')}
+                            aria-label={t('lit.transferProject')}
                             className="rounded p-1.5 text-gray-400 transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3350,7 +3380,7 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
             <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-              Transfer Project
+              {t('lit.transferProject2')}
             </h3>
 
             <p className="mb-4 text-gray-600 dark:text-gray-400">
@@ -3359,14 +3389,14 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
 
             <div className="mb-6">
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Destination Organization
+                {t('lit.destinationOrganization')}
               </label>
               <select
                 value={selectedOrgId}
                 onChange={(e) => setSelectedOrgId(parseInt(e.target.value, 10))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
-                <option value={0}>Select Organization</option>
+                <option value={0}>{t('lit.selectOrganization2')}</option>
                 {organizations.map((org) => (
                   <option key={org.Id} value={org.Id}>
                     {org.Name}
@@ -3389,14 +3419,14 @@ function ProjectsTab({ orgId, canManage, token }: { orgId: number; canManage: bo
                 }}
                 className="flex-1 rounded-lg bg-gray-600 px-6 py-2 text-white transition-colors hover:bg-gray-700"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleTransfer}
                 disabled={!selectedOrgId}
                 className="flex-1 rounded-lg bg-orange-600 px-6 py-2 text-white transition-colors hover:bg-orange-700 disabled:bg-orange-400"
               >
-                Transfer Project
+                {t('lit.transferProject2')}
               </button>
             </div>
           </div>
@@ -3544,7 +3574,7 @@ function TagsTab({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      setError('Tag name is required');
+      setError(t('lit.tagNameIsRequired'));
       return;
     }
 
@@ -3557,7 +3587,7 @@ function TagsTab({
         : `${getApiUrl()}/api/tags`;
 
       const response = await fetch(url, {
-        method: editingTag ? 'PUT' : 'POST',
+        method: editingTag ? 'PUT' : t('lit.post'),
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -3573,13 +3603,13 @@ function TagsTab({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to save tag');
+        throw new Error(result.message || t('lit.failedToSaveTag'));
       }
 
       setShowModal(false);
       loadTags();
     } catch (err: any) {
-      setError(err.message || 'Failed to save tag');
+      setError(err.message || t('lit.failedToSaveTag'));
     } finally {
       setIsSaving(false);
     }
@@ -3633,18 +3663,18 @@ function TagsTab({
 
           const result = await response.json();
           if (!response.ok) {
-            throw new Error(result.message || 'Failed to import default tags');
+            throw new Error(result.message || t('lit.failedToImportDefaultTags'));
           }
 
           await loadTags();
         } catch (err: any) {
-          setError(err.message || 'Failed to import default tags');
+          setError(err.message || t('lit.failedToImportDefaultTags'));
         } finally {
           setIsImportingDefaults(false);
         }
       },
       {
-        confirmLabel: 'Import',
+        confirmLabel: t('lit.import'),
         confirmVariant: 'primary',
       }
     );
@@ -3658,6 +3688,7 @@ function TagsTab({
   ];
 
   const renderSegmentedTagPreview = (tag: { Id: number; Name: string; Color: string }) => {
+  const { t } = useI18n();
     const segments = tag.Name
       .split('/')
       .map((segment) => segment.trim())
@@ -3712,16 +3743,16 @@ function TagsTab({
   };
 
   if (isLoading) {
-    return <div className="text-gray-500 dark:text-gray-400">Loading tags...</div>;
+    return <div className="text-gray-500 dark:text-gray-400">{t('lit.loadingTags')}</div>;
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Tags</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('lit.tags')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage tags for organizing and categorizing tasks
+            {t('lit.manageTagsForOrganizingAndCategorizingTasks')}
           </p>
         </div>
         {canManage && (
@@ -3734,7 +3765,7 @@ function TagsTab({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m14.836 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.356-2m15.356 2H15" />
               </svg>
-              {isImportingDefaults ? 'Importing...' : 'Import Default Tags'}
+              {isImportingDefaults ? 'Importing...' : t('lit.importDefaultTags')}
             </button>
             <button
               onClick={openCreateModal}
@@ -3743,7 +3774,7 @@ function TagsTab({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Create Tag
+              {t('lit.createTag')}
             </button>
           </div>
         )}
@@ -3758,7 +3789,7 @@ function TagsTab({
       {tags.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <div className="text-4xl mb-4">🏷️</div>
-          <p>No tags created yet.</p>
+          <p>{t('lit.noTagsCreatedYet')}</p>
           {canManage && (
             <div className="mt-4 flex items-center justify-center gap-4">
               <button
@@ -3766,13 +3797,13 @@ function TagsTab({
                 disabled={isImportingDefaults}
                 className="text-gray-900 dark:text-gray-100 hover:underline disabled:opacity-60"
               >
-                {isImportingDefaults ? 'Importing defaults...' : 'Import default tags'}
+                {isImportingDefaults ? 'Importing defaults...' : t('lit.importDefaultTags2')}
               </button>
               <button
                 onClick={openCreateModal}
                 className="text-blue-600 dark:text-blue-400 hover:underline"
               >
-                Create your first tag
+                {t('lit.createYourFirstTag')}
               </button>
             </div>
           )}
@@ -3800,14 +3831,14 @@ function TagsTab({
                   <button
                     onClick={() => openEditModal(tag)}
                     className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-                    title="Edit tag"
+                    title={t('lit.editTag')}
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleDelete(tag)}
                     className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
-                    title="Delete tag"
+                    title={t('lit.deleteTag')}
                   >
                     🗑️
                   </button>
@@ -3824,7 +3855,7 @@ function TagsTab({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                {editingTag ? 'Edit Tag' : 'Create Tag'}
+                {editingTag ? t('lit.editTag2') : t('lit.createTag')}
               </h3>
 
               {error && (
@@ -3836,24 +3867,24 @@ function TagsTab({
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Tag Name *
+                    {t('lit.tagName')}
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="e.g., Kind/Bug, Reviewed/Confirmed, Status/Blocked"
+                    placeholder={t('lit.eGKindBugReviewedConfirmedStatusBlocked')}
                     maxLength={50}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Use <span className="font-semibold">/</span> to create segmented labels visually, for example <span className="font-semibold">Kind/Bug</span>.
+                    {t('lit.use')} <span className="font-semibold">/</span> {t('lit.toCreateSegmentedLabelsVisuallyForExample')} <span className="font-semibold">{t('lit.kindBug')}</span>.
                   </p>
                 </div>
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Color
+                    {t('lit.color')}
                   </label>
                   <div className="flex items-center gap-3 mb-2">
                     <input
@@ -3867,13 +3898,13 @@ function TagsTab({
                       value={formData.color}
                       onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                       className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                      placeholder="#6B7280"
+                      placeholder='#6B7280'
                     />
                     <span
                       className="px-3 py-1 rounded-full text-sm font-medium"
                       style={{ backgroundColor: formData.color + '20', color: formData.color, border: `1px solid ${formData.color}` }}
                     >
-                      Preview
+                      {t('lit.preview')}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -3892,14 +3923,14 @@ function TagsTab({
 
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description (optional)
+                    {t('lit.descriptionOptional')}
                   </label>
                   <input
                     type="text"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Brief description of when to use this tag"
+                    placeholder={t('lit.briefDescriptionOfWhenToUseThisTag')}
                     maxLength={255}
                   />
                 </div>
@@ -3910,14 +3941,14 @@ function TagsTab({
                     onClick={() => setShowModal(false)}
                     className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                   >
-                    {isSaving ? 'Saving...' : (editingTag ? 'Save Changes' : 'Create Tag')}
+                    {isSaving ? t('lit.saving') : (editingTag ? t('lit.saveChanges') : t('lit.createTag'))}
                   </button>
                 </div>
               </form>
@@ -3957,6 +3988,7 @@ function AttachmentsTab({
   };
 
   const formatFileSize = (bytes: number) => {
+  const { t } = useI18n();
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
@@ -4062,7 +4094,7 @@ function AttachmentsTab({
 
       {attachments.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-          No attachments yet. Upload files to get started.
+          {t('lit.noAttachmentsYetUploadFilesToGetStarted')}
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -4078,7 +4110,7 @@ function AttachmentsTab({
                     <button
                       onClick={() => handlePreviewAttachment(attachment.Id)}
                       className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
-                      title="Preview"
+                      title={t('lit.preview')}
                     >
                       👁️
                     </button>
@@ -4086,14 +4118,14 @@ function AttachmentsTab({
                   <button
                     onClick={() => handleDownloadAttachment(attachment.Id, attachment.FileName)}
                     className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                    title="Download"
+                    title={t('common.download')}
                   >
                     ⬇️
                   </button>
                   <button
                     onClick={() => onDeleteAttachment(attachment.Id)}
                     className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     🗑️
                   </button>
@@ -4205,7 +4237,7 @@ function SlaTab({
         setStatuses(d.statuses || []);
       }
     } catch {
-      setError('Failed to load SLA configuration');
+      setError(t('lit.failedToLoadSlaConfiguration'));
     } finally {
       setIsLoading(false);
     }
@@ -4267,7 +4299,7 @@ function SlaTab({
         isActive: form.isActive,
       };
       const url = editingRule ? `${API_URL}/api/sla-rules/${editingRule.Id}` : `${API_URL}/api/sla-rules`;
-      const method = editingRule ? 'PUT' : 'POST';
+      const method = editingRule ? 'PUT' : t('lit.post');
       const res = await fetch(url, {
         method,
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -4275,13 +4307,13 @@ function SlaTab({
       });
       if (!res.ok) {
         const d = await res.json();
-        setError(d.message || 'Failed to save');
+        setError(d.message || t('lit.failedToSave2'));
         return;
       }
       setShowModal(false);
       await loadData();
     } catch {
-      setError('Failed to save SLA rule');
+      setError(t('lit.failedToSaveSlaRule'));
     } finally {
       setIsSaving(false);
     }
@@ -4319,6 +4351,7 @@ function SlaTab({
   };
 
   const formatHours = (h: number | null) => {
+  const { t } = useI18n();
     if (h == null) return '—';
     if (h < 1) return `${Math.round(h * 60)}m`;
     if (h === 1) return '1h';
@@ -4328,13 +4361,13 @@ function SlaTab({
     return `${whole}h ${mins}m`;
   };
 
-  if (isLoading) return <div className="py-12 text-center text-gray-500">Loading SLA rules…</div>;
+  if (isLoading) return <div className="py-12 text-center text-gray-500">{t('lit.loadingSlaRules')}</div>;
 
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Define response and resolution time targets for tickets. Breached SLAs are shown in the ticket list.
+          {t('lit.defineResponseAndResolutionTimeTargetsForTicketsBreachedSlasAreShownInTheTicketL')}
         </p>
         {canManage && (
           <button
@@ -4354,16 +4387,16 @@ function SlaTab({
 
       {rules.length === 0 ? (
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No SLA rules configured</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">{t('lit.noSlaRulesConfigured')}</p>
           <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-            Create a rule to start tracking response and resolution times for tickets.
+            {t('lit.createARuleToStartTrackingResponseAndResolutionTimesForTickets')}
           </p>
           {canManage && (
             <button
               onClick={openCreate}
               className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
             >
-              Create first rule
+              {t('lit.createFirstRule')}
             </button>
           )}
         </div>
@@ -4372,15 +4405,15 @@ function SlaTab({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">Rule Name</th>
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">Applies to Priority</th>
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">First Response</th>
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">Resolution</th>
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">Auto Status Change</th>
-                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">Status</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('lit.ruleName')}</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('lit.appliesToPriority')}</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('lit.firstResponse')}</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('lit.resolution')}</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('lit.autoStatusChange')}</th>
+                <th className="text-left py-3 pr-4 text-gray-600 dark:text-gray-400 font-medium">{t('common.status')}</th>
                 {canManage && (
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('common.actions')}</span>
                   </th>
                 )}
               </tr>
@@ -4401,7 +4434,7 @@ function SlaTab({
                         {rule.PriorityName}
                       </span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs italic">All priorities</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-xs italic">{t('lit.allPriorities')}</span>
                     )}
                   </td>
                   <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
@@ -4437,13 +4470,13 @@ function SlaTab({
                             ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200'
                         }`}
-                        title="Click to toggle"
+                        title={t('lit.clickToToggle')}
                       >
                         {rule.IsActive ? '✅ Active' : '⏸ Inactive'}
                       </button>
                     ) : (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${rule.IsActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {rule.IsActive ? 'Active' : 'Inactive'}
+                        {rule.IsActive ? t('lit.active2') : t('lit.inactive')}
                       </span>
                     )}
                   </td>
@@ -4451,16 +4484,16 @@ function SlaTab({
                     <td className="py-3 text-right">
                       <button
                         onClick={() => openEdit(rule)}
-                        title="Edit SLA rule"
-                        aria-label="Edit SLA rule"
+                        title={t('lit.editSlaRule')}
+                        aria-label={t('lit.editSlaRule')}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mr-3"
                       >
                         ✏️
                       </button>
                       <button
                         onClick={() => deleteRule(rule)}
-                        title="Delete SLA rule"
-                        aria-label="Delete SLA rule"
+                        title={t('lit.deleteSlaRule')}
+                        aria-label={t('lit.deleteSlaRule')}
                         className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                       >
                         🗑️
@@ -4476,13 +4509,13 @@ function SlaTab({
 
       {/* Info box */}
       <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300">
-        <p className="font-medium mb-1">How SLA badges work</p>
+        <p className="font-medium mb-1">{t('lit.howSlaBadgesWork')}</p>
         <ul className="list-disc list-inside space-y-0.5 text-blue-700 dark:text-blue-400">
-          <li>🟢 <strong>Green</strong> — ticket is within SLA time limits</li>
-          <li>🟡 <strong>Yellow</strong> — &gt; 75% of the allowed time has elapsed</li>
-          <li>🔴 <strong>Red</strong> — SLA has been breached (time limit exceeded)</li>
-          <li>Rules with no priority set act as a catch-all for all ticket priorities</li>
-          <li>If a priority-specific rule exists, it takes precedence over the catch-all</li>
+          <li>🟢 <strong>{t('lit.green')}</strong> — ticket is within SLA time limits</li>
+          <li>🟡 <strong>{t('lit.yellow')}</strong> — &gt; 75% of the allowed time has elapsed</li>
+          <li>🔴 <strong>{t('lit.red')}</strong> — SLA has been breached (time limit exceeded)</li>
+          <li>{t('lit.rulesWithNoPrioritySetActAsACatchAllForAllTicketPriorities')}</li>
+          <li>{t('lit.ifAPrioritySpecificRuleExistsItTakesPrecedenceOverTheCatchAll')}</li>
         </ul>
       </div>
 
@@ -4492,7 +4525,7 @@ function SlaTab({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingRule ? 'Edit SLA Rule' : 'New SLA Rule'}
+                {editingRule ? t('lit.editSlaRule2') : t('lit.newSlaRule')}
               </h3>
             </div>
             <div className="p-6 space-y-4">
@@ -4503,36 +4536,36 @@ function SlaTab({
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Rule Name *
+                  {t('lit.ruleName2')}
                 </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                  placeholder="e.g. Urgent tickets, Standard SLA"
+                  placeholder={t('lit.eGUrgentTicketsStandardSla')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Applies to Priority
+                  {t('lit.appliesToPriority')}
                 </label>
                 <select
                   value={form.priorityId}
                   onChange={e => setForm({ ...form, priorityId: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
                 >
-                  <option value="">All priorities (catch-all)</option>
+                  <option value="">{t('lit.allPrioritiesCatchAll')}</option>
                   {priorities.map(p => (
                     <option key={p.Id} value={p.Id}>{p.PriorityName}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-1">Leave empty to apply to all priorities not covered by another rule.</p>
+                <p className="text-xs text-gray-400 mt-1">{t('lit.leaveEmptyToApplyToAllPrioritiesNotCoveredByAnotherRule')}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    First Response (hours)
+                    {t('lit.firstResponseHours')}
                   </label>
                   <input
                     type="number"
@@ -4541,13 +4574,13 @@ function SlaTab({
                     value={form.firstResponseHours}
                     onChange={e => setForm({ ...form, firstResponseHours: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="e.g. 4"
+                    placeholder={t('lit.eG4')}
                   />
-                  <p className="text-xs text-gray-400 mt-1">Max hours until first staff reply</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('lit.maxHoursUntilFirstStaffReply')}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Resolution (hours)
+                    {t('lit.resolutionHours')}
                   </label>
                   <input
                     type="number"
@@ -4556,15 +4589,15 @@ function SlaTab({
                     value={form.resolutionHours}
                     onChange={e => setForm({ ...form, resolutionHours: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="e.g. 24"
+                    placeholder={t('lit.eG24')}
                   />
-                  <p className="text-xs text-gray-400 mt-1">Max hours until ticket is resolved</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('lit.maxHoursUntilTicketIsResolved')}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Auto Status Change After (hours)
+                    {t('lit.autoStatusChangeAfterHours')}
                   </label>
                   <input
                     type="number"
@@ -4581,13 +4614,13 @@ function SlaTab({
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="e.g. 8"
+                    placeholder={t('lit.eG8')}
                   />
-                  <p className="text-xs text-gray-400 mt-1">Optional. Leave empty to disable auto transition.</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('lit.optionalLeaveEmptyToDisableAutoTransition')}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Change Status To
+                    {t('lit.changeStatusTo')}
                   </label>
                   <select
                     value={form.autoTransitionStatusId}
@@ -4602,7 +4635,7 @@ function SlaTab({
                       <option key={s.Id} value={String(s.Id)}>{s.StatusName}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-400 mt-1">Required only when auto transition hours are set.</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('lit.requiredOnlyWhenAutoTransitionHoursAreSet')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -4614,7 +4647,7 @@ function SlaTab({
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="sla-active" className="text-sm text-gray-700 dark:text-gray-300">
-                  Active (rule is enforced)
+                  {t('lit.activeRuleIsEnforced')}
                 </label>
               </div>
             </div>
@@ -4623,14 +4656,14 @@ function SlaTab({
                 onClick={() => { setShowModal(false); setError(''); }}
                 className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors text-sm"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={saveRule}
                 disabled={isSaving || !form.name.trim()}
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white rounded-lg transition-colors text-sm"
               >
-                {isSaving ? 'Saving…' : editingRule ? 'Save Changes' : 'Create Rule'}
+                {isSaving ? t('lit.saving2') : editingRule ? t('lit.saveChanges') : t('lit.createRule')}
               </button>
             </div>
           </div>

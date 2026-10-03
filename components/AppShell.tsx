@@ -41,6 +41,7 @@ import {
   filterSidebarNavByUserPreference,
 } from '@/lib/sidebarNavAccess';
 import { NAV_ICONS } from '@/lib/navIcons';
+import { useI18n } from '@/lib/i18n/provider';
 
 const SIDEBAR_PINNED_KEY = 'pm:appshell:sidebar-pinned';
 
@@ -76,28 +77,28 @@ type FeatureFlags = {
 };
 
 /** Full catalog — system flags/role/permissions filter what may appear; user prefs only hide. */
-function buildNav(flags: FeatureFlags): NavItem[] {
+function buildNav(flags: FeatureFlags, t: (path: string) => string): NavItem[] {
   return [
-    { href: '/dashboard', label: 'Dashboard', icon: NAV_ICONS['/dashboard'] },
-    { href: '/projects', label: 'Projects', icon: NAV_ICONS['/projects'], section: 'Delivery', recentKind: 'projects' },
-    { href: '/planning', label: 'Planning', icon: NAV_ICONS['/planning'], section: 'Delivery' },
-    { href: '/timesheet', label: 'Timesheet', icon: NAV_ICONS['/timesheet'], section: 'Work' },
-    { href: '/expenses', label: 'Expenses', icon: NAV_ICONS['/expenses'], section: 'Work' },
-    { href: '/call-records', label: 'Call Records', icon: NAV_ICONS['/call-records'], section: 'Work' },
-    { href: '/work-summary', label: 'Work Summary', icon: NAV_ICONS['/work-summary'], section: 'Work' },
-    { href: '/tickets', label: 'Tickets', icon: NAV_ICONS['/tickets'], section: 'Service' },
-    { href: '/memos', label: 'Memos', icon: NAV_ICONS['/memos'], section: 'Service', recentKind: 'memos' },
-    { href: '/customers', label: 'Customers', icon: NAV_ICONS['/customers'], section: 'Management', recentKind: 'customers' },
-    { href: '/applications', label: 'Applications', icon: NAV_ICONS['/applications'], section: 'Management', recentKind: 'applications' },
+    { href: '/dashboard', label: t('nav.dashboard'), icon: NAV_ICONS['/dashboard'] },
+    { href: '/projects', label: t('nav.projects'), icon: NAV_ICONS['/projects'], section: t('nav.sectionDelivery'), recentKind: 'projects' },
+    { href: '/planning', label: t('nav.planning'), icon: NAV_ICONS['/planning'], section: t('nav.sectionDelivery') },
+    { href: '/timesheet', label: t('nav.timesheet'), icon: NAV_ICONS['/timesheet'], section: t('nav.sectionWork') },
+    { href: '/expenses', label: t('nav.expenses'), icon: NAV_ICONS['/expenses'], section: t('nav.sectionWork') },
+    { href: '/call-records', label: t('nav.callRecords'), icon: NAV_ICONS['/call-records'], section: t('nav.sectionWork') },
+    { href: '/work-summary', label: t('nav.workSummary'), icon: NAV_ICONS['/work-summary'], section: t('nav.sectionWork') },
+    { href: '/tickets', label: t('nav.tickets'), icon: NAV_ICONS['/tickets'], section: t('nav.sectionService') },
+    { href: '/memos', label: t('nav.memos'), icon: NAV_ICONS['/memos'], section: t('nav.sectionService'), recentKind: 'memos' },
+    { href: '/customers', label: t('nav.customers'), icon: NAV_ICONS['/customers'], section: t('nav.sectionManagement'), recentKind: 'customers' },
+    { href: '/applications', label: t('nav.applications'), icon: NAV_ICONS['/applications'], section: t('nav.sectionManagement'), recentKind: 'applications' },
     {
       href: '/approvals',
-      label: flags.expensesEnabled ? 'Approvals & Expenses' : 'Approvals',
+      label: flags.expensesEnabled ? t('nav.approvalsAndExpenses') : t('nav.approvals'),
       icon: NAV_ICONS['/approvals'],
-      section: 'Management',
+      section: t('nav.sectionManagement'),
     },
-    { href: '/dev-support', label: 'Dev Support', icon: NAV_ICONS['/dev-support'], section: 'Management' },
-    { href: '/reporting', label: 'Reporting', icon: NAV_ICONS['/reporting'], section: 'Reporting' },
-    { href: '/portal', label: 'Portal', icon: NAV_ICONS['/portal'], section: 'Portal' },
+    { href: '/dev-support', label: t('nav.devSupport'), icon: NAV_ICONS['/dev-support'], section: t('nav.sectionManagement') },
+    { href: '/reporting', label: t('nav.reporting'), icon: NAV_ICONS['/reporting'], section: t('nav.sectionReporting') },
+    { href: '/portal', label: t('nav.portal'), icon: NAV_ICONS['/portal'], section: t('nav.sectionPortal') },
   ];
 }
 
@@ -310,7 +311,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [token]);
 
-  const NAV = useMemo(() => buildNav(featureFlags), [featureFlags]);
+  const { t } = useI18n();
+  const NAV = useMemo(() => buildNav(featureFlags, t), [featureFlags, t]);
 
   const roleAllowedNav = useMemo(
     () =>
@@ -414,8 +416,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="rounded p-1 text-[var(--pm-muted)] hover:bg-[var(--pm-surface-2)] hover:text-[var(--pm-text)]"
               onClick={() => setMenuVisibilityOpen((open) => !open)}
-              title="Show or hide menus"
-              aria-label="Show or hide menus"
+              title={t('lit.showOrHideMenus')}
+              aria-label={t('lit.showOrHideMenus')}
               aria-expanded={menuVisibilityOpen}
               aria-haspopup="dialog"
               tabIndex={expanded ? 0 : -1}
@@ -425,11 +427,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {menuVisibilityOpen && (
               <div
                 role="dialog"
-                aria-label="Menu visibility"
+                aria-label={t('lit.menuVisibility')}
                 className="absolute right-0 top-full z-[90] mt-1 w-56 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-panel)] p-2 shadow-xl"
               >
                 <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--pm-muted)]">
-                  Visible menus
+                  {t('lit.visibleMenus')}
                 </p>
                 <div className="max-h-72 space-y-0.5 overflow-y-auto">
                   {roleAllowedNav.map((item) => {
@@ -452,7 +454,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         />
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
                         {locked && (
-                          <span className="shrink-0 text-[10px] text-[var(--pm-muted)]">Required</span>
+                          <span className="shrink-0 text-[10px] text-[var(--pm-muted)]">{t('common.required')}</span>
                         )}
                       </label>
                     );
@@ -468,8 +470,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               expanded ? '' : 'invisible',
             ].join(' ')}
             onClick={() => setPinnedExpanded((v) => !v)}
-            title={pinnedExpanded ? 'Unpin menu' : 'Pin menu'}
-            aria-label={pinnedExpanded ? 'Unpin menu' : 'Pin menu'}
+            title={pinnedExpanded ? t('lit.unpinMenu') : t('lit.pinMenu')}
+            aria-label={pinnedExpanded ? t('lit.unpinMenu') : t('lit.pinMenu')}
             tabIndex={expanded ? 0 : -1}
             aria-hidden={!expanded}
           >
@@ -535,7 +537,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           type="button"
                           className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--pm-muted)] hover:bg-[var(--pm-surface)] hover:text-[var(--pm-text)]"
                           onClick={() => toggleRecentExpanded(recentKind)}
-                          title={recentGroupOpen ? 'Collapse recent' : 'Expand recent'}
+                          title={recentGroupOpen ? t('lit.collapseRecent') : t('lit.expandRecent')}
                           aria-label={
                             recentGroupOpen
                               ? `Collapse recent ${item.label}`
@@ -586,7 +588,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                               <button
                                 type="button"
                                 className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--pm-muted)] hover:bg-[var(--pm-surface)] hover:text-[var(--pm-text)]"
-                                title={pinned ? 'Unpin project' : 'Pin project'}
+                                title={pinned ? t('lit.unpinProject') : t('lit.pinProject')}
                                 aria-label={
                                   pinned
                                     ? `Unpin ${child.label}`
@@ -633,9 +635,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               isDemoMode ? (
                 <span
                   className="inline-flex shrink-0 items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                  title="Demo mode is enabled"
+                  title={t('lit.demoModeIsEnabled')}
                 >
-                  Demo
+                  {t('lit.demo')}
                 </span>
               ) : null
             }

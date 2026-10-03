@@ -1,5 +1,17 @@
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import PageTabs from '@/components/PageTabs';
@@ -49,6 +61,8 @@ export default function OrganizationIntegrationsPanel({
   orgId: number;
   token: string;
 }) {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [tab, setTab] = useState<'jira' | VcsProvider>('jira');
   const [jira, setJira] = useState<JiraIntegration | null>(null);
@@ -137,7 +151,7 @@ export default function OrganizationIntegrationsPanel({
         bitbucket: await parseList(bbRes),
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to load integrations');
+      setError(err.message || t('lit.failedToLoadIntegrations'));
     } finally {
       setLoading(false);
     }
@@ -172,11 +186,11 @@ export default function OrganizationIntegrationsPanel({
     const provider = tab as VcsProvider;
     const tokenValue = readPasswordInput(vcsTokenRef);
     if (!vcsForm.url.trim()) {
-      setDialog({ type: 'alert', title: 'Validation', message: 'URL is required' });
+      setDialog({ type: 'alert', title: t('lit.validation'), message: t('lit.urlIsRequired') });
       return;
     }
     if (!editingVcs && !tokenValue) {
-      setDialog({ type: 'alert', title: 'Validation', message: 'Access token is required' });
+      setDialog({ type: 'alert', title: t('lit.validation'), message: t('lit.accessTokenIsRequired') });
       return;
     }
 
@@ -213,14 +227,14 @@ export default function OrganizationIntegrationsPanel({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Save failed');
+        throw new Error(err.message || t('lit.saveFailed'));
       }
 
-      showToast({ type: 'success', title: 'Saved', message: 'Integration saved successfully' });
+      showToast({ type: 'success', title: t('lit.saved'), message: t('lit.integrationSavedSuccessfully') });
       setVcsFormOpen(false);
       await loadAll();
     } catch (err: any) {
-      setDialog({ type: 'alert', title: 'Error', message: err.message || 'Save failed' });
+      setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.saveFailed') });
     } finally {
       setVcsSaving(false);
     }
@@ -231,7 +245,7 @@ export default function OrganizationIntegrationsPanel({
     const provider = tab as VcsProvider;
     setDialog({
       type: 'confirm',
-      title: 'Delete integration',
+      title: t('lit.deleteIntegration'),
       message: `Delete "${row.Name}"? Applications using it will be unlinked.`,
       onConfirm: async () => {
         const res = await fetch(`${getApiUrl()}/api/${PROVIDER_API[provider]}/${row.Id}`, {
@@ -240,10 +254,10 @@ export default function OrganizationIntegrationsPanel({
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setDialog({ type: 'alert', title: 'Error', message: err.message || 'Delete failed' });
+          setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.deleteFailed') });
           return;
         }
-        showToast({ type: 'success', title: 'Deleted', message: 'Integration deleted' });
+        showToast({ type: 'success', title: t('lit.deleted'), message: t('lit.integrationDeleted') });
         await loadAll();
       },
     });
@@ -272,15 +286,15 @@ export default function OrganizationIntegrationsPanel({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to save Jira integration');
+        throw new Error(err.message || t('lit.failedToSaveJiraIntegration'));
       }
-      showToast({ type: 'success', title: 'Saved', message: 'Jira integration saved' });
+      showToast({ type: 'success', title: t('lit.saved'), message: t('lit.jiraIntegrationSaved') });
       setShowJiraForm(false);
       clearPasswordInput(jiraTokenRef);
       clearPasswordInput(jiraProjectsTokenRef);
       await loadAll();
     } catch (err: any) {
-      setDialog({ type: 'alert', title: 'Error', message: err.message || 'Save failed' });
+      setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.saveFailed') });
     } finally {
       setJiraSaving(false);
     }
@@ -289,8 +303,8 @@ export default function OrganizationIntegrationsPanel({
   const deleteJira = () => {
     setDialog({
       type: 'confirm',
-      title: 'Remove Jira integration',
-      message: 'Delete the Jira integration for this organization?',
+      title: t('lit.removeJiraIntegration'),
+      message: t('lit.deleteTheJiraIntegrationForThisOrganization'),
       onConfirm: async () => {
         const res = await fetch(`${getApiUrl()}/api/jira-integrations/organization/${orgId}`, {
           method: 'DELETE',
@@ -298,18 +312,18 @@ export default function OrganizationIntegrationsPanel({
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setDialog({ type: 'alert', title: 'Error', message: err.message || 'Delete failed' });
+          setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.deleteFailed') });
           return;
         }
         setJira(null);
-        showToast({ type: 'success', title: 'Deleted', message: 'Jira integration removed' });
+        showToast({ type: 'success', title: t('lit.deleted'), message: t('lit.jiraIntegrationRemoved') });
         await loadAll();
       },
     });
   };
 
   if (loading) {
-    return <div className="text-sm text-gray-500 dark:text-gray-400">Loading integrations...</div>;
+    return <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</div>;
   }
 
   const currentVcs = tab === 'jira' ? [] : vcsRows[tab];
@@ -320,8 +334,8 @@ export default function OrganizationIntegrationsPanel({
         tabs={[
           { id: 'jira', label: 'Jira' },
           { id: 'github', label: 'GitHub' },
-          { id: 'gitea', label: 'Gitea' },
-          { id: 'bitbucket', label: 'Bitbucket' },
+          { id: 'gitea', label: t('lit.gitea') },
+          { id: 'bitbucket', label: t('lit.bitbucket') },
         ]}
         activeId={tab}
         onChange={(id) => setTab(id as typeof tab)}
@@ -337,7 +351,7 @@ export default function OrganizationIntegrationsPanel({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              One Jira configuration per organization (tickets + optional projects instance).
+              {t('lit.oneJiraConfigurationPerOrganizationTicketsOptionalProjectsInstance')}
             </p>
             <div className="flex gap-2">
               {jira && (
@@ -346,7 +360,7 @@ export default function OrganizationIntegrationsPanel({
                   onClick={deleteJira}
                   className="h-9 rounded-lg border border-red-300 px-3 text-sm text-red-600 dark:border-red-800 dark:text-red-400"
                 >
-                  Remove
+                  {t('common.remove')}
                 </button>
               )}
               <button
@@ -358,27 +372,27 @@ export default function OrganizationIntegrationsPanel({
                 }}
                 className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
               >
-                {jira ? 'Edit Jira' : 'Configure Jira'}
+                {jira ? t('lit.editJira') : t('lit.configureJira')}
               </button>
             </div>
           </div>
 
           {!jira ? (
             <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-              No Jira integration configured.
+              {t('lit.noJiraIntegrationConfigured')}
             </div>
           ) : (
             <div className="overflow-hidden overflow-x-auto rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Tickets URL</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Email</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Project key</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Base JQL</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Hide integrated</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Projects URL</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.ticketsUrl')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('auth.email')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.projectKey')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.baseJql')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.hideIntegrated')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.projectsUrl')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('common.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -390,17 +404,17 @@ export default function OrganizationIntegrationsPanel({
                       {jira.JiraTicketsJqlFilter || '—'}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-                      {jira.HideIntegratedJiraTicketsByDefault ? 'Yes' : 'No'}
+                      {jira.HideIntegratedJiraTicketsByDefault ? t('lit.yes') : t('lit.no')}
                     </td>
                     <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">{jira.JiraProjectsUrl || '—'}</td>
                     <td className="px-3 py-2.5 text-sm">
                       {jira.IsEnabled ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                          Enabled
+                          {t('common.enabled')}
                         </span>
                       ) : (
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                          Disabled
+                          {t('common.disabled')}
                         </span>
                       )}
                     </td>
@@ -421,7 +435,7 @@ export default function OrganizationIntegrationsPanel({
               onClick={openVcsCreate}
               className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
             >
-              Add {tab === 'github' ? 'GitHub' : tab === 'gitea' ? 'Gitea' : 'Bitbucket'}
+              Add {tab === 'github' ? 'GitHub' : tab === 'gitea' ? t('lit.gitea') : t('lit.bitbucket')}
             </button>
           </div>
 
@@ -434,10 +448,10 @@ export default function OrganizationIntegrationsPanel({
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">URL</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">Flags</th>
-                    <th className="relative px-3 py-2"><span className="sr-only">Actions</span></th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('common.name')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.url')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500">{t('lit.flags')}</th>
+                    <th className="relative px-3 py-2"><span className="sr-only">{t('common.actions')}</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -449,12 +463,12 @@ export default function OrganizationIntegrationsPanel({
                         <div className="flex flex-wrap gap-1">
                           {row.IsEnabled === 1 && (
                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                              Enabled
+                              {t('common.enabled')}
                             </span>
                           )}
                           {row.IsDefault === 1 && (
                             <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                              Default
+                              {t('lit.default')}
                             </span>
                           )}
                         </div>
@@ -465,8 +479,8 @@ export default function OrganizationIntegrationsPanel({
                             type="button"
                             onClick={() => openVcsEdit(row)}
                             className="rounded p-1.5 text-gray-400 hover:text-blue-600"
-                            title="Edit"
-                            aria-label="Edit"
+                            title={t('common.edit')}
+                            aria-label={t('common.edit')}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -476,8 +490,8 @@ export default function OrganizationIntegrationsPanel({
                             type="button"
                             onClick={() => deleteVcs(row)}
                             className="rounded p-1.5 text-gray-400 hover:text-red-600"
-                            title="Delete"
-                            aria-label="Delete"
+                            title={t('common.delete')}
+                            aria-label={t('common.delete')}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -500,17 +514,17 @@ export default function OrganizationIntegrationsPanel({
             <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {jira ? 'Edit Jira integration' : 'Configure Jira'}
+                  {jira ? t('lit.editJiraIntegration') : t('lit.configureJira')}
                 </h3>
                 <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                  One configuration per organization
+                  {t('lit.oneConfigurationPerOrganization')}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowJiraForm(false)}
                 className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -521,42 +535,42 @@ export default function OrganizationIntegrationsPanel({
             <div className="space-y-6 overflow-y-auto px-6 py-5">
               <section className="space-y-4">
                 <div className="border-b border-gray-200 pb-2 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">Tickets</h4>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">{t('common.tickets')}</h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Credentials used for ticket search and import
+                    {t('lit.credentialsUsedForTicketSearchAndImport')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block text-sm sm:col-span-2">
                     <span className="font-medium text-gray-700 dark:text-gray-300">
-                      Jira URL <span className="text-red-500">*</span>
+                      {t('lit.jiraUrl')} <span className="text-red-500">*</span>
                     </span>
                     <input
                       type="url"
                       value={jiraForm.jiraUrl}
                       onChange={(e) => setJiraForm((f) => ({ ...f, jiraUrl: e.target.value }))}
-                      placeholder="https://your-domain.atlassian.net"
+                      placeholder='https://your-domain.atlassian.net'
                       className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </label>
                   <label className="block text-sm">
                     <span className="font-medium text-gray-700 dark:text-gray-300">
-                      Email <span className="text-red-500">*</span>
+                      {t('auth.email')} <span className="text-red-500">*</span>
                     </span>
                     <input
                       type="email"
                       value={jiraForm.jiraEmail}
                       onChange={(e) => setJiraForm((f) => ({ ...f, jiraEmail: e.target.value }))}
-                      placeholder="your-email@company.com"
+                      placeholder={t('lit.yourEmailCompanyCom')}
                       className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </label>
                   <label className="block text-sm">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Project key</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{t('lit.projectKey')}</span>
                     <input
                       value={jiraForm.jiraProjectKey}
                       onChange={(e) => setJiraForm((f) => ({ ...f, jiraProjectKey: e.target.value }))}
-                      placeholder="PROJ"
+                      placeholder={t('lit.proj')}
                       className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </label>
@@ -570,16 +584,16 @@ export default function OrganizationIntegrationsPanel({
                     />
                   </label>
                   <label className="block text-sm sm:col-span-2">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Base JQL filter</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{t('lit.baseJqlFilter')}</span>
                     <textarea
                       value={jiraForm.jiraTicketsJqlFilter}
                       onChange={(e) => setJiraForm((f) => ({ ...f, jiraTicketsJqlFilter: e.target.value }))}
-                      placeholder='e.g. status NOT IN (Done, Cancelled) AND labels = "support"'
+                      placeholder={t('lit.eGStatusNotInDoneCancelledAndLabelsSupport')}
                       rows={3}
                       className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                     <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
-                      Applied when importing Jira tickets into projects
+                      {t('lit.appliedWhenImportingJiraTicketsIntoProjects')}
                     </span>
                   </label>
                   <label className="inline-flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300 sm:col-span-2">
@@ -591,31 +605,31 @@ export default function OrganizationIntegrationsPanel({
                         setJiraForm((f) => ({ ...f, hideIntegratedJiraTicketsByDefault: e.target.checked }))
                       }
                     />
-                    <span>Hide already integrated tickets by default in import</span>
+                    <span>{t('lit.hideAlreadyIntegratedTicketsByDefaultInImport')}</span>
                   </label>
                 </div>
               </section>
 
               <section className="space-y-4">
                 <div className="border-b border-gray-200 pb-2 dark:border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">Projects / Kanban</h4>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">{t('lit.projectsKanban')}</h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Optional second instance for boards (leave empty to reuse tickets credentials)
+                    {t('lit.optionalSecondInstanceForBoardsLeaveEmptyToReuseTicketsCredentials')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block text-sm sm:col-span-2">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Projects URL</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{t('lit.projectsUrl')}</span>
                     <input
                       type="url"
                       value={jiraForm.jiraProjectsUrl}
                       onChange={(e) => setJiraForm((f) => ({ ...f, jiraProjectsUrl: e.target.value }))}
-                      placeholder="https://your-projects-domain.atlassian.net"
+                      placeholder='https://your-projects-domain.atlassian.net'
                       className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     />
                   </label>
                   <label className="block text-sm">
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Projects email</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{t('lit.projectsEmail')}</span>
                     <input
                       type="email"
                       value={jiraForm.jiraProjectsEmail}
@@ -645,7 +659,7 @@ export default function OrganizationIntegrationsPanel({
                   checked={jiraForm.isEnabled}
                   onChange={(e) => setJiraForm((f) => ({ ...f, isEnabled: e.target.checked }))}
                 />
-                Integration enabled
+                {t('lit.integrationEnabled')}
               </label>
             </div>
 
@@ -655,7 +669,7 @@ export default function OrganizationIntegrationsPanel({
                 onClick={() => setShowJiraForm(false)}
                 className="h-10 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -663,7 +677,7 @@ export default function OrganizationIntegrationsPanel({
                 onClick={saveJira}
                 className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {jiraSaving ? 'Saving…' : 'Save'}
+                {jiraSaving ? t('lit.saving2') : t('common.save')}
               </button>
             </div>
           </div>
@@ -674,19 +688,19 @@ export default function OrganizationIntegrationsPanel({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md space-y-3 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {editingVcs ? 'Edit' : 'Add'} {tab === 'github' ? 'GitHub' : tab === 'gitea' ? 'Gitea' : 'Bitbucket'}
+              {editingVcs ? t('common.edit') : t('common.add')} {tab === 'github' ? 'GitHub' : tab === 'gitea' ? t('lit.gitea') : t('lit.bitbucket')}
             </h3>
             <label className="block text-sm">
-              <span className="text-gray-700 dark:text-gray-300">Name</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('common.name')}</span>
               <input
                 value={vcsForm.name}
                 onChange={(e) => setVcsForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Production GitHub"
+                placeholder={t('lit.eGProductionGithub')}
                 className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </label>
             <label className="block text-sm">
-              <span className="text-gray-700 dark:text-gray-300">URL</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('lit.url')}</span>
               <input
                 value={vcsForm.url}
                 onChange={(e) => setVcsForm((f) => ({ ...f, url: e.target.value }))}
@@ -695,7 +709,7 @@ export default function OrganizationIntegrationsPanel({
             </label>
             {tab === 'bitbucket' && (
               <label className="block text-sm">
-                <span className="text-gray-700 dark:text-gray-300">Username / Atlassian email</span>
+                <span className="text-gray-700 dark:text-gray-300">{t('lit.usernameAtlassianEmail')}</span>
                 <input
                   value={vcsForm.username}
                   onChange={(e) => setVcsForm((f) => ({ ...f, username: e.target.value }))}
@@ -718,7 +732,7 @@ export default function OrganizationIntegrationsPanel({
                 checked={vcsForm.isEnabled}
                 onChange={(e) => setVcsForm((f) => ({ ...f, isEnabled: e.target.checked }))}
               />
-              Enabled
+              {t('common.enabled')}
             </label>
             <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
@@ -726,11 +740,11 @@ export default function OrganizationIntegrationsPanel({
                 checked={vcsForm.isDefault}
                 onChange={(e) => setVcsForm((f) => ({ ...f, isDefault: e.target.checked }))}
               />
-              Default for this organization
+              {t('lit.defaultForThisOrganization')}
             </label>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setVcsFormOpen(false)} className="h-10 rounded-lg border px-4 text-sm">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -738,7 +752,7 @@ export default function OrganizationIntegrationsPanel({
                 onClick={saveVcs}
                 className="h-10 rounded-lg bg-blue-600 px-4 text-sm text-white disabled:opacity-50"
               >
-                {vcsSaving ? 'Saving…' : 'Save'}
+                {vcsSaving ? t('lit.saving2') : t('common.save')}
               </button>
             </div>
           </div>
@@ -755,7 +769,7 @@ export default function OrganizationIntegrationsPanel({
           dialog?.onConfirm?.();
           setDialog(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

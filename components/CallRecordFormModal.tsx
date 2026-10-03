@@ -1,5 +1,17 @@
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 import { useEffect, useMemo, useState } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -60,7 +72,7 @@ const buildDefaultFormData = (): CallRecordFormValues => ({
   callDate: new Date().toISOString().split('T')[0],
   startTime: '09:00',
   durationMinutes: 30,
-  callType: 'Teams',
+  callType: t('lit.teams'),
   participants: '',
   subject: '',
   notes: '',
@@ -95,11 +107,11 @@ const calculateDurationMinutes = (startTime: string, endTime: string): number =>
 };
 
 const callTypeOptions = [
-  { value: 'Teams', label: 'Teams' },
-  { value: 'Phone', label: 'Phone' },
-  { value: 'Zoom', label: 'Zoom' },
-  { value: 'Meet', label: 'Google Meet' },
-  { value: 'Other', label: 'Other' },
+  { value: t('lit.teams'), label: t('lit.teams') },
+  { value: t('lit.phone'), label: t('lit.phone') },
+  { value: t('lit.zoom'), label: t('lit.zoom') },
+  { value: t('lit.meet'), label: t('lit.googleMeet') },
+  { value: t('lit.other'), label: t('lit.other') },
 ];
 
 export default function CallRecordFormModal({
@@ -115,6 +127,8 @@ export default function CallRecordFormModal({
   onClose,
   onSubmit,
 }: CallRecordFormModalProps) {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [formData, setFormData] = useState<CallRecordFormValues>(mergeFormData(initialData));
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -124,7 +138,7 @@ export default function CallRecordFormModal({
 
   const setErrorWithToast = (message: string) => {
     setError(message);
-    showToast({ type: 'error', title: 'Call Record Error', message });
+    showToast({ type: 'error', title: t('lit.callRecordError'), message });
   };
 
   const endTime = useMemo(
@@ -137,7 +151,7 @@ export default function CallRecordFormModal({
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      throw new Error('Failed to load organizations');
+      throw new Error(t('lit.failedToLoadOrganizations'));
     }
     const data = await response.json();
     setOrganizations(data.organizations || []);
@@ -154,7 +168,7 @@ export default function CallRecordFormModal({
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      throw new Error('Failed to load projects');
+      throw new Error(t('lit.failedToLoadProjects'));
     }
     const data = await response.json();
     setProjects(data.projects || []);
@@ -170,7 +184,7 @@ export default function CallRecordFormModal({
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      throw new Error('Failed to load tasks');
+      throw new Error(t('lit.failedToLoadTasks'));
     }
     const data = await response.json();
     setTasks(data.tasks || []);
@@ -196,7 +210,7 @@ export default function CallRecordFormModal({
         }
       } catch (err) {
         console.error('Error preparing call record form:', err);
-        setErrorWithToast(err instanceof Error ? err.message : 'Failed to load form data');
+        setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadFormData'));
       }
     })();
   }, [isOpen, token, initialData]);
@@ -224,7 +238,7 @@ export default function CallRecordFormModal({
       await loadProjectsForOrg(value);
     } catch (err) {
       console.error('Error loading projects:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to load projects');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadProjects'));
     }
   };
 
@@ -245,7 +259,7 @@ export default function CallRecordFormModal({
       await loadTasksForProject(value);
     } catch (err) {
       console.error('Error loading tasks:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to load tasks');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToLoadTasks'));
     }
   };
 
@@ -260,7 +274,7 @@ export default function CallRecordFormModal({
       await onSubmit(formData);
     } catch (err) {
       console.error('Error saving call record:', err);
-      setErrorWithToast(err instanceof Error ? err.message : 'Failed to save call record');
+      setErrorWithToast(err instanceof Error ? err.message : t('lit.failedToSaveCallRecord'));
     }
   };
 
@@ -275,8 +289,8 @@ export default function CallRecordFormModal({
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              aria-label="Close"
-              title="Close"
+              aria-label={t('common.close')}
+              title={t('common.close')}
             >
               ✕
             </button>
@@ -310,7 +324,7 @@ export default function CallRecordFormModal({
             {showDateField && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Date *
+                  {t('lit.date')}
                 </label>
                 <input
                   type="date"
@@ -324,7 +338,7 @@ export default function CallRecordFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Start Time *
+                  {t('lit.startTime2')}
                 </label>
                 <input
                   type="time"
@@ -343,7 +357,7 @@ export default function CallRecordFormModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  End Time *
+                  {t('lit.endTime2')}
                 </label>
                 <input
                   type="time"
@@ -363,7 +377,7 @@ export default function CallRecordFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Duration (min)
+                  {t('lit.durationMin')}
                 </label>
                 <input
                   type="number"
@@ -381,55 +395,55 @@ export default function CallRecordFormModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type
+                  {t('common.type')}
                 </label>
                 <SearchableSelect
                   options={callTypeOptions}
                   value={formData.callType}
                   onChange={(value) => setFormData((prev) => ({ ...prev, callType: value }))}
-                  placeholder="Select call type"
-                  emptyText="No call types available"
+                  placeholder={t('lit.selectCallType')}
+                  emptyText={t('lit.noCallTypesAvailable')}
                   autoSelectSingleOption
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Subject
+                {t('lit.subject')}
               </label>
               <input
                 type="text"
                 value={formData.subject}
                 onChange={(e) => setFormData((prev) => ({ ...prev, subject: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Meeting topic"
+                placeholder={t('lit.meetingTopic')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Organization
+                {t('common.organization')}
               </label>
               <SearchableSelect
                 options={organizations.map((org) => ({ value: String(org.Id), label: org.Name }))}
                 value={formData.organizationId}
                 onChange={handleOrganizationChange}
-                placeholder="Select organization (optional)"
-                emptyText="-- None --"
+                placeholder={t('lit.selectOrganizationOptional')}
+                emptyText={t('lit.none')}
                 autoSelectSingleOption
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Project
+                {t('common.project')}
               </label>
               <SearchableSelect
                 options={projects.map((project) => ({ value: String(project.Id), label: project.ProjectName }))}
                 value={formData.projectId}
                 onChange={handleProjectChange}
-                placeholder="Select project (optional)"
-                emptyText="-- None --"
+                placeholder={t('lit.selectProjectOptional')}
+                emptyText={t('lit.none')}
                 disabled={!formData.organizationId}
                 autoSelectSingleOption
               />
@@ -437,7 +451,7 @@ export default function CallRecordFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Task
+                {t('common.task')}
               </label>
               <SearchableSelect
                 options={tasks.map((task) => ({
@@ -446,35 +460,35 @@ export default function CallRecordFormModal({
                 }))}
                 value={formData.taskId}
                 onChange={(value) => setFormData((prev) => ({ ...prev, taskId: value }))}
-                placeholder="Select task (optional)"
-                emptyText="-- None --"
+                placeholder={t('lit.selectTaskOptional')}
+                emptyText={t('lit.none')}
                 disabled={!formData.projectId}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Participants
+                {t('lit.participants')}
               </label>
               <input
                 type="text"
                 value={formData.participants}
                 onChange={(e) => setFormData((prev) => ({ ...prev, participants: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="John, Mary, Bob"
+                placeholder={t('lit.johnMaryBob')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Notes
+                {t('lit.notes')}
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Meeting notes..."
+                placeholder={t('lit.meetingNotes')}
               />
             </div>
 
@@ -490,14 +504,14 @@ export default function CallRecordFormModal({
                 onClick={onClose}
                 className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
               >
-                {isSubmitting ? 'Saving...' : submitLabel}
+                {isSubmitting ? t('common.loading') : submitLabel}
               </button>
             </div>
           </div>

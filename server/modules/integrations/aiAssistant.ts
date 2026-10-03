@@ -1046,10 +1046,10 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res: Response) 
         'for a detailed schedule',
         'more specific daily allocations are needed',
         'need daily allocations',
-        'planejamento diario esta vazio',
+        'Planeamento diario esta vazio',
         'planeamento diario esta vazio',
         'nao ha informacoes sobre tarefas planeadas',
-        'nao ha informacoes sobre tarefas planejadas',
+        'nao ha informacoes sobre tarefas Planeadas',
       ]);
       const weakContextReply = includesAny(normalizeSearchText(llmAnswer), [
         'not provided in the context',

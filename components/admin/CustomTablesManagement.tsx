@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api/config';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +44,8 @@ const COLUMN_DATA_TYPES = [
 ];
 
 export default function CustomTablesManagement() {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const { showToast } = useToast();
 
@@ -105,7 +109,7 @@ export default function CustomTablesManagement() {
         setTables(data.tables || []);
       }
     } catch {
-      setError('Failed to load custom tables');
+      setError(t('lit.failedToLoadCustomTables'));
     } finally {
       setIsLoading(false);
     }
@@ -136,17 +140,17 @@ export default function CustomTablesManagement() {
         setRows(d.rows || []);
       }
     } catch {
-      setError('Failed to load table details');
+      setError(t('lit.failedToLoadTableDetails'));
     } finally {
       setIsLoadingDetail(false);
     }
   }, [token]);
 
   const handleSelectTable = (id: number) => {
-    const t = tables.find((t) => t.Id === id);
+    const table = tables.find((row) => row.Id === id);
     setSelectedTableId(id);
-    setMetaName(t?.Name ?? '');
-    setMetaDesc(t?.Description ?? '');
+    setMetaName(table?.Name ?? '');
+    setMetaDesc(table?.Description ?? '');
     setEditingMeta(false);
     setShowAddColumn(false);
     setEditingRowId(null);
@@ -165,15 +169,15 @@ export default function CustomTablesManagement() {
         body: JSON.stringify({ name: newTableName.trim(), description: newTableDesc.trim() || null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to create table');
-      showToast({ type: 'success', title: 'Table Created', message: `"${newTableName.trim()}" was created.` });
+      if (!res.ok) throw new Error(data.message || t('lit.failedToCreateTable'));
+      showToast({ type: 'success', title: t('lit.tableCreated'), message: `"${newTableName.trim()}" was created.` });
       setNewTableName('');
       setNewTableDesc('');
       setShowNewTableForm(false);
       await loadTables();
       if (data.tableId) handleSelectTable(data.tableId);
     } catch (err: any) {
-      setError(err.message || 'Failed to create table');
+      setError(err.message || t('lit.failedToCreateTable'));
     } finally {
       setIsSavingTable(false);
     }
@@ -189,8 +193,8 @@ export default function CustomTablesManagement() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: metaName.trim(), description: metaDesc.trim() || null }),
       });
-      if (!res.ok) throw new Error('Failed to update table');
-      showToast({ type: 'success', title: 'Table Updated', message: 'Table updated successfully.' });
+      if (!res.ok) throw new Error(t('lit.failedToUpdateTable'));
+      showToast({ type: 'success', title: t('lit.tableUpdated'), message: t('lit.tableUpdatedSuccessfully') });
       setEditingMeta(false);
       await loadTables();
     } catch (err: any) {
@@ -213,8 +217,8 @@ export default function CustomTablesManagement() {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
           });
-          if (!res.ok) throw new Error('Failed to delete table');
-          showToast({ type: 'success', title: 'Table Deleted', message: `"${name}" was deleted.` });
+          if (!res.ok) throw new Error(t('lit.failedToDeleteTable'));
+          showToast({ type: 'success', title: t('lit.tableDeleted'), message: `"${name}" was deleted.` });
           setSelectedTableId(null);
           setColumns([]);
           setRows([]);
@@ -242,8 +246,8 @@ export default function CustomTablesManagement() {
           sortOrder: columns.length,
         }),
       });
-      if (!res.ok) throw new Error('Failed to add column');
-      showToast({ type: 'success', title: 'Column Added', message: `"${newColName.trim()}" added.` });
+      if (!res.ok) throw new Error(t('lit.failedToAddColumn'));
+      showToast({ type: 'success', title: t('lit.columnAdded'), message: `"${newColName.trim()}" added.` });
       setNewColName('');
       setNewColType('varchar(255)');
       setNewColRequired(false);
@@ -269,11 +273,11 @@ export default function CustomTablesManagement() {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
           });
-          showToast({ type: 'success', title: 'Column Deleted', message: `"${col.ColumnName}" deleted.` });
+          showToast({ type: 'success', title: t('lit.columnDeleted'), message: `"${col.ColumnName}" deleted.` });
           await loadDetail(selectedTableId);
           await loadTables();
         } catch {
-          setError('Failed to delete column');
+          setError(t('lit.failedToDeleteColumn'));
         }
       })()
     );
@@ -323,7 +327,7 @@ export default function CustomTablesManagement() {
         });
       }
       if (!res.ok) {
-        let message = 'Failed to save row';
+        let message = t('lit.failedToSaveRow');
         try {
           const data = await res.json();
           if (data?.message) message = data.message;
@@ -356,7 +360,7 @@ export default function CustomTablesManagement() {
           await loadDetail(selectedTableId);
           await loadTables();
         } catch {
-          setError('Failed to delete row');
+          setError(t('lit.failedToDeleteRow'));
         }
       })()
     );
@@ -375,7 +379,7 @@ export default function CustomTablesManagement() {
       {error && (
         <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
-          <button onClick={() => setError('')} className="ml-2 underline text-sm">Dismiss</button>
+          <button onClick={() => setError('')} className="ml-2 underline text-sm">{t('lit.dismiss')}</button>
         </div>
       )}
 
@@ -384,7 +388,7 @@ export default function CustomTablesManagement() {
         <div className="lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 sticky top-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Tables</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('lit.tables')}</h3>
               <button
                 onClick={() => setShowNewTableForm(!showNewTableForm)}
                 className="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -399,14 +403,14 @@ export default function CustomTablesManagement() {
                   type="text"
                   value={newTableName}
                   onChange={(e) => setNewTableName(e.target.value)}
-                  placeholder="Table name *"
+                  placeholder={t('lit.tableName')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="text"
                   value={newTableDesc}
                   onChange={(e) => setNewTableDesc(e.target.value)}
-                  placeholder="Description (optional)"
+                  placeholder={t('lit.descriptionOptional')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="flex gap-2">
@@ -415,23 +419,23 @@ export default function CustomTablesManagement() {
                     onClick={() => { setShowNewTableForm(false); setNewTableName(''); setNewTableDesc(''); }}
                     className="flex-1 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingTable || !newTableName.trim()}
                     className="flex-1 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
                   >
-                    Create
+                    {t('common.create')}
                   </button>
                 </div>
               </form>
             )}
 
             {isLoading ? (
-              <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
             ) : tables.length === 0 ? (
-              <div className="text-sm text-gray-500 dark:text-gray-400">No custom tables yet.</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noCustomTablesYet')}</div>
             ) : (
               <div className="space-y-1">
                 {tables.map((table) => (
@@ -461,10 +465,10 @@ export default function CustomTablesManagement() {
         <div className="lg:col-span-3">
           {!selectedTable ? (
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700 p-16 text-center">
-              <p className="text-gray-500 dark:text-gray-400">Select a table from the list or create a new one.</p>
+              <p className="text-gray-500 dark:text-gray-400">{t('lit.selectATableFromTheListOrCreateANewOne')}</p>
             </div>
           ) : isLoadingDetail ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading...</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
           ) : (
             <div className="space-y-6">
               {/* ── Meta header ── */}
@@ -472,7 +476,7 @@ export default function CustomTablesManagement() {
                 {editingMeta ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.name')}</label>
                       <input
                         type="text"
                         value={metaName}
@@ -481,7 +485,7 @@ export default function CustomTablesManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('common.description')}</label>
                       <input
                         type="text"
                         value={metaDesc}
@@ -490,9 +494,9 @@ export default function CustomTablesManagement() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditingMeta(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">Cancel</button>
+                      <button onClick={() => setEditingMeta(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">{t('common.cancel')}</button>
                       <button onClick={handleSaveMeta} disabled={isSavingMeta || !metaName.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm">
-                        {isSavingMeta ? 'Saving...' : 'Save'}
+                        {isSavingMeta ? t('lit.saving') : t('common.save')}
                       </button>
                     </div>
                   </div>
@@ -511,14 +515,14 @@ export default function CustomTablesManagement() {
                       <button
                         onClick={() => { setMetaName(selectedTable.Name); setMetaDesc(selectedTable.Description ?? ''); setEditingMeta(true); }}
                         className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                        title="Edit table"
+                        title={t('lit.editTable')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
                       <button
                         onClick={handleDeleteTable}
                         className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                        title="Delete table"
+                        title={t('lit.deleteTable')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8" /></svg>
                       </button>
@@ -530,7 +534,7 @@ export default function CustomTablesManagement() {
               {/* ── Columns section ── */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-white">Columns</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{t('lit.columns')}</h4>
                   <button
                     onClick={() => setShowAddColumn(!showAddColumn)}
                     className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -541,13 +545,13 @@ export default function CustomTablesManagement() {
 
                 {/* Fixed columns */}
                 <div className="mb-4 space-y-2">
-                  {[{ name: 'Id', type: 'int (auto)' }, { name: 'Description', type: 'varchar(500)' }].map((c) => (
+                  {[{ name: 'Id', type: 'int (auto)' }, { name: t('lit.description2'), type: 'varchar(500)' }].map((c) => (
                     <div key={c.name} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <div className="flex items-center gap-3">
                         <span className="font-medium text-gray-900 dark:text-white text-sm">{c.name}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">{c.type}</span>
                       </div>
-                      <span className="text-xs text-gray-400 italic">Default</span>
+                      <span className="text-xs text-gray-400 italic">{t('lit.default')}</span>
                     </div>
                   ))}
 
@@ -557,13 +561,13 @@ export default function CustomTablesManagement() {
                         <span className="font-medium text-gray-900 dark:text-white text-sm">{col.ColumnName}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">{col.DataType}</span>
                         {col.IsRequired === 1 && (
-                          <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded">Required</span>
+                          <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded">{t('common.required')}</span>
                         )}
                       </div>
                       <button
                         onClick={() => handleDeleteColumn(col)}
                         className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                        title="Delete column"
+                        title={t('lit.deleteColumn')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8" /></svg>
                       </button>
@@ -576,17 +580,17 @@ export default function CustomTablesManagement() {
                   <form onSubmit={handleAddColumn} className="border-t border-gray-200 dark:border-gray-700 pt-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Column Name *</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.columnName2')}</label>
                         <input
                           type="text"
                           value={newColName}
                           onChange={(e) => setNewColName(e.target.value)}
-                          placeholder="e.g. Code"
+                          placeholder={t('lit.eGCode')}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Data Type</label>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.dataType')}</label>
                         <select
                           value={newColType}
                           onChange={(e) => setNewColType(e.target.value)}
@@ -603,14 +607,14 @@ export default function CustomTablesManagement() {
                             onChange={(e) => setNewColRequired(e.target.checked)}
                             className="w-4 h-4 rounded border-gray-300"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Required</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{t('common.required')}</span>
                         </label>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setShowAddColumn(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">Cancel</button>
+                      <button type="button" onClick={() => setShowAddColumn(false)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">{t('common.cancel')}</button>
                       <button type="submit" disabled={isSavingColumn || !newColName.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm">
-                        {isSavingColumn ? 'Adding...' : 'Add Column'}
+                        {isSavingColumn ? t('lit.adding') : t('lit.addColumn')}
                       </button>
                     </div>
                   </form>
@@ -621,7 +625,7 @@ export default function CustomTablesManagement() {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h4 className="font-semibold text-gray-900 dark:text-white">
-                    Rows <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">({rows.length})</span>
+                    {t('lit.rows')} <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">({rows.length})</span>
                   </h4>
                   {editingRowId !== 'new' && (
                     <button
@@ -638,28 +642,28 @@ export default function CustomTablesManagement() {
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">#</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description *</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('lit.description')}</th>
                         {columns.map((col) => (
                           <th key={col.Id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {col.ColumnName}
                             {col.IsRequired === 1 && <span className="text-red-500 ml-1">*</span>}
                           </th>
                         ))}
-                        <th className="relative px-4 py-3"><span className="sr-only">Actions</span></th>
+                        <th className="relative px-4 py-3"><span className="sr-only">{t('common.actions')}</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {/* New row form */}
                       {editingRowId === 'new' && (
                         <tr className="bg-blue-50 dark:bg-blue-900/10">
-                          <td className="px-4 py-3 text-gray-400 text-xs">new</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{t('lit.new')}</td>
                           <td className="px-4 py-3">
                             <input
                               type="text"
                               value={rowDraft.description}
                               onChange={(e) => setRowDraft((d) => ({ ...d, description: e.target.value }))}
                               autoFocus
-                              placeholder="Description"
+                              placeholder={t('common.description')}
                               className="w-full px-2 py-1.5 border border-blue-400 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
                             />
                           </td>
@@ -672,8 +676,8 @@ export default function CustomTablesManagement() {
                                   className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
                                 >
                                   <option value="">—</option>
-                                  <option value="1">Yes</option>
-                                  <option value="0">No</option>
+                                  <option value="1">{t('common.yes')}</option>
+                                  <option value="0">{t('common.no')}</option>
                                 </select>
                               ) : (
                                 <input
@@ -687,8 +691,8 @@ export default function CustomTablesManagement() {
                           ))}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1 justify-end">
-                              <button onClick={cancelEditRow} className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors" title="Cancel">✕</button>
-                              <button onClick={handleSaveRow} disabled={isSavingRow || !rowDraft.description.trim()} className="p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 rounded transition-colors" title="Save">
+                              <button onClick={cancelEditRow} className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors" title={t('common.cancel')}>✕</button>
+                              <button onClick={handleSaveRow} disabled={isSavingRow || !rowDraft.description.trim()} className="p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 rounded transition-colors" title={t('common.save')}>
                                 {isSavingRow ? '...' : '✓'}
                               </button>
                             </div>
@@ -699,7 +703,7 @@ export default function CustomTablesManagement() {
                       {rows.length === 0 && editingRowId !== 'new' ? (
                         <tr>
                           <td colSpan={3 + columns.length} className="px-4 py-10 text-center text-gray-500 dark:text-gray-400">
-                            No rows yet. Click "+ Add Row" to add the first entry.
+                            {t('lit.noRowsYetClickAddRowToAddTheFirstEntry')}
                           </td>
                         </tr>
                       ) : (
@@ -725,8 +729,8 @@ export default function CustomTablesManagement() {
                                       className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
                                     >
                                       <option value="">—</option>
-                                      <option value="1">Yes</option>
-                                      <option value="0">No</option>
+                                      <option value="1">{t('common.yes')}</option>
+                                      <option value="0">{t('common.no')}</option>
                                     </select>
                                   ) : (
                                     <input
@@ -740,8 +744,8 @@ export default function CustomTablesManagement() {
                               ))}
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-1 justify-end">
-                                  <button onClick={cancelEditRow} className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors" title="Cancel">✕</button>
-                                  <button onClick={handleSaveRow} disabled={isSavingRow || !rowDraft.description.trim()} className="p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 rounded transition-colors" title="Save">
+                                  <button onClick={cancelEditRow} className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors" title={t('common.cancel')}>✕</button>
+                                  <button onClick={handleSaveRow} disabled={isSavingRow || !rowDraft.description.trim()} className="p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 rounded transition-colors" title={t('common.save')}>
                                     {isSavingRow ? '...' : '✓'}
                                   </button>
                                 </div>
@@ -761,16 +765,16 @@ export default function CustomTablesManagement() {
                                   <button
                                     onClick={() => startEditRow(row)}
                                     className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                                    title="Edit row"
-                                    aria-label="Edit row"
+                                    title={t('lit.editRow')}
+                                    aria-label={t('lit.editRow')}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
                                   <button
                                     onClick={() => handleDeleteRow(row)}
                                     className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
-                                    title="Delete row"
-                                    aria-label="Delete row"
+                                    title={t('lit.deleteRow')}
+                                    aria-label={t('lit.deleteRow')}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8" /></svg>
                                   </button>
@@ -799,7 +803,7 @@ export default function CustomTablesManagement() {
           modal?.onConfirm();
           setModal(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>

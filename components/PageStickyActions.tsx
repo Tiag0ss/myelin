@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n/provider';
 import type { ReactNode } from 'react';
 
 type PageStickyActionsProps = {
@@ -15,6 +16,7 @@ type PageStickyActionsProps = {
  * Prefer this over putting primary form actions in the page header.
  */
 export default function PageStickyActions({ children, className = '' }: PageStickyActionsProps) {
+  const { t } = useI18n();
   return (
     <div
       data-page-sticky-actions=""
@@ -26,7 +28,7 @@ export default function PageStickyActions({ children, className = '' }: PageStic
         .filter(Boolean)
         .join(' ')}
       role="toolbar"
-      aria-label="Page actions"
+      aria-label={t('lit.pageActions')}
     >
       <div className="flex flex-wrap items-center justify-end gap-2 pb-2">{children}</div>
     </div>

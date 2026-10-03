@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,6 +16,8 @@ import AuthShell, {
 } from '@/components/AuthShell';
 
 export default function ResetPasswordPage() {
+  const { t } = useI18n();
+
   const { showToast } = useToast();
   const [token, setToken] = useState('');
   const newPasswordRef = useRef<HTMLInputElement>(null);
@@ -66,11 +70,11 @@ export default function ResetPasswordPage() {
         const result = await authApi.validateResetToken(token);
         setIsTokenValid(!!result.valid);
         if (!result.valid) {
-          setError('This reset link is invalid or expired.');
+          setError(t('lit.thisResetLinkIsInvalidOrExpired'));
         }
       } catch (err: unknown) {
         setIsTokenValid(false);
-        setError(err instanceof Error ? err.message : 'Failed to validate reset link.');
+        setError(err instanceof Error ? err.message : t('lit.failedToValidateResetLink'));
       } finally {
         setIsCheckingToken(false);
       }
@@ -102,26 +106,27 @@ export default function ResetPasswordPage() {
     const confirmPassword = readPasswordInput(confirmPasswordRef);
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('lit.passwordMustBeAtLeast8Characters'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.passwordsMismatch'));
       return;
     }
 
     try {
       setIsSaving(true);
       const result = await authApi.resetPassword(token, newPassword);
-      const message = result.message || 'Password reset successfully. Redirecting to login...';
-      showToast({ type: 'success', title: 'Password Reset', message });
+      const message =
+        result.message || t('lit.passwordResetSuccessfullyRedirectingToLogin');
+      showToast({ type: 'success', title: t('lit.passwordReset'), message });
       clearPasswordInput(newPasswordRef);
       clearPasswordInput(confirmPasswordRef);
       setCanSubmit(false);
       setTimeout(() => router.push('/login'), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password.');
+      setError(err instanceof Error ? err.message : t('lit.failedToResetPassword'));
     } finally {
       setIsSaving(false);
     }
@@ -129,13 +134,13 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell
-      title="Reset Password"
-      description="Set a new password for your account."
+      title={t('auth.resetTitle')}
+      description={t('auth.resetHint')}
       companyName={companyName}
       companyLogoUrl={companyLogoUrl}
       footer={
         <Link href="/login" className={authLinkClass}>
-          Back to login
+          {t('auth.backSignIn')}
         </Link>
       }
     >
@@ -146,18 +151,20 @@ export default function ResetPasswordPage() {
       )}
 
       {isCheckingToken ? (
-        <div className="text-center text-sm text-[var(--pm-muted)]">Validating reset link…</div>
+        <div className="text-center text-sm text-[var(--pm-muted)]">
+          {t('lit.validatingResetLink')}
+        </div>
       ) : !isTokenValid ? (
         <div className="text-center">
           <Link href="/forgot-password" className={`text-sm ${authLinkClass}`}>
-            Request a new reset link
+            {t('lit.requestANewResetLink')}
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label htmlFor="newPassword" className={authLabelClass}>
-              New Password
+              {t('auth.newPassword')}
             </label>
             <PasswordInput
               ref={newPasswordRef}
@@ -168,13 +175,13 @@ export default function ResetPasswordPage() {
               minLength={8}
               autoComplete="new-password"
               preventAutofill
-              placeholder="At least 8 characters"
+              placeholder={t('lit.atLeast8Characters')}
             />
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className={authLabelClass}>
-              Confirm Password
+              {t('auth.confirmPassword')}
             </label>
             <PasswordInput
               ref={confirmPasswordRef}
@@ -185,12 +192,12 @@ export default function ResetPasswordPage() {
               minLength={8}
               autoComplete="new-password"
               preventAutofill
-              placeholder="Repeat new password"
+              placeholder={t('lit.repeatNewPassword')}
             />
           </div>
 
           <button type="submit" disabled={isSaving || !canSubmit} className={authPrimaryButtonClass}>
-            {isSaving ? 'Resetting…' : 'Reset Password'}
+            {isSaving ? t('lit.resetting') : t('auth.resetTitle')}
           </button>
         </form>
       )}

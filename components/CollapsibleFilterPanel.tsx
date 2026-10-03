@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useState, type ReactNode } from 'react';
 
@@ -30,7 +31,7 @@ type CollapsibleFilterPanelProps = {
  * Filters are collapsed by default to free vertical space.
  */
 export default function CollapsibleFilterPanel({
-  title = 'Filters',
+  title,
   activeCount = 0,
   defaultOpen = false,
   children,
@@ -39,8 +40,11 @@ export default function CollapsibleFilterPanel({
   headerMiddle,
   headerExtra,
   onClear,
-  clearLabel = 'Clear',
+  clearLabel,
 }: CollapsibleFilterPanelProps) {
+  const { t } = useI18n();
+  const titleResolved = title ?? t('common.filters');
+  const clearLabelResolved = clearLabel ?? t('common.clear');
   const [open, setOpen] = useState(defaultOpen);
   const hasActive = activeCount > 0;
 
@@ -64,14 +68,14 @@ export default function CollapsibleFilterPanel({
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="truncate">{title}</span>
+          <span className="truncate">{titleResolved}</span>
           {hasActive && (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
               {activeCount}
             </span>
           )}
           <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
-            {open ? 'Hide' : 'Show'}
+            {open ? t('common.showLess') : t('common.showMore')}
           </span>
         </button>
 
@@ -87,7 +91,7 @@ export default function CollapsibleFilterPanel({
             onClick={onClear}
             className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:underline dark:text-blue-400 dark:hover:bg-blue-900/20"
           >
-            {clearLabel}
+            {clearLabelResolved}
           </button>
         ) : null}
 

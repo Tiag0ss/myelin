@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useState, useEffect } from 'react';
 import { getTicketHistory, TicketHistoryEntry } from '@/lib/api/tickets';
@@ -9,6 +10,8 @@ interface TicketHistoryProps {
 }
 
 export default function TicketHistory({ ticketId, token }: TicketHistoryProps) {
+  const { t } = useI18n();
+
   const [history, setHistory] = useState<TicketHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,7 +27,7 @@ export default function TicketHistory({ ticketId, token }: TicketHistoryProps) {
       const data = await getTicketHistory(ticketId, token);
       setHistory(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load history');
+      setError(err.message || t('lit.failedToLoadHistory'));
     } finally {
       setLoading(false);
     }
@@ -66,9 +69,9 @@ export default function TicketHistory({ ticketId, token }: TicketHistoryProps) {
       case 'Updated':
         if (entry.FieldName === 'Title') {
           return `${userName} changed title from "${entry.OldValue}" to "${entry.NewValue}"`;
-        } else if (entry.FieldName === 'Description') {
+        } else if (entry.FieldName === t('lit.description2')) {
           return `${userName} updated the description`;
-        } else if (entry.FieldName === 'Category') {
+        } else if (entry.FieldName === t('lit.category')) {
           return `${userName} changed category from "${entry.OldValue}" to "${entry.NewValue}"`;
         } else if (entry.FieldName === 'ProjectId') {
           if (!entry.OldValue && entry.NewValue) {
@@ -155,7 +158,7 @@ export default function TicketHistory({ ticketId, token }: TicketHistoryProps) {
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-4">📜</div>
-        <p className="text-gray-500 dark:text-gray-400">No history available</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('lit.noHistoryAvailable')}</p>
       </div>
     );
   }
@@ -192,13 +195,13 @@ export default function TicketHistory({ ticketId, token }: TicketHistoryProps) {
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         {entry.OldValue && (
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">Previous:</span>
+                            <span className="text-gray-500 dark:text-gray-400">{t('lit.previous')}</span>
                             <p className="text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">{entry.OldValue}</p>
                           </div>
                         )}
                         {entry.NewValue && (
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">Updated:</span>
+                            <span className="text-gray-500 dark:text-gray-400">{t('lit.updated')}</span>
                             <p className="text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">{entry.NewValue}</p>
                           </div>
                         )}

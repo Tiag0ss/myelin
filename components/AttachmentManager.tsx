@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useRef } from 'react';
 
 interface AttachmentUploaderProps {
@@ -37,6 +39,8 @@ const FILE_ICONS: Record<string, string> = {
 };
 
 export default function AttachmentUploader({ onUpload, maxSize = 10 * 1024 * 1024, disabled = false }: AttachmentUploaderProps) {
+  const { t } = useI18n();
+
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +53,7 @@ export default function AttachmentUploader({ onUpload, maxSize = 10 * 1024 * 102
 
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('File type not allowed. Allowed: images, PDF, Word, Excel, ZIP, TXT');
+      setError(t('lit.fileTypeNotAllowedAllowedImagesPdfWordExcelZipTxt'));
       return;
     }
 
@@ -77,20 +81,20 @@ export default function AttachmentUploader({ onUpload, maxSize = 10 * 1024 * 102
             fileInputRef.current.value = '';
           }
         } catch (err: any) {
-          setError(err.message || 'Failed to upload file');
+          setError(err.message || t('lit.failedToUploadFile'));
         } finally {
           setUploading(false);
         }
       };
 
       reader.onerror = () => {
-        setError('Failed to read file');
+        setError(t('lit.failedToReadFile'));
         setUploading(false);
       };
 
       reader.readAsDataURL(file);
     } catch (err: any) {
-      setError(err.message || 'Failed to upload file');
+      setError(err.message || t('lit.failedToUploadFile'));
       setUploading(false);
     }
   };
@@ -118,12 +122,12 @@ export default function AttachmentUploader({ onUpload, maxSize = 10 * 1024 * 102
           {uploading ? (
             <>
               <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <span>Uploading...</span>
+              <span>{t('lit.uploading')}</span>
             </>
           ) : (
             <>
               <span>📎</span>
-              <span>Attach File</span>
+              <span>{t('lit.attachFile')}</span>
             </>
           )}
         </label>
@@ -162,6 +166,7 @@ interface AttachmentListProps {
 }
 
 export function AttachmentList({ attachments, currentUserId, isAdmin, onDownload, onPreview, onDelete }: AttachmentListProps) {
+  const { t } = useI18n();
   const getFileIcon = (fileType: string): string => {
     for (const [type, icon] of Object.entries(FILE_ICONS)) {
       if (fileType.startsWith(type)) {
@@ -194,7 +199,7 @@ export function AttachmentList({ attachments, currentUserId, isAdmin, onDownload
   if (attachments.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-        No attachments yet
+        {t('lit.noAttachmentsYet')}
       </div>
     );
   }
@@ -232,7 +237,7 @@ export function AttachmentList({ attachments, currentUserId, isAdmin, onDownload
               <button
                 onClick={() => onPreview(attachment.Id)}
                 className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                title="Preview"
+                title={t('lit.preview')}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -244,7 +249,7 @@ export function AttachmentList({ attachments, currentUserId, isAdmin, onDownload
             <button
               onClick={() => onDownload(attachment.Id)}
               className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-              title="Download"
+              title={t('common.download')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -255,7 +260,7 @@ export function AttachmentList({ attachments, currentUserId, isAdmin, onDownload
               <button
                 onClick={() => onDelete(attachment.Id)}
                 className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                title="Delete"
+                title={t('common.delete')}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

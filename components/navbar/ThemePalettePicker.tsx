@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import {
   THEME_PALETTE_META,
@@ -18,6 +19,8 @@ export default function ThemePalettePicker({
   onChange,
   variant = 'legacy',
 }: ThemePalettePickerProps) {
+  const { t } = useI18n();
+
   const isSynapse = variant === 'synapse';
 
   return (
@@ -29,7 +32,7 @@ export default function ThemePalettePicker({
             : 'mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'
         }
       >
-        Palette
+        {t('chrome.palette')}
       </p>
       <div className="grid grid-cols-2 gap-1">
         {THEME_PALETTES.map((palette) => {

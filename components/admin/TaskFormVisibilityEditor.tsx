@@ -1,5 +1,17 @@
 'use client';
 
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
+
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+
+import { useI18n } from '@/lib/i18n/provider';
 import React, { useMemo, useState } from 'react';
 import {
   TASK_FORM_FIELD_CATALOG,
@@ -20,35 +32,35 @@ type EditorArea = 'tabs' | 'labels' | 'header' | 'details' | 'hours';
 const AREA_META: { id: EditorArea; label: string; description: string }[] = [
   {
     id: 'tabs',
-    label: 'Modal tabs',
-    description: 'Which tabs appear in the task modal.',
+    label: t('lit.modalTabs'),
+    description: t('lit.whichTabsAppearInTheTaskModal'),
   },
   {
     id: 'labels',
-    label: 'Section labels',
-    description: 'Show or hide section headings to save space. Fields stay visible.',
+    label: t('lit.sectionLabels'),
+    description: t('lit.showOrHideSectionHeadingsToSaveSpaceFieldsStayVisible'),
   },
   {
     id: 'header',
-    label: 'Header',
-    description: 'Controls above the tabs (pills, timer, tags, actions).',
+    label: t('lit.header'),
+    description: t('lit.controlsAboveTheTabsPillsTimerTagsActions'),
   },
   {
     id: 'details',
-    label: 'Details tab',
-    description: 'Fields inside the Details tab.',
+    label: t('lit.detailsTab'),
+    description: t('lit.fieldsInsideTheDetailsTab'),
   },
   {
     id: 'hours',
-    label: 'Hours tab',
-    description: 'Planning, allocations, and time entries.',
+    label: t('lit.hoursTab'),
+    description: t('lit.planningAllocationsAndTimeEntries'),
   },
 ];
 
 function areaForSection(section: string): Exclude<EditorArea, 'tabs'> {
   if (section === 'Section labels') return 'labels';
   if (section === 'Header') return 'header';
-  if (section === 'Hours' || section.startsWith('Hours ')) return 'hours';
+  if (section === t('lit.hours2') || section.startsWith('Hours ')) return 'hours';
   return 'details';
 }
 
@@ -67,6 +79,8 @@ function VisibilityRow({
   disabled?: boolean;
   onChange: (next: boolean) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <label
       className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
@@ -90,12 +104,12 @@ function VisibilityRow({
           <span className="text-sm font-medium text-gray-900 dark:text-white">{label}</span>
           {locked && (
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-              Required
+              {t('common.required')}
             </span>
           )}
           {!locked && !checked && (
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-              Hidden
+              {t('lit.hidden')}
             </span>
           )}
         </span>
@@ -142,7 +156,7 @@ function SectionBlock({
             onClick={() => onSetSectionVisible(!allOptionalVisible)}
             className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
           >
-            {allOptionalVisible ? 'Hide all optional' : 'Show all optional'}
+            {allOptionalVisible ? t('lit.hideAllOptional') : t('lit.showAllOptional')}
           </button>
         )}
       </div>
@@ -174,6 +188,8 @@ export default function TaskFormVisibilityEditor({
   onChange,
   disabled = false,
 }: TaskFormVisibilityEditorProps) {
+  const { t } = useI18n();
+
   const [activeArea, setActiveArea] = useState<EditorArea>('tabs');
 
   const config = useMemo(() => {
@@ -201,7 +217,7 @@ export default function TaskFormVisibilityEditor({
   const fieldsBySection = useMemo(() => {
     const map = new Map<string, TaskFieldVisibilityCatalogItem[]>();
     for (const field of TASK_FORM_FIELD_CATALOG) {
-      const section = field.section || 'Other';
+      const section = field.section || t('lit.other');
       const list = map.get(section) || [];
       list.push(field);
       map.set(section, list);
@@ -227,7 +243,7 @@ export default function TaskFormVisibilityEditor({
       if (config.tabs[tab.key] !== false) counts.tabs.visible += 1;
     }
     for (const field of TASK_FORM_FIELD_CATALOG) {
-      const area = areaForSection(field.section || 'Other');
+      const area = areaForSection(field.section || t('lit.other'));
       counts[area].total += 1;
       if (config.fields[field.key] !== false) counts[area].visible += 1;
     }
@@ -279,7 +295,7 @@ export default function TaskFormVisibilityEditor({
 
           {activeArea === 'tabs' ? (
             <SectionBlock
-              title="Tabs in the task modal"
+              title={t('lit.tabsInTheTaskModal')}
               items={TASK_FORM_TAB_CATALOG}
               config={config}
               disabled={disabled}

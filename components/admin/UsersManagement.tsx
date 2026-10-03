@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +21,8 @@ interface CustomerOption {
 }
 
 export default function UsersManagement() {
+  const { t } = useI18n();
+
   const [users, setUsers] = useState<User[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
@@ -71,7 +75,7 @@ export default function UsersManagement() {
       setUsers(response.users);
       setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to load users');
+      setError(err.message || t('lit.failedToLoadUsers'));
     } finally {
       setIsLoadingUsers(false);
     }
@@ -102,14 +106,14 @@ export default function UsersManagement() {
     if (!token) return;
     
     showConfirm(
-      'Delete User',
+      t('lit.deleteUser2'),
       'Are you sure you want to delete this user? This action cannot be undone.',
       async () => {
         try {
           await usersApi.delete(id, token);
           await loadUsers();
         } catch (err: any) {
-          setError(err.message || 'Failed to delete user');
+          setError(err.message || t('lit.failedToDeleteUser'));
         }
       }
     );
@@ -175,13 +179,13 @@ export default function UsersManagement() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by username, email, name, customer, country, or Jira ID"
+            placeholder={t('lit.searchByUsernameEmailNameCustomerCountryOrJiraId')}
             className="w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none placeholder:text-[var(--pm-muted)] focus:border-[var(--pm-accent)]"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-1.5 text-xs text-[var(--pm-muted)]">
-            <span className="whitespace-nowrap">Rows</span>
+            <span className="whitespace-nowrap">{t('lit.rows')}</span>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
@@ -199,7 +203,7 @@ export default function UsersManagement() {
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700"
             >
               <span className="text-base leading-none">+</span>
-              Create User
+              {t('lit.createUser')}
             </button>
           )}
         </div>
@@ -213,7 +217,7 @@ export default function UsersManagement() {
 
       {isLoadingUsers ? (
         <div className="flex h-40 items-center justify-center text-sm text-[var(--pm-muted)]">
-          Loading users…
+          {t('lit.loadingUsers')}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)]">
@@ -221,34 +225,34 @@ export default function UsersManagement() {
             <thead className="bg-[var(--pm-panel)]">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  User
+                  {t('common.user')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Email
+                  {t('auth.email')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Jira ID
+                  {t('lit.jiraId')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Type
+                  {t('common.type')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Role
+                  {t('lit.role')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Team Leader
+                  {t('lit.teamLeader')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Country
+                  {t('lit.country')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--pm-muted)]">
-                  Created
+                  {t('lit.created')}
                 </th>
                 <th scope="col" className="relative px-3 py-2">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('common.actions')}</span>
                 </th>
               </tr>
             </thead>
@@ -291,17 +295,17 @@ export default function UsersManagement() {
                     {(u.UserType || (u.CustomerId ? 'customer' : 'internal')) === 'customer' ? (
                       <div>
                         <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-                          Customer
+                          {t('common.customer')}
                         </span>
                         <div className="mt-0.5 text-[11px] text-[var(--pm-muted)]">{u.CustomerName}</div>
                       </div>
                     ) : (u.UserType || (u.CustomerId ? 'customer' : 'internal')) === 'fictitious' ? (
                       <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                        Fictitious
+                        {t('lit.fictitious')}
                       </span>
                     ) : (
                       <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                        Internal
+                        {t('lit.internal')}
                       </span>
                     )}
                   </td>
@@ -312,22 +316,22 @@ export default function UsersManagement() {
                       <div className="flex flex-wrap gap-1">
                         {!!u.IsAdmin && (
                           <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                            Admin
+                            {t('nav.sectionAdmin')}
                           </span>
                         )}
                         {!!u.IsDeveloper && (
                           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                            Developer
+                            {t('lit.developer')}
                           </span>
                         )}
                         {!!u.IsSupport && (
                           <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/30 dark:text-teal-400">
-                            Support
+                            {t('lit.support')}
                           </span>
                         )}
                         {!!u.IsManager && (
                           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
-                            Manager
+                            {t('lit.manager')}
                           </span>
                         )}
                         {!u.IsAdmin && !u.IsDeveloper && !u.IsSupport && !u.IsManager && (
@@ -361,7 +365,7 @@ export default function UsersManagement() {
                           : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                       }`}
                     >
-                      {u.IsActive ? 'Active' : 'Inactive'}
+                      {u.IsActive ? t('lit.active2') : t('lit.inactive')}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-sm tabular-nums text-[var(--pm-muted)]">
@@ -372,8 +376,8 @@ export default function UsersManagement() {
                       <button
                         type="button"
                         onClick={() => handleViewDetails(u.Id)}
-                        title="View user details"
-                        aria-label="View user details"
+                        title={t('lit.viewUserDetails')}
+                        aria-label={t('lit.viewUserDetails')}
                         className="rounded p-1.5 text-[var(--pm-muted)] transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,8 +388,8 @@ export default function UsersManagement() {
                       <button
                         type="button"
                         onClick={() => handleEditUser(u)}
-                        title="Edit user"
-                        aria-label="Edit user"
+                        title={t('lit.editUser')}
+                        aria-label={t('lit.editUser')}
                         className="rounded p-1.5 text-[var(--pm-muted)] transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -395,8 +399,8 @@ export default function UsersManagement() {
                       <button
                         type="button"
                         onClick={() => handleResetPassword(u)}
-                        title="Reset password"
-                        aria-label="Reset password"
+                        title={t('auth.resetTitle')}
+                        aria-label={t('auth.resetTitle')}
                         className="rounded p-1.5 text-[var(--pm-muted)] transition-colors hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,8 +411,8 @@ export default function UsersManagement() {
                         <button
                           type="button"
                           onClick={() => handleDeleteUser(u.Id)}
-                          title="Delete user"
-                          aria-label="Delete user"
+                          title={t('lit.deleteUser')}
+                          aria-label={t('lit.deleteUser')}
                           className="rounded p-1.5 text-[var(--pm-muted)] transition-colors hover:text-red-600 dark:hover:text-red-400"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,7 +442,7 @@ export default function UsersManagement() {
               disabled={safeCurrentPage <= 1}
               className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Previous
+              {t('common.previous')}
             </button>
             <span>
               Page {safeCurrentPage} of {totalPages}
@@ -449,7 +453,7 @@ export default function UsersManagement() {
               disabled={safeCurrentPage >= totalPages}
               className="h-8 rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 text-xs font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>
@@ -513,13 +517,13 @@ export default function UsersManagement() {
                   onClick={closeConfirmModal}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleModalConfirm}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -544,6 +548,8 @@ function CreateUserModal({
   customers: CustomerOption[];
   allUsers: User[];
 }) {
+  const { t } = useI18n();
+
   const countryOptions = COUNTRY_OPTIONS.map((country) => ({
     value: country.code,
     label: `${country.name} (${country.code})`
@@ -603,7 +609,7 @@ function CreateUserModal({
     setIsLoading(true);
 
     if (formData.userType === 'customer' && !formData.customerId) {
-      setError('Please select a customer for Customer User type');
+      setError(t('lit.pleaseSelectACustomerForCustomerUserType'));
       setIsLoading(false);
       return;
     }
@@ -640,7 +646,7 @@ function CreateUserModal({
       clearPasswordInput(passwordRef);
       onUserCreated();
     } catch (err: any) {
-      setError(err.message || 'Failed to create user');
+      setError(err.message || t('lit.failedToCreateUser'));
     } finally {
       setIsLoading(false);
     }
@@ -651,7 +657,7 @@ function CreateUserModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full h-[calc(100vh-2rem)] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create User</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.createUser')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
@@ -670,7 +676,7 @@ function CreateUserModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Username *
+                  {t('lit.username')}
                 </label>
                 <input
                   type="text"
@@ -696,7 +702,7 @@ function CreateUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                User Type *
+                {t('lit.userType')}
               </label>
               <select
                 value={formData.userType}
@@ -710,13 +716,13 @@ function CreateUserModal({
                 }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="internal">Internal User</option>
-                <option value="customer">Customer User</option>
-                <option value="fictitious">Fictitious User</option>
+                <option value="internal">{t('lit.internalUser')}</option>
+                <option value="customer">{t('lit.customerUser')}</option>
+                <option value="fictitious">{t('lit.fictitiousUser')}</option>
               </select>
               {formData.userType === 'fictitious' && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Fictitious users are resources for planning and do not receive email alerts.
+                  {t('lit.fictitiousUsersAreResourcesForPlanningAndDoNotReceiveEmailAlerts')}
                 </p>
               )}
             </div>
@@ -724,7 +730,7 @@ function CreateUserModal({
             {formData.userType !== 'fictitious' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password *
+                  {t('lit.password')}
                 </label>
                 <PasswordInput
                   ref={passwordRef}
@@ -736,14 +742,14 @@ function CreateUserModal({
               </div>
             ) : (
               <div className="p-3 bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300">
-                Password is not required for fictitious users.
+                {t('lit.passwordIsNotRequiredForFictitiousUsers')}
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  First Name
+                  {t('lit.firstName2')}
                 </label>
                 <input
                   type="text"
@@ -754,7 +760,7 @@ function CreateUserModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Last Name
+                  {t('lit.lastName2')}
                 </label>
                 <input
                   type="text"
@@ -767,7 +773,7 @@ function CreateUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Jira ID
+                {t('lit.jiraId')}
               </label>
               <input
                 type="text"
@@ -787,7 +793,7 @@ function CreateUserModal({
                 required={formData.userType === 'customer'}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">No customer</option>
+                <option value="">{t('lit.noCustomer')}</option>
                 {customers.map((c) => (
                   <option key={c.Id} value={c.Id}>{c.Name}</option>
                 ))}
@@ -796,7 +802,7 @@ function CreateUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Hourly Rate
+                {t('lit.hourlyRate2')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(for budget calculations)</span>
               </label>
               <div className="relative">
@@ -815,7 +821,7 @@ function CreateUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Annual Vacation Days
+                {t('lit.annualVacationDays')}
               </label>
               <input
                 type="number"
@@ -829,7 +835,7 @@ function CreateUserModal({
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Roles
+                {t('lit.roles')}
               </label>
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center">
@@ -839,7 +845,7 @@ function CreateUserModal({
                     onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Admin</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('nav.sectionAdmin')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -848,7 +854,7 @@ function CreateUserModal({
                     onChange={(e) => setFormData({ ...formData, isDeveloper: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Developer</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.developer')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -857,7 +863,7 @@ function CreateUserModal({
                     onChange={(e) => setFormData({ ...formData, isSupport: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Support</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.support')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -866,7 +872,7 @@ function CreateUserModal({
                     onChange={(e) => setFormData({ ...formData, isManager: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Manager</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.manager')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -875,14 +881,14 @@ function CreateUserModal({
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('common.active')}</span>
                 </label>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Team Leader
+                {t('lit.teamLeader')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(approves time entries)</span>
               </label>
               <select
@@ -890,7 +896,7 @@ function CreateUserModal({
                 onChange={(e) => setFormData({ ...formData, teamLeaderId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">No team leader</option>
+                <option value="">{t('lit.noTeamLeader')}</option>
                 {allUsers.filter(u => (u.UserType || (u.CustomerId ? 'customer' : 'internal')) === 'internal').map(u => (
                   <option key={u.Id} value={u.Id}>
                     {u.FirstName && u.LastName ? `${u.FirstName} ${u.LastName} (@${u.Username})` : u.Username}
@@ -901,7 +907,7 @@ function CreateUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Country
+                {t('lit.country')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(used for holiday calendar)</span>
               </label>
               <SearchableSelect
@@ -911,15 +917,15 @@ function CreateUserModal({
                   loadAvailableRegions(value);
                 }}
                 options={countryOptions}
-                placeholder="Country"
-                emptyText="No country selected"
+                placeholder={t('lit.country')}
+                emptyText={t('lit.noCountrySelected')}
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Region / Subdivision
+                {t('lit.regionSubdivision')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(regional holidays)</span>
               </label>
               {availableRegions.length > 0 ? (
@@ -935,7 +941,7 @@ function CreateUserModal({
                 </select>
               ) : (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                  {formData.countryCode ? 'No regional holidays configured for this country' : 'Select a country first'}
+                  {formData.countryCode ? t('lit.noRegionalHolidaysConfiguredForThisCountry') : t('lit.selectACountryFirst')}
                 </p>
               )}
             </div>
@@ -953,14 +959,14 @@ function CreateUserModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Creating...' : 'Create User'}
+                {isLoading ? 'Creating...' : t('lit.createUser')}
               </button>
             </div>
           </form>
@@ -986,6 +992,8 @@ function EditUserModal({
   customers: CustomerOption[];
   allUsers: User[];
 }) {
+  const { t } = useI18n();
+
   const countryOptions = COUNTRY_OPTIONS.map((country) => ({
     value: country.code,
     label: `${country.name} (${country.code})`
@@ -1046,7 +1054,7 @@ function EditUserModal({
     setIsLoading(true);
 
     if (formData.userType === 'customer' && !formData.customerId) {
-      setError('Please select a customer for Customer User type');
+      setError(t('lit.pleaseSelectACustomerForCustomerUserType'));
       setIsLoading(false);
       return;
     }
@@ -1081,7 +1089,7 @@ function EditUserModal({
       }, token);
       onUserUpdated();
     } catch (err: any) {
-      setError(err.message || 'Failed to update user');
+      setError(err.message || t('lit.failedToUpdateUser'));
     } finally {
       setIsLoading(false);
     }
@@ -1092,7 +1100,7 @@ function EditUserModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full h-[calc(100vh-2rem)] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit User</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.editUser2')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
@@ -1111,7 +1119,7 @@ function EditUserModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Username *
+                  {t('lit.username')}
                 </label>
                 <input
                   type="text"
@@ -1137,7 +1145,7 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                User Type *
+                {t('lit.userType')}
               </label>
               <select
                 value={formData.userType}
@@ -1151,16 +1159,16 @@ function EditUserModal({
                 }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="internal">Internal User</option>
-                <option value="customer">Customer User</option>
-                <option value="fictitious">Fictitious User</option>
+                <option value="internal">{t('lit.internalUser')}</option>
+                <option value="customer">{t('lit.customerUser')}</option>
+                <option value="fictitious">{t('lit.fictitiousUser')}</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  First Name
+                  {t('lit.firstName2')}
                 </label>
                 <input
                   type="text"
@@ -1171,7 +1179,7 @@ function EditUserModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Last Name
+                  {t('lit.lastName2')}
                 </label>
                 <input
                   type="text"
@@ -1184,7 +1192,7 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Jira ID
+                {t('lit.jiraId')}
               </label>
               <input
                 type="text"
@@ -1204,7 +1212,7 @@ function EditUserModal({
                 required={formData.userType === 'customer'}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">No customer</option>
+                <option value="">{t('lit.noCustomer')}</option>
                 {customers.map((c) => (
                   <option key={c.Id} value={c.Id}>{c.Name}</option>
                 ))}
@@ -1213,7 +1221,7 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Hourly Rate
+                {t('lit.hourlyRate2')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(for budget calculations)</span>
               </label>
               <div className="relative">
@@ -1232,7 +1240,7 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Annual Vacation Days
+                {t('lit.annualVacationDays')}
               </label>
               <input
                 type="number"
@@ -1246,14 +1254,14 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Team Leader 
+                {t('lit.teamLeader')} 
               </label>
               <select
                 value={formData.teamLeaderId}
                 onChange={(e) => setFormData({ ...formData, teamLeaderId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">No team leader</option>
+                <option value="">{t('lit.noTeamLeader')}</option>
                 {allUsers.filter(u => (u.UserType || (u.CustomerId ? 'customer' : 'internal')) === 'internal' && u.Id !== user.Id).map(u => (
                   <option key={u.Id} value={u.Id}>
                     {u.FirstName && u.LastName ? `${u.FirstName} ${u.LastName} (@${u.Username})` : u.Username}
@@ -1264,7 +1272,7 @@ function EditUserModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Country
+                {t('lit.country')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(used for holiday calendar)</span>
               </label>
               <SearchableSelect
@@ -1274,15 +1282,15 @@ function EditUserModal({
                   loadAvailableRegions(value);
                 }}
                 options={countryOptions}
-                placeholder="Country"
-                emptyText="No country selected"
+                placeholder={t('lit.country')}
+                emptyText={t('lit.noCountrySelected')}
                 className="w-full"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Region / Subdivision
+                {t('lit.regionSubdivision')}
                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">(regional holidays)</span>
               </label>
               {availableRegions.length > 0 ? (
@@ -1298,14 +1306,14 @@ function EditUserModal({
                 </select>
               ) : (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                  {formData.countryCode ? 'No regional holidays configured for this country' : 'Select a country first'}
+                  {formData.countryCode ? t('lit.noRegionalHolidaysConfiguredForThisCountry') : t('lit.selectACountryFirst')}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Roles
+                {t('lit.roles')}
               </label>
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center">
@@ -1315,7 +1323,7 @@ function EditUserModal({
                     onChange={(e) => setFormData({ ...formData, isAdmin: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Admin</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('nav.sectionAdmin')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -1324,7 +1332,7 @@ function EditUserModal({
                     onChange={(e) => setFormData({ ...formData, isDeveloper: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Developer</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.developer')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -1333,7 +1341,7 @@ function EditUserModal({
                     onChange={(e) => setFormData({ ...formData, isSupport: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Support</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.support')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -1342,7 +1350,7 @@ function EditUserModal({
                     onChange={(e) => setFormData({ ...formData, isManager: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Manager</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('lit.manager')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -1351,13 +1359,13 @@ function EditUserModal({
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('common.active')}</span>
                 </label>
               </div>
             </div>
 
             <CustomFieldsFormSection
-              tableName="Users"
+              tableName={t('lit.users')}
               token={token}
               values={customFields}
               onChange={setCustomFields}
@@ -1369,14 +1377,14 @@ function EditUserModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? t('lit.saving') : t('lit.saveChanges')}
               </button>
             </div>
           </form>
@@ -1398,6 +1406,8 @@ function ResetPasswordModal({
   onPasswordReset: () => void; 
   token: string;
 }) {
+  const { t } = useI18n();
+
   const newPasswordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
@@ -1410,12 +1420,12 @@ function ResetPasswordModal({
     const confirmPassword = readPasswordInput(confirmPasswordRef);
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('lit.passwordsDoNotMatch'));
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('lit.passwordMustBeAtLeast6Characters'));
       return;
     }
 
@@ -1428,7 +1438,7 @@ function ResetPasswordModal({
       clearPasswordInput(confirmPasswordRef);
       onPasswordReset();
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password');
+      setError(err.message || t('lit.failedToResetPassword2'));
     } finally {
       setIsLoading(false);
     }
@@ -1439,7 +1449,7 @@ function ResetPasswordModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[calc(100vh-2rem)] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Reset Password</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('lit.resetPassword')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
@@ -1449,7 +1459,7 @@ function ResetPasswordModal({
           </div>
 
           <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            Resetting password for: <span className="font-medium text-gray-900 dark:text-white">{user.Username}</span>
+            {t('lit.resettingPasswordFor')} <span className="font-medium text-gray-900 dark:text-white">{user.Username}</span>
           </div>
 
           {error && (
@@ -1461,7 +1471,7 @@ function ResetPasswordModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                New Password *
+                {t('lit.newPassword')}
               </label>
               <PasswordInput
                 ref={newPasswordRef}
@@ -1474,7 +1484,7 @@ function ResetPasswordModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password *
+                {t('lit.confirmPassword')}
               </label>
               <PasswordInput
                 ref={confirmPasswordRef}
@@ -1491,14 +1501,14 @@ function ResetPasswordModal({
                 onClick={onClose}
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="flex-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
-                {isLoading ? 'Resetting...' : 'Reset Password'}
+                {isLoading ? 'Resetting...' : t('lit.resetPassword')}
               </button>
             </div>
           </form>

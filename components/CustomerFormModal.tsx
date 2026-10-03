@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { useEffect, useState } from 'react';
 import SearchableSelect from './SearchableSelect';
@@ -58,6 +59,8 @@ export default function CustomerFormModal({
   onSubmit,
   token,
 }: CustomerFormModalProps) {
+  const { t } = useI18n();
+
   const [values, setValues] = useState<CustomerFormValues>(initialValues);
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export default function CustomerFormModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {mode === 'edit' ? 'Edit Customer' : 'Add Customer'}
+              {mode === 'edit' ? t('lit.editCustomer2') : t('lit.addCustomer')}
             </h2>
             <button
               onClick={onClose}
@@ -110,7 +113,7 @@ export default function CustomerFormModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Name <span className="text-red-500">*</span>
+                  {t('common.name')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -123,7 +126,7 @@ export default function CustomerFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  External Name
+                  {t('lit.externalName')}
                 </label>
                 <input
                   type="text"
@@ -135,7 +138,7 @@ export default function CustomerFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
+                  {t('auth.email')}
                 </label>
                 <input
                   type="email"
@@ -147,7 +150,7 @@ export default function CustomerFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Phone
+                  {t('lit.phone')}
                 </label>
                 <input
                   type="tel"
@@ -159,7 +162,7 @@ export default function CustomerFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Address
+                  {t('lit.address')}
                 </label>
                 <textarea
                   value={values.Address}
@@ -172,7 +175,7 @@ export default function CustomerFormModal({
               {internalTicketsEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Default Support User
+                    {t('lit.defaultSupportUser')}
                   </label>
                   <SearchableSelect
                     value={values.DefaultSupportUserId?.toString() || ''}
@@ -181,18 +184,18 @@ export default function CustomerFormModal({
                       value: user.Id,
                       label: user.FirstName && user.LastName ? `${user.FirstName} ${user.LastName}` : user.Username
                     }))}
-                    placeholder="Select Support User"
-                    emptyText="No default support user"
+                    placeholder={t('lit.selectSupportUser')}
+                    emptyText={t('lit.noDefaultSupportUser')}
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    This user will be automatically assigned to tickets created by this customer
+                    {t('lit.thisUserWillBeAutomaticallyAssignedToTicketsCreatedByThisCustomer')}
                   </p>
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes
+                  {t('lit.notes')}
                 </label>
                 <textarea
                   value={values.Notes}
@@ -212,23 +215,23 @@ export default function CustomerFormModal({
                       className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                     />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Create default project
+                      {t('lit.createDefaultProject')}
                     </span>
                   </label>
                   {values.CreateDefaultProject && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Project Name
+                        {t('lit.projectName')}
                       </label>
                       <input
                         type="text"
                         value={values.DefaultProjectName}
                         onChange={(e) => setValues({ ...values, DefaultProjectName: e.target.value })}
-                        placeholder={values.Name || 'Same as customer name'}
+                        placeholder={values.Name || t('lit.sameAsCustomerName')}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Leave empty to use customer name
+                        {t('lit.leaveEmptyToUseCustomerName')}
                       </p>
                     </div>
                   )}
@@ -237,7 +240,7 @@ export default function CustomerFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Organizations <span className="text-red-500">*</span>
+                  {t('nav.organizations')} <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                   {organizations.map((organization) => (
@@ -256,7 +259,7 @@ export default function CustomerFormModal({
                   ))}
                 </div>
                 {values.OrganizationIds.length === 0 && (
-                  <p className="text-sm text-red-500 mt-1">Select at least one organization</p>
+                  <p className="text-sm text-red-500 mt-1">{t('lit.selectAtLeastOneOrganization')}</p>
                 )}
               </div>
 
@@ -274,14 +277,14 @@ export default function CustomerFormModal({
                 onClick={onClose}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSaving || values.OrganizationIds.length === 0}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
               >
-                {isSaving ? 'Saving...' : mode === 'edit' ? 'Update' : 'Create'}
+                {isSaving ? t('lit.saving') : mode === 'edit' ? t('lit.update') : t('lit.create')}
               </button>
             </div>
           </form>

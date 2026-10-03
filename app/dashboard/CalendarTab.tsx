@@ -1,5 +1,8 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
+import { htmlLang } from '@/lib/i18n/config';
 import { getApiUrl } from '@/lib/api/config';
 import { RecurringAllocationOccurrence } from '@/lib/api/recurringAllocations';
 import { tasksApi, Task as ApiTask } from '@/lib/api/tasks';
@@ -10,23 +13,33 @@ import { useColorVision } from '@/hooks/useColorVision';
 import { getCalendarEventColors } from '@/lib/colorVisionPalettes';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, getDay } from 'date-fns';
-import { enUS } from 'date-fns/locale';
+import { enUS, pt, es, fr } from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
 import CallRecordFormModal, { CallRecordFormValues } from '@/components/CallRecordFormModal';
 import TimeEntryFormModal, { TimeEntryFormValues } from '@/components/TimeEntryFormModal';
 import RichTextEditor from '@/components/RichTextEditor';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-const mondayEnUS = {
-  ...enUS,
-  options: {
-    ...enUS.options,
-    weekStartsOn: 1,
-  },
-};
+function withMondayStart(loc: DateFnsLocale): DateFnsLocale {
+  return {
+    ...loc,
+    options: {
+      ...loc.options,
+      weekStartsOn: 1,
+    },
+  };
+}
 
-const locales = {
-  'en-US': mondayEnUS,
+const locales: Record<string, DateFnsLocale> = {
+  en: withMondayStart(enUS),
+  'en-US': withMondayStart(enUS),
+  pt: withMondayStart(pt),
+  'pt-PT': withMondayStart(pt),
+  es: withMondayStart(es),
+  'es-ES': withMondayStart(es),
+  fr: withMondayStart(fr),
+  'fr-FR': withMondayStart(fr),
 };
 
 const startOfWeekMonday = (date: Date) => startOfWeek(date, { weekStartsOn: 1 });
@@ -228,6 +241,10 @@ interface SlotInfo {
 }
 
 export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, taskAllocations, recurringAllocations, workStartTimes, lunchTime, lunchDuration, token, onDataChanged }: CalendarTabProps) {
+  const { t, locale } = useI18n();
+  const dateLocale = htmlLang(locale);
+  const dfLocale = locales[dateLocale] || locales.en;
+
   const { mode } = useColorVision();
   const [currentView, setCurrentView] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -867,7 +884,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
           type: 'vacation',
           vacationId: vacation.Id,
           vacationStatus: status,
-          description: `${dayPortion === 'half' ? 'Half day' : 'Full day'}${vacation.Notes ? ` - ${vacation.Notes}` : ''}`,
+          description: `${dayPortion === 'half' ? t('lit.halfDay2') : t('lit.fullDay2')}${vacation.Notes ? ` - ${vacation.Notes}` : ''}`,
         },
       });
     });
@@ -901,7 +918,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
           type: 'outOfOffice',
           outOfOfficeId: outOfOffice.Id,
           outOfOfficeStatus: status,
-          description: `${dayPortion === 'half' ? 'Half day' : 'Full day'}${outOfOffice.Notes ? ` - ${outOfOffice.Notes}` : ''}`,
+          description: `${dayPortion === 'half' ? t('lit.halfDay2') : t('lit.fullDay2')}${outOfOffice.Notes ? ` - ${outOfOffice.Notes}` : ''}`,
         },
       });
     });
@@ -926,7 +943,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         resource: {
           type: 'devSupport',
           devSupportId: devSupport.Id,
-          description: devSupport.Notes ? `Dev Support - ${devSupport.Notes}` : 'Dev Support',
+          description: devSupport.Notes ? `Dev Support - ${devSupport.Notes}` : t('lit.devSupport'),
         },
       });
     });
@@ -1177,14 +1194,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         },
         body: JSON.stringify({
           timerType: 'callRecord',
-          callType: 'Teams',
+          callType: t('lit.teams'),
           subject: subjectText || null,
           clientTimezone,
         }),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to start call timer');
+        throw new Error(data.message || t('lit.failedToStartCallTimer'));
       }
       window.dispatchEvent(new CustomEvent('timer-changed'));
       closeOutlookActionModal();
@@ -1197,7 +1214,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
   const handleCreateTimeEntry = async (entryData: TimeEntryFormValues) => {
     if (!entryData.taskId || !selectedSlot) {
-      throw new Error('Task is required');
+      throw new Error(t('lit.taskIsRequired2'));
     }
     
     setIsSaving(true);
@@ -1226,11 +1243,11 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         onDataChanged();
       } else {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to create time entry');
+        throw new Error(data.message || t('lit.failedToCreateTimeEntry'));
       }
     } catch (err) {
       console.error('Failed to create time entry:', err);
-      throw err instanceof Error ? err : new Error('Failed to create time entry');
+      throw err instanceof Error ? err : new Error(t('lit.failedToCreateTimeEntry'));
     } finally {
       setIsSaving(false);
     }
@@ -1329,11 +1346,11 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         onDataChanged();
       } else {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.message || 'Failed to create call record');
+        throw new Error(data?.message || t('lit.failedToCreateCallRecord'));
       }
     } catch (err) {
       console.error('Failed to create call record:', err);
-      throw err instanceof Error ? err : new Error('Failed to create call record');
+      throw err instanceof Error ? err : new Error(t('lit.failedToCreateCallRecord'));
     } finally {
       setIsSaving(false);
     }
@@ -1373,11 +1390,11 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         onDataChanged();
       } else {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.message || 'Failed to update call record');
+        throw new Error(data?.message || t('lit.failedToUpdateCallRecord'));
       }
     } catch (err) {
       console.error('Failed to update call record:', err);
-      throw err instanceof Error ? err : new Error('Failed to update call record');
+      throw err instanceof Error ? err : new Error(t('lit.failedToUpdateCallRecord'));
     } finally {
       setIsSaving(false);
     }
@@ -1465,7 +1482,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
               onClick={goToToday}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Today
+              {t('lit.today')}
             </button>
             <button
               onClick={goNext}
@@ -1484,7 +1501,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                Week
+                {t('lit.week')}
               </button>
               <button
                 onClick={() => setCurrentView('month')}
@@ -1494,7 +1511,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                Month
+                {t('lit.month')}
               </button>
             </div>
           </div>
@@ -1504,8 +1521,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         <div className="text-center mb-4">
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
             {currentView === 'month'
-              ? format(currentDate, 'MMMM yyyy')
-              : `Week of ${format(startOfWeek(currentDate), 'MMM d, yyyy')}`
+              ? format(currentDate, 'MMMM yyyy', { locale: dfLocale })
+              : t('lit.weekOf', { date: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy', { locale: dfLocale }) })
             }
           </span>
         </div>
@@ -1586,6 +1603,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         <div style={{ height: '650px' }} className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           <Calendar
             localizer={localizer}
+            culture={dateLocale}
             events={events.filter((e) => !hiddenTypes.has(e.resource.type))}
             startAccessor="start"
             endAccessor="end"
@@ -1611,14 +1629,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         {/* Legend */}
         <div className="mt-4 flex flex-wrap gap-x-3 gap-y-2 items-center text-sm">
           {([
-            { type: 'task' as const,      color: 'bg-blue-500',   label: 'Tasks' },
-            { type: 'timeEntry' as const, color: 'bg-green-500',  label: 'Time Entries' },
-            { type: 'call' as const,      color: 'bg-purple-500', label: 'Calls' },
-            { type: 'lunch' as const,     color: 'bg-amber-400',  label: 'Lunch Break' },
-            { type: 'holiday' as const,   color: 'bg-semantic-holiday',    label: 'Holidays' },
-            { type: 'vacation' as const,  color: 'bg-semantic-vacation',   label: 'Vacations' },
-            { type: 'outOfOffice' as const, color: 'bg-semantic-ooo', label: 'Out Of Office' },
-            { type: 'devSupport' as const, color: 'bg-semantic-dev-support', label: 'Dev Support' },
+            { type: 'task' as const,      color: 'bg-blue-500',   label: t('lit.tasks') },
+            { type: 'timeEntry' as const, color: 'bg-green-500',  label: t('lit.timeEntries') },
+            { type: 'call' as const,      color: 'bg-purple-500', label: t('lit.calls') },
+            { type: 'lunch' as const,     color: 'bg-amber-400',  label: t('lit.lunchBreak') },
+            { type: 'holiday' as const,   color: 'bg-semantic-holiday',    label: t('lit.holidays') },
+            { type: 'vacation' as const,  color: 'bg-semantic-vacation',   label: t('lit.vacations') },
+            { type: 'outOfOffice' as const, color: 'bg-semantic-ooo', label: t('lit.outOfOffice') },
+            { type: 'devSupport' as const, color: 'bg-semantic-dev-support', label: t('lit.devSupport') },
           ] as { type: CalendarEventType; color: string; label: string }[]).map(({ type, color, label }) => {
             const hidden = hiddenTypes.has(type);
             return (
@@ -1629,7 +1647,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                 className={`flex items-center gap-2 px-2 py-1 rounded transition-opacity select-none ${
                   hidden ? 'opacity-40' : 'opacity-100'
                 } hover:opacity-80`}
-                title={hidden ? `Show ${label}` : `Hide ${label}`}
+                title={hidden ? t('lit.showX', { label }) : t('lit.hideX', { label })}
               >
                 <div className={`w-4 h-4 rounded ${color} ${hidden ? 'opacity-40' : ''}`}></div>
                 <span className={`text-gray-700 dark:text-gray-300 ${hidden ? 'line-through' : ''}`}>{label}</span>
@@ -1638,14 +1656,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
           })}
 
           {/* Overlap toggle */}
-          <label className="flex items-center gap-2 px-2 py-1 rounded cursor-pointer hover:opacity-80 select-none border-l border-gray-200 dark:border-gray-600 ml-1 pl-3" title={noOverlap ? 'Disable separate columns' : 'Show overlapping events in separate columns'}>
+          <label className="flex items-center gap-2 px-2 py-1 rounded cursor-pointer hover:opacity-80 select-none border-l border-gray-200 dark:border-gray-600 ml-1 pl-3" title={noOverlap ? t('lit.disableSeparateColumns') : t('lit.showOverlappingEventsInSeparateColumns')}>
             <input
               type="checkbox"
               checked={noOverlap}
               onChange={toggleNoOverlap}
               className="w-4 h-4 accent-blue-500 cursor-pointer"
             />
-            <span className="text-gray-700 dark:text-gray-300">Separate overlapping events</span>
+            <span className="text-gray-700 dark:text-gray-300">{t('lit.separateOverlappingEvents')}</span>
           </label>
         </div>
       </div>
@@ -1671,7 +1689,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     || selectedOutlookEvent.title.replace(/^📅\s*/, '').split(' • ')[0]}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  📆 {format(selectedOutlookEvent.start, 'EEEE, MMMM d, yyyy')}
+                  📆 {format(selectedOutlookEvent.start, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
                 </p>
                 {!selectedOutlookEvent.allDay && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -1682,7 +1700,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
               <div className="space-y-3">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  What would you like to do?
+                  {t('lit.whatWouldYouLikeToDo')}
                 </p>
                 {selectedOutlookEvent.resource.webLink && (
                   <button
@@ -1691,8 +1709,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   >
                     <span className="text-2xl">🌐</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Open in Outlook</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">View the meeting in Office / Outlook</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.openInOutlook')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.viewTheMeetingInOfficeOutlook')}</p>
                     </div>
                   </button>
                 )}
@@ -1704,10 +1722,10 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   <span className="text-2xl">📞</span>
                   <div className="text-left">
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {isStartingOutlookTimer ? 'Starting...' : 'Start Call Timer'}
+                      {isStartingOutlookTimer ? 'Starting...' : t('lit.startCallTimer')}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Start a call record timer with the meeting subject
+                      {t('lit.startACallRecordTimerWithTheMeetingSubject')}
                     </p>
                   </div>
                 </button>
@@ -1740,7 +1758,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
               {/* Date/Time Info */}
               <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  📆 {format(selectedSlot.start, 'EEEE, MMMM d, yyyy')}
+                  📆 {format(selectedSlot.start, 'EEEE, MMMM d, yyyy', { locale: dfLocale })}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   🕐 {format(selectedSlot.start, 'HH:mm')} - {format(selectedSlot.end, 'HH:mm')}
@@ -1751,7 +1769,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
               {slotAction === 'choice' && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    What would you like to add?
+                    {t('lit.whatWouldYouLikeToAdd')}
                   </p>
                   <button
                     onClick={() => setSlotAction('timeEntry')}
@@ -1759,8 +1777,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   >
                     <span className="text-2xl">⏱️</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Time Entry</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Log hours worked on a task</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.timeEntry')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.logHoursWorkedOnATask')}</p>
                     </div>
                   </button>
                   <button
@@ -1769,8 +1787,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   >
                     <span className="text-2xl">📞</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Call Record</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Record a meeting or call</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.callRecord2')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.recordAMeetingOrCall')}</p>
                     </div>
                   </button>
                   <button
@@ -1779,8 +1797,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   >
                     <span className="text-2xl">🏖️</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Vacation</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Request vacation for selected range</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.vacation')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.requestVacationForSelectedRange')}</p>
                     </div>
                   </button>
                   <button
@@ -1789,8 +1807,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   >
                     <span className="text-2xl">🚫</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">Out Of Office</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Request out of office for selected range</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{t('lit.outOfOffice')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.requestOutOfOfficeForSelectedRange')}</p>
                     </div>
                   </button>
                 </div>
@@ -1808,7 +1826,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Start Date *
+                        {t('lit.startDate2')}
                       </label>
                       <input
                         type="date"
@@ -1819,7 +1837,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        End Date *
+                        {t('lit.endDate2')}
                       </label>
                       <input
                         type="date"
@@ -1832,33 +1850,33 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Day Portion
+                      {t('lit.dayPortion')}
                     </label>
                     <select
                       value={leaveDayPortion}
                       onChange={(e) => setLeaveDayPortion(e.target.value as LeaveDayPortion)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="full">Full Day (default)</option>
-                      <option value="half">Half Day</option>
+                      <option value="full">{t('lit.fullDayDefault')}</option>
+                      <option value="half">{t('lit.halfDay')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Notes
+                      {t('lit.notes')}
                     </label>
                     <input
                       type="text"
                       value={vacationNotes}
                       onChange={(e) => setVacationNotes(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="Optional notes"
+                      placeholder={t('lit.optionalNotes')}
                     />
                   </div>
 
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Non-working days in the selected range are skipped automatically.
+                    {t('lit.nonWorkingDaysInTheSelectedRangeAreSkippedAutomatically')}
                   </p>
 
                   <div className="flex gap-2 pt-2">
@@ -1866,14 +1884,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                       onClick={closeSlotModal}
                       className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleCreateVacationRequest}
                       disabled={isSaving || !vacationStartDate || !vacationEndDate}
                       className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-400 text-white rounded-lg transition-colors"
                     >
-                      {isSaving ? 'Saving...' : 'Request Vacation'}
+                      {isSaving ? t('lit.saving') : t('lit.requestVacation')}
                     </button>
                   </div>
                 </div>
@@ -1891,7 +1909,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Start Date *
+                        {t('lit.startDate2')}
                       </label>
                       <input
                         type="date"
@@ -1902,7 +1920,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        End Date *
+                        {t('lit.endDate2')}
                       </label>
                       <input
                         type="date"
@@ -1915,33 +1933,33 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Day Portion
+                      {t('lit.dayPortion')}
                     </label>
                     <select
                       value={leaveDayPortion}
                       onChange={(e) => setLeaveDayPortion(e.target.value as LeaveDayPortion)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="full">Full Day (default)</option>
-                      <option value="half">Half Day</option>
+                      <option value="full">{t('lit.fullDayDefault')}</option>
+                      <option value="half">{t('lit.halfDay')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Notes
+                      {t('lit.notes')}
                     </label>
                     <input
                       type="text"
                       value={vacationNotes}
                       onChange={(e) => setVacationNotes(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="Optional notes"
+                      placeholder={t('lit.optionalNotes')}
                     />
                   </div>
 
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Non-working days in the selected range are skipped automatically.
+                    {t('lit.nonWorkingDaysInTheSelectedRangeAreSkippedAutomatically')}
                   </p>
 
                   <div className="flex gap-2 pt-2">
@@ -1949,14 +1967,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                       onClick={closeSlotModal}
                       className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleCreateOutOfOfficeRequest}
                       disabled={isSaving || !vacationStartDate || !vacationEndDate}
                       className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-lg transition-colors"
                     >
-                      {isSaving ? 'Saving...' : 'Request Out Of Office'}
+                      {isSaving ? t('lit.saving') : t('lit.requestOutOfOffice')}
                     </button>
                   </div>
                 </div>
@@ -1968,8 +1986,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
       <TimeEntryFormModal
         isOpen={showSlotModal && !!selectedSlot && slotAction === 'timeEntry'}
-        title="⏱️ Add Time Entry"
-        submitLabel="Add Entry"
+        title={t('lit.addTimeEntry')}
+        submitLabel={t('lit.addEntry')}
         isSubmitting={isSaving}
         token={token}
         useOrganizationProjectTaskFlow
@@ -1982,7 +2000,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
           taskId: '',
         } : undefined}
         dateInfo={selectedSlot ? {
-          dateLabel: format(selectedSlot.start, 'EEEE, MMMM d, yyyy'),
+          dateLabel: format(selectedSlot.start, 'EEEE, MMMM d, yyyy', { locale: dfLocale }),
           timeLabel: `${format(selectedSlot.start, 'HH:mm')} - ${format(selectedSlot.end, 'HH:mm')}`,
         } : undefined}
         showDateField={false}
@@ -1994,14 +2012,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
       <CallRecordFormModal
         isOpen={showSlotModal && !!selectedSlot && slotAction === 'call'}
         token={token}
-        title="📞 Add Call Record"
-        submitLabel="Add Call"
+        title={t('lit.addCallRecord')}
+        submitLabel={t('lit.addCall')}
         isSubmitting={isSaving}
         initialData={selectedSlot ? {
           callDate: format(selectedSlot.start, 'yyyy-MM-dd'),
           startTime: format(selectedSlot.start, 'HH:mm'),
           durationMinutes: Math.max(1, Math.round((selectedSlot.end.getTime() - selectedSlot.start.getTime()) / 60000)),
-          callType: 'Teams',
+          callType: t('lit.teams'),
           participants: '',
           subject: '',
           notes: '',
@@ -2010,7 +2028,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
           taskId: '',
         } : undefined}
         dateInfo={selectedSlot ? {
-          dateLabel: format(selectedSlot.start, 'EEEE, MMMM d, yyyy'),
+          dateLabel: format(selectedSlot.start, 'EEEE, MMMM d, yyyy', { locale: dfLocale }),
           timeLabel: `${format(selectedSlot.start, 'HH:mm')} - ${format(selectedSlot.end, 'HH:mm')}`,
         } : undefined}
         showDateField={false}
@@ -2022,14 +2040,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
       <CallRecordFormModal
         isOpen={showEditCallModal && !!editingCallRecord}
         token={token}
-        title="📞 Edit Call Record"
-        submitLabel="Save"
+        title={t('lit.editCallRecord')}
+        submitLabel={t('common.save')}
         isSubmitting={isSaving}
         initialData={editingCallRecord ? {
           callDate: editingCallRecord.CallDate ? String(editingCallRecord.CallDate).split('T')[0] : format(new Date(), 'yyyy-MM-dd'),
           startTime: editingCallRecord.StartTime ? String(editingCallRecord.StartTime).slice(0, 5) : '09:00',
           durationMinutes: Number(editingCallRecord.DurationMinutes || 30),
-          callType: editingCallRecord.CallType || 'Teams',
+          callType: editingCallRecord.CallType || t('lit.teams'),
           participants: editingCallRecord.Participants || '',
           subject: editingCallRecord.Subject || '',
           notes: editingCallRecord.Notes || '',
@@ -2066,14 +2084,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   📋 {editingEntry.taskName}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  📆 {new Date(editingEntry.workDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  📆 {new Date(editingEntry.workDate).toLocaleDateString(dateLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Hours *
+                    {t('lit.hours')}
                   </label>
                   <input
                     type="number"
@@ -2092,7 +2110,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Start Time *
+                      {t('lit.startTime2')}
                     </label>
                     <input
                       type="time"
@@ -2106,7 +2124,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      End Time *
+                      {t('lit.endTime2')}
                     </label>
                     <input
                       type="time"
@@ -2122,12 +2140,12 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
+                    {t('common.description')}
                   </label>
                   <RichTextEditor
                     content={editingEntry.description}
                     onChange={(html) => setEditingEntry({ ...editingEntry, description: html })}
-                    placeholder="What did you work on?"
+                    placeholder={t('lit.whatDidYouWorkOn')}
                   />
                 </div>
 
@@ -2144,14 +2162,14 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
                     onClick={closeEditEntryModal}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleUpdateTimeEntry}
                     disabled={isSaving}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
                   >
-                    {isSaving ? 'Saving...' : 'Save'}
+                    {isSaving ? t('lit.saving') : t('common.save')}
                   </button>
                 </div>
               </div>

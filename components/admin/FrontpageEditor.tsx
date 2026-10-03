@@ -1,11 +1,15 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiUrl } from '@/lib/api/config';
 import { useToast } from '@/contexts/ToastContext';
 
 export default function FrontpageEditor() {
+  const { t } = useI18n();
+
   const { token } = useAuth();
   const { showToast } = useToast();
   const [content, setContent] = useState('');
@@ -19,7 +23,7 @@ export default function FrontpageEditor() {
   useEffect(() => {
     const initialize = async () => {
       if (!token) {
-        setError('Authentication required');
+        setError(t('lit.authenticationRequired'));
         setIsLoading(false);
         return;
       }
@@ -32,7 +36,7 @@ export default function FrontpageEditor() {
           setIsDemoMode(demoMode);
 
           if (demoMode) {
-            setError('Demo mode is enabled. Frontpage loading and editing are disabled.');
+            setError(t('lit.demoModeIsEnabledFrontpageLoadingAndEditingAreDisabled'));
             setIsLoading(false);
             return;
           }
@@ -51,7 +55,7 @@ export default function FrontpageEditor() {
 
   const loadFrontpageContent = async () => {
     if (!token) {
-      setError('Authentication required');
+      setError(t('lit.authenticationRequired'));
       setIsLoading(false);
       return;
     }
@@ -68,7 +72,7 @@ export default function FrontpageEditor() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to load frontpage content');
+        throw new Error(errorData.message || t('lit.failedToLoadFrontpageContent'));
       }
 
       const data = await response.json();
@@ -77,7 +81,7 @@ export default function FrontpageEditor() {
       setOriginalContent(frontpageContent);
     } catch (err: any) {
       console.error('Error loading frontpage:', err);
-      setError(err.message || 'An error occurred while loading frontpage');
+      setError(err.message || t('lit.anErrorOccurredWhileLoadingFrontpage'));
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +128,8 @@ export default function FrontpageEditor() {
           <span class="text-base font-semibold">Myelin</span>
         </div>
         <div class="flex items-center gap-2">
-          <a href="/login" class="rounded-lg px-3 py-1.5 text-sm text-pm-muted hover:text-pm-text">Login</a>
-          <a href="/register" class="rounded-lg bg-pm-accent px-3 py-1.5 text-sm font-medium text-pm-accentFg hover:brightness-110">Get Started</a>
+          <a href="/login" class="rounded-lg px-3 py-1.5 text-sm text-pm-muted hover:text-pm-text">{t('lit.login')}</a>
+          <a href="/register" class="rounded-lg bg-pm-accent px-3 py-1.5 text-sm font-medium text-pm-accentFg hover:brightness-110">{t('lit.getStarted')}</a>
         </div>
       </div>
     </nav>
@@ -133,47 +137,47 @@ export default function FrontpageEditor() {
     <section class="relative overflow-hidden">
       <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_420px_at_20%_-10%,rgba(18,32,46,0.75),transparent_60%)]"></div>
       <div class="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-20">
-        <p class="mb-3 text-xs font-medium uppercase tracking-wide text-pm-accentSoft">Self-hosted · Open source · Full control</p>
+        <p class="mb-3 text-xs font-medium uppercase tracking-wide text-pm-accentSoft">{t('lit.selfHostedOpenSourceFullControl')}</p>
         <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">Myelin</h1>
-        <p class="mt-2 text-xl text-pm-muted sm:text-2xl">Your projects, your infrastructure.</p>
+        <p class="mt-2 text-xl text-pm-muted sm:text-2xl">{t('lit.yourProjectsYourInfrastructure')}</p>
         <p class="mt-4 max-w-2xl text-sm leading-relaxed text-pm-muted sm:text-base">
           Myelin — a self-hosted project and delivery platform. Deploy on your own servers, keep full control over your data, and tailor workflows to your team.
         </p>
         <div class="mt-8 flex flex-wrap gap-2">
-          <a href="/login" class="inline-flex h-10 items-center rounded-lg bg-pm-accent px-4 text-sm font-medium text-pm-accentFg hover:brightness-110">Access Dashboard</a>
-          <a href="/register" class="inline-flex h-10 items-center rounded-lg border border-pm-border bg-pm-panel px-4 text-sm font-medium hover:bg-pm-surface2">Get Started</a>
+          <a href="/login" class="inline-flex h-10 items-center rounded-lg bg-pm-accent px-4 text-sm font-medium text-pm-accentFg hover:brightness-110">{t('lit.accessDashboard')}</a>
+          <a href="/register" class="inline-flex h-10 items-center rounded-lg border border-pm-border bg-pm-panel px-4 text-sm font-medium hover:bg-pm-surface2">{t('lit.getStarted')}</a>
         </div>
       </div>
     </section>
 
     <section class="border-t border-pm-border bg-pm-surface py-14">
       <div class="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <h2 class="text-2xl font-semibold">Built for self-hosting</h2>
-        <p class="mt-2 max-w-2xl text-sm text-pm-muted">Deploy on your infrastructure and keep complete control over project data.</p>
+        <h2 class="text-2xl font-semibold">{t('lit.builtForSelfHosting')}</h2>
+        <p class="mt-2 max-w-2xl text-sm text-pm-muted">{t('lit.deployOnYourInfrastructureAndKeepCompleteControlOverProjectData')}</p>
         <div class="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Full Data Ownership</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">Your data stays on your servers. No third-party access, complete privacy and control.</p>
+            <h3 class="text-sm font-semibold">{t('lit.fullDataOwnership')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.yourDataStaysOnYourServersNoThirdPartyAccessCompletePrivacyAndControl')}</p>
           </div>
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Enterprise Security</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">JWT authentication, role-based permissions, and encrypted data storage.</p>
+            <h3 class="text-sm font-semibold">{t('lit.enterpriseSecurity')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.jwtAuthenticationRoleBasedPermissionsAndEncryptedDataStorage')}</p>
           </div>
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Fully Customizable</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">Custom statuses, workflows, and permissions tailored to your organization.</p>
+            <h3 class="text-sm font-semibold">{t('lit.fullyCustomizable')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.customStatusesWorkflowsAndPermissionsTailoredToYourOrganization')}</p>
           </div>
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Advanced Planning</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">Gantt charts, resource allocation, and capacity planning tools.</p>
+            <h3 class="text-sm font-semibold">{t('lit.advancedPlanning')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.ganttChartsResourceAllocationAndCapacityPlanningTools')}</p>
           </div>
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Time Tracking</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">Comprehensive time tracking with daily and weekly timesheets.</p>
+            <h3 class="text-sm font-semibold">{t('lit.timeTracking')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.comprehensiveTimeTrackingWithDailyAndWeeklyTimesheets')}</p>
           </div>
           <div class="rounded-md border border-pm-border bg-pm-panel p-4">
-            <h3 class="text-sm font-semibold">Multi-Tenant Support</h3>
-            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">Manage multiple organizations with isolated data and custom permissions.</p>
+            <h3 class="text-sm font-semibold">{t('lit.multiTenantSupport')}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-pm-muted">{t('lit.manageMultipleOrganizationsWithIsolatedDataAndCustomPermissions')}</p>
           </div>
         </div>
       </div>
@@ -186,11 +190,11 @@ export default function FrontpageEditor() {
             <div class="flex h-7 w-7 items-center justify-center rounded-md bg-pm-accent text-xs font-bold text-pm-accentFg">P</div>
             <span class="text-sm font-semibold">Myelin</span>
           </div>
-          <p class="text-xs text-pm-muted">Self-hosted delivery platform · Myelin</p>
+          <p class="text-xs text-pm-muted">{t('lit.selfHostedDeliveryPlatformMyelin')}</p>
         </div>
         <div>
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-pm-muted">Getting started</p>
-          <a href="/login" class="text-sm text-pm-accentSoft hover:underline">Access your instance</a>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-pm-muted">{t('lit.gettingStarted')}</p>
+          <a href="/login" class="text-sm text-pm-accentSoft hover:underline">{t('lit.accessYourInstance')}</a>
         </div>
       </div>
       <div class="mx-auto mt-8 w-full max-w-6xl border-t border-pm-border px-4 pt-6 text-center text-xs text-pm-muted sm:px-6">
@@ -204,11 +208,11 @@ export default function FrontpageEditor() {
 
   const handleSave = async () => {
     if (isDemoMode) {
-      setError('Demo mode is enabled. Frontpage editing is disabled.');
+      setError(t('lit.demoModeIsEnabledFrontpageEditingIsDisabled'));
       return;
     }
     if (!token) {
-      setError('Authentication required');
+      setError(t('lit.authenticationRequired'));
       return;
     }
     
@@ -228,16 +232,16 @@ export default function FrontpageEditor() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to save frontpage content');
+        throw new Error(errorData.message || t('lit.failedToSaveFrontpageContent'));
       }
 
       setOriginalContent(content);
       setSuccessMessage('Frontpage saved successfully!');
-      showToast({ type: 'success', title: 'Frontpage Saved', message: 'Frontpage saved successfully!' });
+      showToast({ type: 'success', title: t('lit.frontpageSaved'), message: t('lit.frontpageSavedSuccessfully') });
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       console.error('Error saving frontpage:', err);
-      setError(err.message || 'An error occurred while saving');
+      setError(err.message || t('lit.anErrorOccurredWhileSaving'));
     } finally {
       setIsSaving(false);
     }
@@ -259,7 +263,7 @@ export default function FrontpageEditor() {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center py-12">
-          <div className="text-gray-600 dark:text-gray-400">Loading frontpage content...</div>
+          <div className="text-gray-600 dark:text-gray-400">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -268,7 +272,7 @@ export default function FrontpageEditor() {
   return (
     <div className="p-4 sm:p-6">
       <p className="mb-4 text-xs text-[var(--pm-muted)]">
-        Edit the HTML content of your frontpage. Changes are reflected in the preview on the right.
+        {t('lit.editTheHtmlContentOfYourFrontpageChangesAreReflectedInThePreviewOnTheRight')}
       </p>
 
       {error && (
@@ -282,14 +286,14 @@ export default function FrontpageEditor() {
         {/* Editor */}
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            HTML Editor
+            {t('lit.htmlEditor')}
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={isDemoMode}
             className="w-full h-[600px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
-            placeholder="Enter HTML content..."
+            placeholder={t('lit.enterHtmlContent')}
             spellCheck={false}
           />
         </div>
@@ -297,13 +301,13 @@ export default function FrontpageEditor() {
         {/* Live Preview */}
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Live Preview
+            {t('lit.livePreview')}
           </label>
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-900 h-[600px]">
             <iframe
               srcDoc={content}
               className="w-full h-full"
-              title="Frontpage Preview"
+              title={t('lit.frontpagePreview')}
               sandbox="allow-same-origin allow-scripts"
             />
           </div>
@@ -312,7 +316,7 @@ export default function FrontpageEditor() {
 
       {/* Tips */}
       <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Tips</h3>
+        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">{t('lit.tips')}</h3>
         <ul className="text-sm text-blue-800 dark:text-blue-400 space-y-1">
           <li>• Use Tailwind CSS classes for styling</li>
           <li>• Dark mode classes (dark:) are supported</li>
@@ -329,7 +333,7 @@ export default function FrontpageEditor() {
           disabled={isDemoMode}
           className="h-10 rounded-lg bg-orange-600 px-4 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:bg-gray-400"
         >
-          Reset to Default
+          {t('lit.resetToDefault')}
         </button>
         <button
           type="button"
@@ -337,7 +341,7 @@ export default function FrontpageEditor() {
           disabled={isDemoMode || content === originalContent}
           className="h-10 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-surface)] px-4 text-sm font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
         >
-          Reset to Saved
+          {t('lit.resetToSaved')}
         </button>
         <button
           type="button"
@@ -345,7 +349,7 @@ export default function FrontpageEditor() {
           disabled={isDemoMode || isSaving || content === originalContent}
           className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-gray-400"
         >
-          {isSaving ? 'Saving…' : 'Save Changes'}
+          {isSaving ? t('lit.saving2') : t('lit.saveChanges')}
         </button>
       </div>
     </div>

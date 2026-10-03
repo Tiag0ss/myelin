@@ -1,6 +1,7 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
 
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -104,6 +105,8 @@ const formatLeaveDays = (value: number): string => {
 };
 
 export default function ApprovalsPage() {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { user, token } = useAuth();
   const { permissions: _permissions } = usePermissions();
@@ -178,8 +181,8 @@ export default function ApprovalsPage() {
 
   const isOutOfOfficeTab = activeTab === 'outOfOffice';
   const leaveApiBase = isOutOfOfficeTab ? 'out-of-office' : 'vacations';
-  const leaveLabel = isOutOfOfficeTab ? 'Out Of Office' : 'Vacation';
-  const leaveLabelPlural = isOutOfOfficeTab ? 'Out Of Office' : 'Vacations';
+  const leaveLabel = isOutOfOfficeTab ? t('lit.outOfOffice') : t('lit.vacation');
+  const leaveLabelPlural = isOutOfOfficeTab ? t('lit.outOfOffice') : t('lit.vacations');
   const canApproveCurrentLeave = isOutOfOfficeTab ? canApproveOutOfOffice : canApproveVacations;
 
   useEffect(() => {
@@ -296,17 +299,17 @@ export default function ApprovalsPage() {
       );
       if (!response.ok) {
         if (response.status === 403) {
-          setError('Access denied. You must be an admin or a team leader to view approvals.');
+          setError(t('lit.accessDeniedYouMustBeAnAdminOrATeamLeaderToViewApprovals'));
           setIsLoading(false);
           return;
         }
-        throw new Error('Failed to load entries');
+        throw new Error(t('lit.failedToLoadEntries'));
       }
       const data = await response.json();
       setEntries(data.entries || []);
       if (data.subordinates) setSubordinates(data.subordinates);
     } catch (err: any) {
-      setError(err.message || 'Failed to load entries');
+      setError(err.message || t('lit.failedToLoadEntries'));
     } finally {
       setIsLoading(false);
     }
@@ -552,7 +555,7 @@ export default function ApprovalsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to reopen time entry');
+        throw new Error(data.message || t('lit.failedToReopenTimeEntry'));
       }
 
       if (filterStatus === 'pending') {
@@ -565,7 +568,7 @@ export default function ApprovalsPage() {
         setEntries(prev => prev.filter(e => e.Id !== entryId));
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to reopen time entry');
+      setError(err.message || t('lit.failedToReopenTimeEntry'));
     }
   };
 
@@ -597,7 +600,7 @@ export default function ApprovalsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to save admin description');
+        throw new Error(data.message || t('lit.failedToSaveAdminDescription'));
       }
 
       setEntries(prev => prev.map(e =>
@@ -607,7 +610,7 @@ export default function ApprovalsPage() {
       ));
       closeAdminDescriptionModal();
     } catch (err: any) {
-      setError(err.message || 'Failed to save admin description');
+      setError(err.message || t('lit.failedToSaveAdminDescription'));
       setIsSavingDescription(false);
     }
   };
@@ -717,28 +720,28 @@ export default function ApprovalsPage() {
       <PageStickyChrome>
         <div className="min-w-0">
           <h1 className="text-xl font-semibold leading-tight text-[var(--pm-text)]">
-            {expensesEnabled ? 'Approvals & Expenses' : 'Approvals'}
+            {expensesEnabled ? 'Approvals & Expenses' : t('lit.approvals')}
           </h1>
           <p className="text-xs text-[var(--pm-muted)]">
-            Review and manage team approvals in one place.
+            {t('lit.reviewAndManageTeamApprovalsInOnePlace')}
           </p>
         </div>
 
         <PageTabs
           tabs={[
-            { id: 'time', label: 'Time Entries', disabled: !canApproveTime },
+            { id: 'time', label: t('lit.timeEntries'), disabled: !canApproveTime },
             {
               id: 'vacations',
-              label: 'Vacations',
+              label: t('lit.vacations'),
               disabled: !canApproveVacations && !user?.isAdmin,
             },
             {
               id: 'outOfOffice',
-              label: 'Out Of Office',
+              label: t('lit.outOfOffice'),
               disabled: !canApproveOutOfOffice && !user?.isAdmin,
             },
             ...(expensesEnabled
-              ? [{ id: 'expenses', label: 'Expenses', disabled: !canApproveExpenses }]
+              ? [{ id: 'expenses', label: t('lit.expenses'), disabled: !canApproveExpenses }]
               : []),
           ]}
           activeId={activeTab}
@@ -761,7 +764,7 @@ export default function ApprovalsPage() {
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pt-3">
         {!canApproveTime && !canApproveVacations && !canApproveOutOfOffice && !canApproveExpenses && (
           <div className="mb-6 p-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 text-yellow-700 dark:text-yellow-300 rounded-lg">
-            You don&apos;t currently have approval scope for time entries, vacations, out-of-office, or expenses.
+            {t('lit.youDontCurrentlyHaveApprovalScopeForTimeEntriesVacationsOutOfOfficeOrExp')}
           </div>
         )}
 
@@ -782,12 +785,12 @@ export default function ApprovalsPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">⏳ Pending</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{pendingCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">entries awaiting approval</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.entriesAwaitingApproval')}</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Approved</div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{approvedCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">entries in current view</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.entriesInCurrentView')}</div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">⏱ Total Hours</div>
@@ -800,7 +803,7 @@ export default function ApprovalsPage() {
         {/* Filters */}
         <CollapsibleFilterPanel
           className="mb-2"
-          title="Timesheet filters"
+          title={t('lit.timesheetFilters')}
           activeCount={timesheetFilterActiveCount}
           onClear={() => {
             setFilterStatus('pending');
@@ -813,25 +816,25 @@ export default function ApprovalsPage() {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Status</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.status')}</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
+                <option value="pending">{t('lit.pending')}</option>
+                <option value="approved">{t('lit.approved')}</option>
+                <option value="rejected">{t('lit.rejected')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Team Member</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.teamMember2')}</label>
               <select
                 value={filterUserId}
                 onChange={(e) => setFilterUserId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All members</option>
+                <option value="">{t('lit.allMembers')}</option>
                 {subordinates.map(s => (
                   <option key={s.Id} value={s.Id}>
                     {s.FirstName && s.LastName ? `${s.FirstName} ${s.LastName}` : s.Username}
@@ -840,20 +843,20 @@ export default function ApprovalsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Project</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.project')}</label>
               <select
                 value={filterProjectId}
                 onChange={(e) => setFilterProjectId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All projects</option>
+                <option value="">{t('lit.allProjects')}</option>
                 {uniqueProjects.map(p => (
                   <option key={p.Id} value={p.Id}>{p.Name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">From</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.from')}</label>
               <input
                 type="date"
                 value={filterDateFrom}
@@ -862,7 +865,7 @@ export default function ApprovalsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">To</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.to')}</label>
               <input
                 type="date"
                 value={filterDateTo}
@@ -877,7 +880,7 @@ export default function ApprovalsPage() {
                 onClick={loadEntries}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                Apply Filters
+                {t('lit.applyFilters')}
               </button>
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input
@@ -886,7 +889,7 @@ export default function ApprovalsPage() {
                   onChange={(e) => setGroupByUser(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded"
                 />
-                Group by user
+                {t('lit.groupByUser')}
               </label>
             </div>
             {selectedIds.size > 0 && filterStatus === 'pending' && (
@@ -912,7 +915,7 @@ export default function ApprovalsPage() {
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="text-gray-500 dark:text-gray-400">Loading entries…</div>
+            <div className="text-gray-500 dark:text-gray-400">{t('lit.loadingEntries')}</div>
           </div>
         ) : entries.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 py-16 text-center">
@@ -920,7 +923,7 @@ export default function ApprovalsPage() {
               <NavModuleIcon href="/approvals" size={40} />
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-              {filterStatus === 'pending' ? 'All caught up!' : 'No entries found'}
+              {filterStatus === 'pending' ? 'All caught up!' : t('lit.noEntriesFound')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {filterStatus === 'pending'
@@ -961,7 +964,7 @@ export default function ApprovalsPage() {
                           }}
                           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                          {allPendingSelected ? 'Deselect all' : 'Select all'}
+                          {allPendingSelected ? t('lit.deselectAll') : t('lit.selectAll')}
                         </button>
                         <button
                           onClick={() => Promise.all(userPending.map(e => handleApproval(e.Id, 'approved')))}
@@ -1000,14 +1003,14 @@ export default function ApprovalsPage() {
                               />
                             </th>
                           )}
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Project</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Task</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Hours</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Description</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.date')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.project')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.task')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.hours')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.description')}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.status')}</th>
                           <th scope="col" className="relative px-4 py-2">
-                            <span className="sr-only">Actions</span>
+                            <span className="sr-only">{t('common.actions')}</span>
                           </th>
                         </tr>
                       </thead>
@@ -1040,9 +1043,9 @@ export default function ApprovalsPage() {
                             <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                               {entry.AdminEditedDescription ? (
                                 <div className="space-y-1">
-                                  <div className="text-xs font-medium text-purple-700 dark:text-purple-400">Admin edited</div>
+                                  <div className="text-xs font-medium text-purple-700 dark:text-purple-400">{t('lit.adminEdited')}</div>
                                   <div className="truncate">{stripHtml(entry.AdminEditedDescription) || <span className="italic text-gray-400">—</span>}</div>
-                                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Original</div>
+                                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('lit.original')}</div>
                                   <div className="truncate text-gray-500 dark:text-gray-400">{stripHtml(entry.Description) || <span className="italic text-gray-400">—</span>}</div>
                                 </div>
                               ) : (
@@ -1056,24 +1059,24 @@ export default function ApprovalsPage() {
                                   <button
                                     onClick={() => handleApproval(entry.Id, 'approved')}
                                     className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
-                                    title="Approve"
-                                    aria-label="Approve"
+                                    title={t('lit.approve')}
+                                    aria-label={t('lit.approve')}
                                   >
                                     ✓
                                   </button>
                                   <button
                                     onClick={() => handleApproval(entry.Id, 'rejected')}
                                     className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
-                                    title="Reject"
-                                    aria-label="Reject"
+                                    title={t('lit.reject')}
+                                    aria-label={t('lit.reject')}
                                   >
                                     ✗
                                   </button>
                                   <button
                                     onClick={() => openAdminDescriptionModal(entry)}
                                     className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors"
-                                    title="Edit description"
-                                    aria-label="Edit description"
+                                    title={t('lit.editDescription')}
+                                    aria-label={t('lit.editDescription')}
                                   >
                                     ✎
                                   </button>
@@ -1083,16 +1086,16 @@ export default function ApprovalsPage() {
                                   <button
                                     onClick={() => handleReopen(entry.Id)}
                                     className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded transition-colors"
-                                    title="Reopen"
-                                    aria-label="Reopen"
+                                    title={t('lit.reopen')}
+                                    aria-label={t('lit.reopen')}
                                   >
                                     ↻
                                   </button>
                                   <button
                                     onClick={() => openAdminDescriptionModal(entry)}
                                     className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors"
-                                    title="Edit description"
-                                    aria-label="Edit description"
+                                    title={t('lit.editDescription')}
+                                    aria-label={t('lit.editDescription')}
                                   >
                                     ✎
                                   </button>
@@ -1125,15 +1128,15 @@ export default function ApprovalsPage() {
                         />
                       </th>
                     )}
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Project</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Task</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Hours</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.date')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.user')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.project')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.task')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.hours')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.description')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
                     <th scope="col" className="relative px-4 py-3">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -1170,9 +1173,9 @@ export default function ApprovalsPage() {
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                         {entry.AdminEditedDescription ? (
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-purple-700 dark:text-purple-400">Admin edited</div>
+                            <div className="text-xs font-medium text-purple-700 dark:text-purple-400">{t('lit.adminEdited')}</div>
                             <div className="truncate">{stripHtml(entry.AdminEditedDescription) || <span className="italic text-gray-400">—</span>}</div>
-                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Original</div>
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('lit.original')}</div>
                             <div className="truncate text-gray-500 dark:text-gray-400">{stripHtml(entry.Description) || <span className="italic text-gray-400">—</span>}</div>
                           </div>
                         ) : (
@@ -1186,24 +1189,24 @@ export default function ApprovalsPage() {
                             <button
                               onClick={() => handleApproval(entry.Id, 'approved')}
                               className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
-                              title="Approve"
-                              aria-label="Approve"
+                              title={t('lit.approve')}
+                              aria-label={t('lit.approve')}
                             >
                               ✓
                             </button>
                             <button
                               onClick={() => handleApproval(entry.Id, 'rejected')}
                               className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
-                              title="Reject"
-                              aria-label="Reject"
+                              title={t('lit.reject')}
+                              aria-label={t('lit.reject')}
                             >
                               ✗
                             </button>
                             <button
                               onClick={() => openAdminDescriptionModal(entry)}
                               className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors"
-                              title="Edit description"
-                              aria-label="Edit description"
+                              title={t('lit.editDescription')}
+                              aria-label={t('lit.editDescription')}
                             >
                               ✎
                             </button>
@@ -1213,16 +1216,16 @@ export default function ApprovalsPage() {
                             <button
                               onClick={() => handleReopen(entry.Id)}
                               className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded transition-colors"
-                              title="Reopen"
-                              aria-label="Reopen"
+                              title={t('lit.reopen')}
+                              aria-label={t('lit.reopen')}
                             >
                               ↻
                             </button>
                             <button
                               onClick={() => openAdminDescriptionModal(entry)}
                               className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors"
-                              title="Edit description"
-                              aria-label="Edit description"
+                              title={t('lit.editDescription')}
+                              aria-label={t('lit.editDescription')}
                             >
                               ✎
                             </button>
@@ -1241,7 +1244,7 @@ export default function ApprovalsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Edit Admin Description</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('lit.editAdminDescription')}</h3>
                 <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
                   {getUserDisplayName(selectedEntryForDescription)} · {selectedEntryForDescription.ProjectName} · {selectedEntryForDescription.TaskName}
                 </div>
@@ -1249,7 +1252,7 @@ export default function ApprovalsPage() {
                 <RichTextEditor
                   content={adminDescriptionDraft}
                   onChange={(html) => setAdminDescriptionDraft(html)}
-                  placeholder="Admin edited description..."
+                  placeholder={t('lit.adminEditedDescription')}
                 />
 
                 <div className="flex justify-end gap-3 mt-6">
@@ -1257,14 +1260,14 @@ export default function ApprovalsPage() {
                     onClick={closeAdminDescriptionModal}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSaveAdminDescription}
                     disabled={isSavingDescription}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
                   >
-                    {isSavingDescription ? 'Saving...' : 'Save Description'}
+                    {isSavingDescription ? t('lit.saving') : t('lit.saveDescription')}
                   </button>
                 </div>
               </div>
@@ -1286,17 +1289,17 @@ export default function ApprovalsPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">⏳ Pending</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{formatLeaveDays(pendingVisibleVacationCount)}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">days awaiting approval</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.daysAwaitingApproval')}</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Approved</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{formatLeaveDays(approvedVacationCount)}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">days in current view</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.daysInCurrentView')}</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="text-sm text-red-600 dark:text-red-400 font-medium">✕ Rejected</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{formatLeaveDays(rejectedVacationCount)}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">days in current view</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('lit.daysInCurrentView')}</div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                   <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">📅 Total Days</div>
@@ -1324,7 +1327,7 @@ export default function ApprovalsPage() {
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Year</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.year')}</label>
                       <input
                         type="number"
                         min="2000"
@@ -1335,13 +1338,13 @@ export default function ApprovalsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Team Member</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('lit.teamMember2')}</label>
                       <select
                         value={selectedMemberId}
                         onChange={(e) => setSelectedMemberId(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="">All users</option>
+                        <option value="">{t('lit.allUsers')}</option>
                         {vacationMembers.map((member) => (
                           <option key={member.Id} value={member.Id}>
                             {(member.FirstName && member.LastName) ? `${member.FirstName} ${member.LastName}` : member.Username}
@@ -1350,16 +1353,16 @@ export default function ApprovalsPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Status</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t('common.status')}</label>
                       <select
                         value={vacationStatusFilter}
                         onChange={(e) => setVacationStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="all">All statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="all">{t('lit.allStatuses')}</option>
+                        <option value="pending">{t('lit.pending')}</option>
+                        <option value="approved">{t('lit.approved')}</option>
+                        <option value="rejected">{t('lit.rejected')}</option>
                       </select>
                     </div>
                   </div>
@@ -1369,7 +1372,7 @@ export default function ApprovalsPage() {
                         onClick={loadVacationData}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                       >
-                        Apply Filters
+                        {t('lit.applyFilters')}
                       </button>
                       <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
@@ -1378,7 +1381,7 @@ export default function ApprovalsPage() {
                           onChange={(e) => setVacationGroupByUser(e.target.checked)}
                           className="w-4 h-4 text-blue-600 rounded"
                         />
-                        Group by user
+                        {t('lit.groupByUser')}
                       </label>
                       {selectedVacationMember && (
                         <div className="flex flex-wrap gap-2 text-xs">
@@ -1423,7 +1426,7 @@ export default function ApprovalsPage() {
                 </div>
 
                 {sortedVacationRequests.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">No requests found for this filter.</div>
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('lit.noRequestsFoundForThisFilter')}</div>
                 ) : vacationGroupByUser && vacationGroupedByUser ? (
                   <div className="space-y-4">
                     {Object.values(vacationGroupedByUser).map(({ user: reqUser, requests: userRequests }) => {
@@ -1468,12 +1471,12 @@ export default function ApprovalsPage() {
                                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => handleVacationSort('date')}>
                                     Date {vacationSortField === 'date' ? (vacationSortDirection === 'asc' ? '↑' : '↓') : ''}
                                   </th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Portion</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.portion')}</th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => handleVacationSort('status')}>
                                     Status {vacationSortField === 'status' ? (vacationSortDirection === 'asc' ? '↑' : '↓') : ''}
                                   </th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Notes</th>
-                                  <th scope="col" className="relative px-4 py-2"><span className="sr-only">Actions</span></th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('lit.notes')}</th>
+                                  <th scope="col" className="relative px-4 py-2"><span className="sr-only">{t('common.actions')}</span></th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1488,7 +1491,7 @@ export default function ApprovalsPage() {
                                       )}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                      {normalizeDayPortion(request.DayPortion) === 'half' ? 'Half Day' : 'Full Day'}
+                                      {normalizeDayPortion(request.DayPortion) === 'half' ? t('lit.halfDay') : t('lit.fullDay')}
                                     </td>
                                     <td className="px-4 py-3 text-sm">
                                       {String(request.Status).toLowerCase() === 'approved' && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">✓ Approved</span>}
@@ -1500,15 +1503,15 @@ export default function ApprovalsPage() {
                                       <div className="flex items-center justify-end gap-1">
                                         {String(request.Status).toLowerCase() === 'pending' && (
                                           <>
-                                            <button onClick={() => handleVacationApproval(request.Id, 'approved')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400" title="Approve" aria-label="Approve">
+                                            <button onClick={() => handleVacationApproval(request.Id, 'approved')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400" title={t('lit.approve')} aria-label={t('lit.approve')}>
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                             </button>
-                                            <button onClick={() => handleVacationApproval(request.Id, 'rejected')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title="Reject" aria-label="Reject">
+                                            <button onClick={() => handleVacationApproval(request.Id, 'rejected')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title={t('lit.reject')} aria-label={t('lit.reject')}>
                                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                             </button>
                                           </>
                                         )}
-                                        <button onClick={() => setVacationDeleteTarget(request)} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title="Delete request" aria-label="Delete request">
+                                        <button onClick={() => setVacationDeleteTarget(request)} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title={t('lit.deleteRequest')} aria-label={t('lit.deleteRequest')}>
                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                         </button>
                                       </div>
@@ -1535,12 +1538,12 @@ export default function ApprovalsPage() {
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => handleVacationSort('date')}>
                               Date {vacationSortField === 'date' ? (vacationSortDirection === 'asc' ? '↑' : '↓') : ''}
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Portion</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.portion')}</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => handleVacationSort('status')}>
                               Status {vacationSortField === 'status' ? (vacationSortDirection === 'asc' ? '↑' : '↓') : ''}
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Notes</th>
-                            <th scope="col" className="relative px-4 py-3"><span className="sr-only">Actions</span></th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.notes')}</th>
+                            <th scope="col" className="relative px-4 py-3"><span className="sr-only">{t('common.actions')}</span></th>
                           </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1558,7 +1561,7 @@ export default function ApprovalsPage() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                {normalizeDayPortion(request.DayPortion) === 'half' ? 'Half Day' : 'Full Day'}
+                                {normalizeDayPortion(request.DayPortion) === 'half' ? t('lit.halfDay') : t('lit.fullDay')}
                               </td>
                               <td className="px-4 py-3 text-sm">
                                 {String(request.Status).toLowerCase() === 'approved' && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">✓ Approved</span>}
@@ -1570,15 +1573,15 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center justify-end gap-1">
                                   {String(request.Status).toLowerCase() === 'pending' && (
                                     <>
-                                      <button onClick={() => handleVacationApproval(request.Id, 'approved')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400" title="Approve" aria-label="Approve">
+                                      <button onClick={() => handleVacationApproval(request.Id, 'approved')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-blue-600 dark:hover:text-blue-400" title={t('lit.approve')} aria-label={t('lit.approve')}>
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                       </button>
-                                      <button onClick={() => handleVacationApproval(request.Id, 'rejected')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title="Reject" aria-label="Reject">
+                                      <button onClick={() => handleVacationApproval(request.Id, 'rejected')} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title={t('lit.reject')} aria-label={t('lit.reject')}>
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                       </button>
                                     </>
                                   )}
-                                  <button onClick={() => setVacationDeleteTarget(request)} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title="Delete request" aria-label="Delete request">
+                                  <button onClick={() => setVacationDeleteTarget(request)} className="p-1.5 text-gray-400 rounded transition-colors hover:text-red-600 dark:hover:text-red-400" title={t('lit.deleteRequest')} aria-label={t('lit.deleteRequest')}>
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
                                 </div>
@@ -1608,7 +1611,7 @@ export default function ApprovalsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Team Member</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.teamMember2')}</label>
                       <select
                         value={selectedMemberId}
                         onChange={(e) => {
@@ -1617,7 +1620,7 @@ export default function ApprovalsPage() {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="">Select user</option>
+                        <option value="">{t('lit.selectUser')}</option>
                         {vacationMembers.map((member) => (
                           <option key={member.Id} value={member.Id}>
                             {(member.FirstName && member.LastName) ? `${member.FirstName} ${member.LastName}` : member.Username}
@@ -1634,7 +1637,7 @@ export default function ApprovalsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.startDate')}</label>
                         <input
                           type="date"
                           value={configStartDate}
@@ -1643,7 +1646,7 @@ export default function ApprovalsPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.endDate')}</label>
                         <input
                           type="date"
                           value={configEndDate}
@@ -1654,25 +1657,25 @@ export default function ApprovalsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day Portion</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.dayPortion')}</label>
                       <select
                         value={configDayPortion}
                         onChange={(e) => setConfigDayPortion(e.target.value as LeaveDayPortion)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="full">Full Day (default)</option>
-                        <option value="half">Half Day</option>
+                        <option value="full">{t('lit.fullDayDefault')}</option>
+                        <option value="half">{t('lit.halfDay')}</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.notes')}</label>
                       <input
                         type="text"
                         value={configNotes}
                         onChange={(e) => setConfigNotes(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Optional notes"
+                        placeholder={t('lit.optionalNotes')}
                       />
                     </div>
 
@@ -1681,7 +1684,7 @@ export default function ApprovalsPage() {
                         onClick={() => setShowVacationConfigModal(false)}
                         className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
                       >
-                        Close
+                        {t('common.close')}
                       </button>
                       <button
                         onClick={configureVacationForUser}
@@ -1711,13 +1714,13 @@ export default function ApprovalsPage() {
                         onClick={() => setVacationDeleteTarget(null)}
                         className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                       <button
                         onClick={handleConfirmVacationDelete}
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
                       >
-                        Delete
+                        {t('common.delete')}
                       </button>
                     </div>
                   </div>

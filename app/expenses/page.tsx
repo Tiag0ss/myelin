@@ -1,6 +1,16 @@
-/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 'use client';
+import { t as tPath } from '@/lib/i18n/messages';
+import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
 
+function localeNow(): Locale {
+  return (readLocaleStorage() as Locale) || 'en';
+}
+function t(path: string, vars?: Record<string, string | number>): string {
+  return tPath(localeNow(), path, vars);
+}
+
+import { useI18n } from '@/lib/i18n/provider';
+/* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -72,12 +82,14 @@ const statusBadgeClass = (status: string) => {
 
 const formatReimbursementLabel = (expense: Expense) => {
   if (expense.ApprovalStatus === 'rejected' || expense.ReimbursementStatus === 'not_applicable') {
-    return 'Not applicable';
+    return t('lit.notApplicable');
   }
   return expense.ReimbursementStatus.replace('_', ' ');
 };
 
 export default function ExpensesPage() {
+  const { t } = useI18n();
+
   const { user, token, isLoading: authLoading } = useAuth();
   const { permissions, isLoading: permissionsLoading } = usePermissions();
   const router = useRouter();
@@ -238,7 +250,7 @@ export default function ExpensesPage() {
       });
       setExpenses(rows);
     } catch (err: any) {
-      setError(err.message || 'Failed to load expenses');
+      setError(err.message || t('lit.failedToLoadExpenses'));
     } finally {
       setIsLoading(false);
     }
@@ -357,7 +369,7 @@ export default function ExpensesPage() {
     for (const cat of categories) {
       const g =
         groups.find((x) => x.Id === cat.GroupId) ||
-        ({ Id: cat.GroupId, GroupName: cat.GroupName || 'Other' } as ExpenseCategoryGroup);
+        ({ Id: cat.GroupId, GroupName: cat.GroupName || t('lit.other') } as ExpenseCategoryGroup);
       if (!map.has(cat.GroupId)) map.set(cat.GroupId, { group: g, items: [] });
       map.get(cat.GroupId)!.items.push(cat);
     }
@@ -408,7 +420,7 @@ export default function ExpensesPage() {
   const totalsByGroup = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of expenses) {
-      const key = e.CategoryGroupName || 'Ungrouped';
+      const key = e.CategoryGroupName || t('lit.ungrouped');
       map.set(key, (map.get(key) || 0) + Number(e.Amount || 0));
     }
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
@@ -480,7 +492,7 @@ export default function ExpensesPage() {
         setShowModal(false);
         await loadExpenses();
       } catch (err: any) {
-        setDialog({ type: 'alert', title: 'Error', message: err.message || 'Failed to save expense' });
+        setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.failedToSaveExpense') });
       } finally {
         setIsSaving(false);
       }
@@ -488,7 +500,7 @@ export default function ExpensesPage() {
     }
 
     if (!form.organizationId || !form.categoryId || !form.title.trim() || !form.amount) {
-      setDialog({ type: 'alert', title: 'Validation', message: 'Organization, category, title and amount are required.' });
+      setDialog({ type: 'alert', title: t('lit.validation'), message: t('lit.organizationCategoryTitleAndAmountAreRequired') });
       return;
     }
     setIsSaving(true);
@@ -528,7 +540,7 @@ export default function ExpensesPage() {
       setShowModal(false);
       await loadExpenses();
     } catch (err: any) {
-      setDialog({ type: 'alert', title: 'Error', message: err.message || 'Failed to save expense' });
+      setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.failedToSaveExpense') });
     } finally {
       setIsSaving(false);
     }
@@ -537,7 +549,7 @@ export default function ExpensesPage() {
   const handleDelete = (expense: Expense) => {
     setDialog({
       type: 'confirm',
-      title: 'Delete expense',
+      title: t('lit.deleteExpense'),
       message: `Delete "${expense.Title}"? This cannot be undone.`,
       onConfirm: async () => {
         if (!token) return;
@@ -545,7 +557,7 @@ export default function ExpensesPage() {
           await deleteExpense(token, expense.Id);
           await loadExpenses();
         } catch (err: any) {
-          setDialog({ type: 'alert', title: 'Error', message: err.message || 'Failed to delete' });
+          setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.failedToDelete') });
         }
       },
     });
@@ -565,7 +577,7 @@ export default function ExpensesPage() {
         a.click();
       }
     } catch (err: any) {
-      setDialog({ type: 'alert', title: 'Error', message: err.message || 'Failed to open attachment' });
+      setDialog({ type: 'alert', title: t('lit.error'), message: err.message || t('lit.failedToOpenAttachment') });
     }
   };
 
@@ -578,12 +590,12 @@ export default function ExpensesPage() {
       <div className="w-full p-4 sm:p-6 space-y-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">Expenses</h1>
+            <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white">{t('pages.expenses.title')}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Track project and internal expenses with invoices and reimbursements.
+              {t('lit.trackProjectAndInternalExpensesWithInvoicesAndReimbursements')}
               {' '}
               <Link href="/reporting?tab=expenses" className="text-blue-600 dark:text-blue-400 hover:underline">
-                Open expenses reporting
+                {t('lit.openExpensesReporting')}
               </Link>
             </p>
           </div>
@@ -593,14 +605,14 @@ export default function ExpensesPage() {
               onClick={openCreate}
               className="h-10 shrink-0 px-4 rounded-lg text-sm font-medium inline-flex items-center bg-blue-600 text-white hover:bg-blue-700"
             >
-              New Expense
+              {t('pages.expenses.newExpense')}
             </button>
           )}
         </div>
 
         <CollapsibleFilterPanel
           className="mb-2"
-          title="Expense filters"
+          title={t('lit.expenseFilters')}
           activeCount={[
             filterDateFrom ? 1 : 0,
             filterDateTo ? 1 : 0,
@@ -619,7 +631,7 @@ export default function ExpensesPage() {
         >
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">
           <label className="block text-sm lg:col-span-1">
-            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">From</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('common.from')}</span>
             <input
               type="date"
               value={filterDateFrom}
@@ -628,7 +640,7 @@ export default function ExpensesPage() {
             />
           </label>
           <label className="block text-sm lg:col-span-1">
-            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">To</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('common.to')}</span>
             <input
               type="date"
               value={filterDateTo}
@@ -645,16 +657,16 @@ export default function ExpensesPage() {
               setFilterProject('');
             }}
             options={organizationOptions}
-            placeholder="All organizations"
-            emptyText="All organizations"
+            placeholder={t('lit.allOrganizations')}
+            emptyText={t('lit.allOrganizations')}
             className="text-sm"
           />
           <SearchableSelect
             value={filterProject}
             onChange={setFilterProject}
             options={filterProjectOptions}
-            placeholder="All projects"
-            emptyText="All projects"
+            placeholder={t('lit.allProjects')}
+            emptyText={t('lit.allProjects')}
             className="text-sm"
           />
           <SearchableSelect
@@ -664,16 +676,16 @@ export default function ExpensesPage() {
               setFilterCategory('');
             }}
             options={filterGroupOptions}
-            placeholder="All groups"
-            emptyText="All groups"
+            placeholder={t('lit.allGroups')}
+            emptyText={t('lit.allGroups')}
             className="text-sm"
           />
           <SearchableSelect
             value={filterCategory}
             onChange={setFilterCategory}
             options={filterCategoryOptions}
-            placeholder="All categories"
-            emptyText="All categories"
+            placeholder={t('lit.allCategories')}
+            emptyText={t('lit.allCategories')}
             className="text-sm"
           />
           <select
@@ -681,10 +693,10 @@ export default function ExpensesPage() {
             onChange={(e) => setFilterApproval(e.target.value)}
             className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm px-3 py-2"
           >
-            <option value="">All approval</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t('lit.allApproval')}</option>
+            <option value="pending">{t('pages.approvals.pending')}</option>
+            <option value="approved">{t('pages.approvals.approved')}</option>
+            <option value="rejected">{t('pages.approvals.rejected')}</option>
           </select>
           <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
@@ -693,19 +705,19 @@ export default function ExpensesPage() {
               onChange={(e) => setFilterInternalOnly(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Internal only
+            {t('lit.internalOnly')}
           </label>
           <select
             value={filterReimbursement}
             onChange={(e) => setFilterReimbursement(e.target.value)}
             className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm px-3 py-2 md:col-span-2"
           >
-            <option value="">All reimbursement</option>
-            <option value="needs_reimbursement">Needs reimbursement</option>
-            <option value="pending">Pending</option>
-            <option value="partial">Partial</option>
-            <option value="reimbursed">Reimbursed</option>
-            <option value="not_required">Not required</option>
+            <option value="">{t('lit.allReimbursement')}</option>
+            <option value="needs_reimbursement">{t('lit.needsReimbursement')}</option>
+            <option value="pending">{t('lit.pending')}</option>
+            <option value="partial">{t('lit.partial')}</option>
+            <option value="reimbursed">{t('lit.reimbursed')}</option>
+            <option value="not_required">{t('lit.notRequired')}</option>
           </select>
           </div>
         </CollapsibleFilterPanel>
@@ -731,23 +743,23 @@ export default function ExpensesPage() {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
           {isLoading ? (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading expenses...</div>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('lit.loadingExpenses')}</div>
           ) : expenses.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">No expenses found.</div>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('pages.expenses.noExpenses')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Title</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Category</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Scope</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Reimbursed</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('common.date')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.title')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('pages.expenses.category')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.scope')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('pages.expenses.amount')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('lit.reimbursed')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('common.status')}</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('common.actions')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -771,7 +783,7 @@ export default function ExpensesPage() {
                           <div className="text-xs text-gray-500">{e.CategoryName}</div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                          {e.ProjectName || <span className="italic text-gray-500">Internal</span>}
+                          {e.ProjectName || <span className="italic text-gray-500">{t('lit.internal')}</span>}
                           {e.TaskName ? <div className="text-xs text-gray-500">{e.TaskName}</div> : null}
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white font-medium">
@@ -798,8 +810,8 @@ export default function ExpensesPage() {
                             {canOpenExpenseEdit(e) && (
                               <button
                                 type="button"
-                                title={Number(e.ReimbursedAmount || 0) > 0 ? 'Update description / attachments' : 'Edit'}
-                                aria-label={Number(e.ReimbursedAmount || 0) > 0 ? 'Update description / attachments' : 'Edit'}
+                                title={Number(e.ReimbursedAmount || 0) > 0 ? 'Update description / attachments' : t('common.edit')}
+                                aria-label={Number(e.ReimbursedAmount || 0) > 0 ? 'Update description / attachments' : t('common.edit')}
                                 onClick={() => openEdit(e)}
                                 className="p-1.5 text-gray-400 rounded hover:text-blue-600 dark:hover:text-blue-400"
                               >
@@ -809,8 +821,8 @@ export default function ExpensesPage() {
                             {(canManage || e.SubmittedByUserId === user?.id) && e.ApprovalStatus === 'pending' && (
                               <button
                                 type="button"
-                                title="Delete"
-                                aria-label="Delete"
+                                title={t('common.delete')}
+                                aria-label={t('common.delete')}
                                 onClick={() => handleDelete(e)}
                                 className="p-1.5 text-gray-400 rounded hover:text-red-600"
                               >
@@ -837,8 +849,8 @@ export default function ExpensesPage() {
                 {editing
                   ? isLimitedEditMode
                     ? 'Update description & attachments'
-                    : 'Edit Expense'
-                  : 'New Expense'}
+                    : t('lit.editExpense')
+                  : t('lit.newExpense')}
               </h2>
               <button type="button" onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
             </div>
@@ -850,7 +862,7 @@ export default function ExpensesPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">Organization</span>
+                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">{t('common.organization')}</span>
                   <SearchableSelect
                     value={form.organizationId || ''}
                     onChange={(value) =>
@@ -863,20 +875,20 @@ export default function ExpensesPage() {
                       }))
                     }
                     options={organizationOptions}
-                    placeholder="Select organization"
-                    emptyText="Select organization..."
+                    placeholder={t('lit.selectOrganization')}
+                    emptyText={t('lit.selectOrganization3')}
                     disabled={!!editing}
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">Category</span>
+                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">{t('pages.expenses.category')}</span>
                   <select
                     value={form.categoryId}
                     onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
                     disabled={!form.organizationId || isLimitedEditMode}
                     className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 disabled:opacity-50"
                   >
-                    <option value={0}>Select...</option>
+                    <option value={0}>{t('lit.select')}</option>
                     {categoriesByGroup.map(({ group, items }) => (
                       <optgroup key={group.Id} label={group.GroupName}>
                         {items.map((c) => (
@@ -895,7 +907,7 @@ export default function ExpensesPage() {
                     )}
                 </label>
                 <label className="block text-sm sm:col-span-2">
-                  <span className="text-gray-700 dark:text-gray-300">Title</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('lit.title')}</span>
                   <input
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -904,7 +916,7 @@ export default function ExpensesPage() {
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300">Amount</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('pages.expenses.amount')}</span>
                   <input
                     type="number"
                     min="0.01"
@@ -916,7 +928,7 @@ export default function ExpensesPage() {
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300">Date</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('common.date')}</span>
                   <input
                     type="date"
                     value={form.expenseDate}
@@ -926,19 +938,19 @@ export default function ExpensesPage() {
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300">Paid by</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('lit.paidBy')}</span>
                   <select
                     value={form.paidBy}
                     onChange={(e) => setForm((f) => ({ ...f, paidBy: e.target.value as 'employee' | 'company' }))}
                     disabled={isLimitedEditMode}
                     className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 disabled:opacity-50"
                   >
-                    <option value="employee">Employee (reimbursable)</option>
-                    <option value="company">Company</option>
+                    <option value="employee">{t('lit.employeeReimbursable')}</option>
+                    <option value="company">{t('lit.company')}</option>
                   </select>
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300">Vendor</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('lit.vendor')}</span>
                   <input
                     value={form.vendor}
                     onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value }))}
@@ -947,7 +959,7 @@ export default function ExpensesPage() {
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">Project (optional)</span>
+                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">{t('lit.projectOptional')}</span>
                   <SearchableSelect
                     value={form.projectId || ''}
                     onChange={(value) =>
@@ -958,24 +970,24 @@ export default function ExpensesPage() {
                       }))
                     }
                     options={projectOptions}
-                    placeholder="Internal / no project"
-                    emptyText="Internal / no project"
+                    placeholder={t('lit.internalNoProject')}
+                    emptyText={t('lit.internalNoProject')}
                     disabled={!form.organizationId || isLimitedEditMode}
                   />
                 </label>
                 <label className="block text-sm">
-                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">Task (optional)</span>
+                  <span className="text-gray-700 dark:text-gray-300 mb-1 block">{t('lit.taskOptional')}</span>
                   <SearchableSelect
                     value={form.taskId || ''}
                     onChange={(value) => setForm((f) => ({ ...f, taskId: value || '' }))}
                     options={taskOptions}
-                    placeholder="No task"
-                    emptyText="No task"
+                    placeholder={t('lit.noTask')}
+                    emptyText={t('lit.noTask')}
                     disabled={!form.projectId || isLimitedEditMode}
                   />
                 </label>
                 <label className="block text-sm sm:col-span-2">
-                  <span className="text-gray-700 dark:text-gray-300">Description</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('common.description')}</span>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -986,7 +998,7 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Invoice attachments (images / PDF)</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.invoiceAttachmentsImagesPdf')}</div>
                 <input
                   type="file"
                   accept="image/*,application/pdf"
@@ -1003,7 +1015,7 @@ export default function ExpensesPage() {
                     {pendingFiles.map((f, i) => (
                       <li key={`${f.name}-${i}`} className="flex justify-between gap-2">
                         <span>{f.name}</span>
-                        <button type="button" className="text-red-500" onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}>Remove</button>
+                        <button type="button" className="text-red-500" onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}>{t('common.remove')}</button>
                       </li>
                     ))}
                   </ul>
@@ -1024,7 +1036,7 @@ export default function ExpensesPage() {
                             setAttachments((prev) => prev.filter((x) => x.Id !== a.Id));
                           }}
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       </li>
                     ))}
@@ -1034,7 +1046,7 @@ export default function ExpensesPage() {
             </div>
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
               <button type="button" onClick={() => setShowModal(false)} className="h-10 px-4 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1042,7 +1054,7 @@ export default function ExpensesPage() {
                 onClick={handleSave}
                 className="h-10 px-4 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? t('lit.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -1059,7 +1071,7 @@ export default function ExpensesPage() {
           dialog?.onConfirm?.();
           setDialog(null);
         }}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
       <ScrollToTopButton />

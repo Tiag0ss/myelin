@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { sanitizeRichTextHtml } from '@/lib/sanitizeHtml';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,6 +30,8 @@ export function OverviewTab({
   token: string;
   onViewTasks?: () => void;
 }) {
+  const { t } = useI18n();
+
   const decimalHoursToHMS = useFormatHours();
   const { pillStyle, backgroundStyle } = useColorVision();
   const taskAnalytics = useMemo(() => buildTaskAnalytics(tasks), [tasks]);
@@ -144,9 +147,9 @@ export function OverviewTab({
       {/* ── RAG Health Badge ── */}
       {(() => {
         const ragMap = {
-          red:   { dot: '#ef4444', bg: 'bg-red-50 dark:bg-red-900/20',     border: 'border-red-200 dark:border-red-800',     text: 'text-red-700 dark:text-red-300',     label: 'Red — Immediate action required' },
-          amber: { dot: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-300', label: 'Amber — Needs attention' },
-          green: { dot: '#22c55e', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-300', label: 'Green — On track' },
+          red:   { dot: '#ef4444', bg: 'bg-red-50 dark:bg-red-900/20',     border: 'border-red-200 dark:border-red-800',     text: 'text-red-700 dark:text-red-300',     label: t('lit.redImmediateActionRequired') },
+          amber: { dot: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-300', label: t('lit.amberNeedsAttention') },
+          green: { dot: '#22c55e', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-300', label: t('lit.greenOnTrack') },
         };
         const rc = ragMap[rag.status];
         return (
@@ -154,9 +157,9 @@ export function OverviewTab({
             <span className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm" style={{ background: rc.dot }} />
             <div className="flex-1 min-w-0">
               <p className={`font-semibold text-sm ${rc.text}`}>{rc.label}</p>
-              <p className={`text-xs mt-0.5 opacity-80 ${rc.text}`}>{rag.reasons.length > 0 ? rag.reasons.join(' · ') : 'No issues detected'}</p>
+              <p className={`text-xs mt-0.5 opacity-80 ${rc.text}`}>{rag.reasons.length > 0 ? rag.reasons.join(' · ') : t('lit.noIssuesDetected')}</p>
             </div>
-            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">Project Health</span>
+            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">{t('lit.projectHealth')}</span>
           </div>
         );
       })()}
@@ -188,13 +191,13 @@ export function OverviewTab({
               </div>
             );
           })()}
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Overall Completion</p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('lit.overallCompletion')}</p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{completedTasks} of {totalTasks} tasks done</p>
         </div>
 
         {/* Segmented status bar + counts */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">Task Status</h2>
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">{t('lit.taskStatus')}</h2>
           {totalTasks > 0 ? (
             <div className="flex rounded-lg overflow-hidden h-4 mb-6 gap-0.5">
               {completedTasks > 0 && (
@@ -213,19 +216,19 @@ export function OverviewTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalTasks}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('common.total')}</div>
             </div>
             <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
               <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">{todoTasks}</div>
-              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">To Do</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t('lit.toDo2')}</div>
             </div>
             <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{inProgressTasks}</div>
-              <div className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">In Progress</div>
+              <div className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">{t('lit.inProgress3')}</div>
             </div>
             <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">{completedTasks}</div>
-              <div className="text-xs text-green-500 dark:text-green-400 mt-0.5">Completed</div>
+              <div className="text-xs text-green-500 dark:text-green-400 mt-0.5">{t('lit.completed')}</div>
             </div>
           </div>
         </div>
@@ -241,7 +244,7 @@ export function OverviewTab({
           .map(userId => {
             const memberTasks = assignedTasks.filter(t => t.AssignedTo === userId);
             const firstTask = memberTasks[0];
-            const name = firstTask.AssigneeName || 'Unknown';
+            const name = firstTask.AssigneeName || t('lit.unknown');
             const completed = memberTasks.filter(t => t.StatusIsClosed === 1).length;
             const inProgress = memberTasks.filter(t =>
               t.StatusIsClosed !== 1 && t.StatusIsCancelled !== 1 && t.Status !== null && t.StatusName?.toLowerCase() !== 'to do'
@@ -257,14 +260,14 @@ export function OverviewTab({
         if (teamMembers.length === 0) {
           return (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-[220px]">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Team Members</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-10 text-center flex-1">No assigned team members.</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('lit.teamMembers2')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-10 text-center flex-1">{t('lit.noAssignedTeamMembers')}</p>
             </div>
           );
         }
         return (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-[220px]">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Team Members</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.teamMembers2')}</h3>
             <div className="space-y-2 overflow-y-auto max-h-[280px] pr-1">
               {teamMembers.map(member => {
                 const completionRate = member.taskCount > 0 ? Math.round((member.completed / member.taskCount) * 100) : 0;
@@ -302,7 +305,7 @@ export function OverviewTab({
               <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Start</span>
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t('lit.start')}</span>
             </div>
             <div className="text-sm font-bold text-gray-900 dark:text-white">{new Date(project.StartDate).toLocaleDateString()}</div>
           </div>
@@ -313,13 +316,13 @@ export function OverviewTab({
               <svg className="w-4 h-4 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">End</span>
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t('lit.end')}</span>
             </div>
             <div className="text-sm font-bold text-gray-900 dark:text-white">{new Date(project.EndDate).toLocaleDateString()}</div>
             {(() => {
               const diff = Math.ceil((new Date(project.EndDate).getTime() - today.getTime()) / 86400000);
               if (diff > 0) return <div className="text-xs text-gray-400 mt-0.5">{diff}d remaining</div>;
-              if (diff === 0) return <div className="text-xs text-amber-500 mt-0.5">Due today</div>;
+              if (diff === 0) return <div className="text-xs text-amber-500 mt-0.5">{t('lit.dueToday')}</div>;
               return <div className="text-xs text-red-500 mt-0.5">{Math.abs(diff)}d overdue</div>;
             })()}
           </div>
@@ -329,10 +332,10 @@ export function OverviewTab({
             <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Hours</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t('common.hours')}</span>
           </div>
           <div className="text-sm font-bold text-gray-900 dark:text-white">{decimalHoursToHMS(totalEstimatedHours)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">Estimated</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('lit.estimated')}</div>
         </div>
         {internalTicketsEnabled && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
@@ -340,7 +343,7 @@ export function OverviewTab({
               <svg className="w-4 h-4 text-violet-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
               </svg>
-              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Tickets</span>
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t('nav.tickets')}</span>
             </div>
             <div className="text-sm font-bold text-gray-900 dark:text-white">{totalTickets}</div>
             <div className="text-xs text-gray-400 mt-0.5">{unresolvedTickets} pending</div>
@@ -351,10 +354,10 @@ export function OverviewTab({
             <svg className="w-4 h-4 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Team</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t('lit.team')}</span>
           </div>
           <div className="text-sm font-bold text-gray-900 dark:text-white">{new Set(tasks.filter(t => t.AssignedTo).map(t => t.AssignedTo)).size}</div>
-          <div className="text-xs text-gray-400 mt-0.5">Members</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('lit.members')}</div>
         </div>
       </div>
 
@@ -369,7 +372,7 @@ export function OverviewTab({
         return (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-6 py-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Project Timeline</h2>
+              <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('lit.projectTimeline')}</h2>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isOverdue ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
                 {isOverdue
                   ? `${Math.abs(Math.ceil((today.getTime() - end.getTime()) / 86400000))}d overdue`
@@ -408,12 +411,12 @@ export function OverviewTab({
         const textColor = budgetPct >= 100 ? 'text-red-600 dark:text-red-400' : budgetPct >= 80 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400';
         return (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">{budgetType === 'hours' ? 'Budget (Hours)' : 'Budget'}</h2>
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">{budgetType === 'hours' ? 'Budget (Hours)' : t('lit.budget')}</h2>
             <div className="mb-4">
               <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                <span>Spent: <span className={`font-semibold ${textColor}`}>{budgetType === 'hours' ? decimalHoursToHMS(budgetSpent) : `${budgetUnit}${budgetSpent.toFixed(2)}`}</span></span>
+                <span>{t('lit.spent2')} <span className={`font-semibold ${textColor}`}>{budgetType === 'hours' ? decimalHoursToHMS(budgetSpent) : `${budgetUnit}${budgetSpent.toFixed(2)}`}</span></span>
                 <span className="font-semibold">{budgetPct}%</span>
-                <span>Total: <span className="font-semibold text-gray-900 dark:text-white">{budgetType === 'hours' ? decimalHoursToHMS(budgetTotal) : `${budgetUnit}${budgetTotal.toFixed(2)}`}</span></span>
+                <span>{t('lit.total2')} <span className="font-semibold text-gray-900 dark:text-white">{budgetType === 'hours' ? decimalHoursToHMS(budgetTotal) : `${budgetUnit}${budgetTotal.toFixed(2)}`}</span></span>
               </div>
               <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
                 <div className={`${barColor} h-3 rounded-full transition-all`} style={{ width: `${budgetPct}%` }} />
@@ -421,15 +424,15 @@ export function OverviewTab({
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">Total</div>
+                <div className="text-xs text-gray-400 mb-1">{t('common.total')}</div>
                 <div className="text-base font-bold text-gray-900 dark:text-white">{budgetType === 'hours' ? decimalHoursToHMS(budgetTotal) : `${budgetUnit}${budgetTotal.toFixed(2)}`}</div>
               </div>
               <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">Spent</div>
+                <div className="text-xs text-gray-400 mb-1">{t('lit.spent')}</div>
                 <div className={`text-base font-bold ${textColor}`}>{budgetType === 'hours' ? decimalHoursToHMS(budgetSpent) : `${budgetUnit}${budgetSpent.toFixed(2)}`}</div>
               </div>
               <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">Remaining</div>
+                <div className="text-xs text-gray-400 mb-1">{t('lit.remaining')}</div>
                 <div className={`text-base font-bold ${budgetRemaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{budgetType === 'hours' ? decimalHoursToHMS(budgetRemaining) : `${budgetUnit}${budgetRemaining.toFixed(2)}`}</div>
               </div>
             </div>
@@ -448,14 +451,14 @@ export function OverviewTab({
       {/* ── Requires Attention ── */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">
-          Requires Attention
+          {t('lit.requiresAttention')}
         </h2>
         {overdueTasks.length === 0 && upcomingTasks.length === 0 && unassignedTasks.length === 0 ? (
           <div className="text-center py-6 text-gray-500 dark:text-gray-400">
             <svg className="w-8 h-8 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm">All good! No items require attention.</p>
+            <p className="text-sm">{t('lit.allGoodNoItemsRequireAttention')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -465,7 +468,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-sm font-medium">Overdue Tasks</span>
+                  <span className="text-sm font-medium">{t('lit.overdueTasks')}</span>
                 </div>
                 <span className="text-sm font-bold text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-2.5 py-0.5 rounded-full">
                   {overdueTasks.length}
@@ -478,7 +481,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="text-sm font-medium">Due This Week</span>
+                  <span className="text-sm font-medium">{t('lit.dueThisWeek')}</span>
                 </div>
                 <span className="text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 rounded-full">
                   {upcomingTasks.length}
@@ -491,7 +494,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <span className="text-sm font-medium">Unassigned</span>
+                  <span className="text-sm font-medium">{t('lit.unassigned')}</span>
                 </div>
                 <span className="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 rounded-full">
                   {unassignedTasks.length}
@@ -512,7 +515,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  Overdue Tasks
+                  {t('lit.overdueTasks')}
                 </h2>
                 <span className="text-xs font-bold bg-red-200 dark:bg-red-800 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">{overdueTasks.length}</span>
               </div>
@@ -551,7 +554,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Due This Week
+                  {t('lit.dueThisWeek')}
                 </h2>
                 <span className="text-xs font-bold bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{upcomingTasks.length}</span>
               </div>
@@ -593,7 +596,7 @@ export function OverviewTab({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              Unassigned Tasks
+              {t('lit.unassignedTasks')}
             </h2>
             <span className="text-xs font-bold bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full">{unassignedTasks.length}</span>
           </div>
@@ -632,7 +635,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                   </svg>
-                  Overdue Milestones
+                  {t('lit.overdueMilestones')}
                 </h2>
                 <span className="text-xs font-bold bg-red-200 dark:bg-red-800 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">{overdueMilestones.length}</span>
               </div>
@@ -664,7 +667,7 @@ export function OverviewTab({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                   </svg>
-                  Upcoming Milestones
+                  {t('lit.upcomingMilestones')}
                 </h2>
                 <span className="text-xs font-bold bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{upcomingMilestones.length}</span>
               </div>
@@ -694,7 +697,7 @@ export function OverviewTab({
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm font-medium">All {completedMilestones.length} milestone{completedMilestones.length !== 1 ? 's' : ''} completed</span>
+              <span className="text-sm font-medium">{t('lit.allNMilestonesCompleted', { count: completedMilestones.length })}</span>
             </div>
           )}
         </div>
@@ -708,7 +711,7 @@ export function OverviewTab({
               <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Sprints
+              {t('lit.sprints')}
             </h2>
             <div className="flex items-center gap-2">
               {activeSprints.length > 0 && (
@@ -726,7 +729,7 @@ export function OverviewTab({
                 active: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
                 planned: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
               };
-              const statusLabel: Record<string, string> = { active: 'Active', planned: 'Planned' };
+              const statusLabel: Record<string, string> = { active: t('lit.active2'), planned: t('lit.planned') };
               return (
                 <div key={sprint.Id} className="px-5 py-4 hover:bg-gray-50/60 dark:hover:bg-gray-700/30 transition-colors">
                   <div className="flex items-start gap-3">
@@ -750,7 +753,7 @@ export function OverviewTab({
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <div className={`text-lg font-bold ${completionPct === 100 ? 'text-green-600 dark:text-green-400' : 'text-indigo-600 dark:text-indigo-400'}`}>{completionPct}%</div>
-                      <div className="text-xs text-gray-400">done</div>
+                      <div className="text-xs text-gray-400">{t('lit.done')}</div>
                     </div>
                   </div>
                 </div>

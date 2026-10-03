@@ -1,5 +1,7 @@
 'use client';
 
+
+import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -15,7 +17,18 @@ import AuthShell, {
   authPrimaryButtonClass,
 } from '@/components/AuthShell';
 
+function AuthPageLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
+      <div className="text-sm text-[var(--pm-muted)]">{t('common.loading')}</div>
+    </div>
+  );
+}
+
 function LoginPageInner() {
+  const { t } = useI18n();
+
   const [username, setUsername] = useState('');
   const passwordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
@@ -82,7 +95,7 @@ function LoginPageInner() {
         router.push('/dashboard');
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setError(err instanceof Error ? err.message : t('lit.loginFailedPleaseTryAgain'));
     } finally {
       setIsLoading(false);
     }
@@ -90,16 +103,18 @@ function LoginPageInner() {
 
   return (
     <AuthShell
-      title="Login"
-      description="Sign in to access your workspace."
+      title={t('auth.loginTitle')}
+      description={t('auth.loginSubtitle')}
       companyName={companyName}
       companyLogoUrl={companyLogoUrl}
       footer={
         allowPublicRegistration ? (
           <p>
-            {registrationType === 'customer' ? 'Need customer access?' : "Don't have an account?"}{' '}
+            {registrationType === 'customer'
+              ? t('lit.needCustomerAccess')
+              : t('lit.dontHaveAnAccount')}{' '}
             <Link href="/register" className={`${authLinkClass} font-medium`}>
-              {registrationType === 'customer' ? 'Register as customer' : 'Create account'}
+              {registrationType === 'customer' ? t('lit.registerAsCustomer') : t('auth.createAccount')}
             </Link>
           </p>
         ) : null
@@ -114,7 +129,7 @@ function LoginPageInner() {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="username" className={authLabelClass}>
-            Username or Email
+            {t('auth.usernameOrEmail')}
           </label>
           <input
             id="username"
@@ -123,13 +138,13 @@ function LoginPageInner() {
             onChange={(e) => setUsername(e.target.value)}
             required
             className={authFieldClass}
-            placeholder="Enter your username or email"
+            placeholder={t('lit.enterYourUsernameOrEmail')}
           />
         </div>
 
         <div>
           <label htmlFor="password" className={authLabelClass}>
-            Password
+            {t('auth.password')}
           </label>
           <PasswordInput
             ref={passwordRef}
@@ -137,17 +152,17 @@ function LoginPageInner() {
             name="password"
             required
             autoComplete="current-password"
-            placeholder="Enter your password"
+            placeholder={t('lit.enterYourPassword')}
           />
           <div className="mt-1.5 text-right">
             <Link href="/forgot-password" className={`text-xs ${authLinkClass}`}>
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
         </div>
 
         <button type="submit" disabled={isLoading} className={authPrimaryButtonClass}>
-          {isLoading ? 'Logging in…' : 'Login'}
+          {isLoading ? t('auth.signingIn') : t('auth.signIn')}
         </button>
       </form>
     </AuthShell>
@@ -156,13 +171,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[var(--pm-bg)]">
-          <div className="text-sm text-[var(--pm-muted)]">Loading…</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<AuthPageLoading />}>
       <LoginPageInner />
     </Suspense>
   );

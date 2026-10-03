@@ -1,4 +1,5 @@
 'use client';
+import { useI18n } from '@/lib/i18n/provider';
 
 import { Task } from '@/lib/api/tasks';
 
@@ -11,6 +12,8 @@ interface DGNode {
 }
 
 export function DependencyGraphTab({ tasks, onOpenTask }: { tasks: Task[]; onOpenTask: (t: Task) => void }) {
+  const { t } = useI18n();
+
   const BOX_W = 170;
   const BOX_H = 54;
   const COL_GAP = 100;
@@ -105,9 +108,9 @@ export function DependencyGraphTab({ tasks, onOpenTask }: { tasks: Task[]; onOpe
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-10 text-center">
         <div className="text-5xl mb-4">🔗</div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Task Dependencies</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('lit.noTaskDependencies')}</h2>
         <p className="text-gray-500 dark:text-gray-400">
-          Set a <strong>Depends On</strong> value on any task to see the dependency graph here.
+          {t('lit.setA')} <strong>{t('lit.dependsOn')}</strong> {t('lit.valueOnAnyTaskToSeeTheDependencyGraphHere')}
         </p>
       </div>
     );
@@ -194,10 +197,10 @@ export function DependencyGraphTab({ tasks, onOpenTask }: { tasks: Task[]; onOpe
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-green-500" /> Completed/Done</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-500" /> In Progress</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" /> Blocked/Cancelled</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-slate-400" /> Other</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-green-500" /> {t('lit.completedDone')}</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-500" /> {t('lit.inProgress3')}</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-red-500" /> {t('lit.blockedCancelled')}</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-slate-400" /> {t('lit.other')}</span>
       </div>
     </div>
   );
