@@ -69,6 +69,8 @@ COPY --from=builder /app/extras/release ./extras/release
 COPY --from=builder /app/extras/scripts/tampermonkey ./extras/scripts/tampermonkey
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server/database ./dist/server/database
+# UI lit catalogs are read at runtime via fs (not bundled into the client graph).
+COPY --from=builder /app/lib/i18n/locales ./lib/i18n/locales
 
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules

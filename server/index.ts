@@ -152,6 +152,20 @@ app.prepare().then(async () => {
 
   const server = express();
 
+  // Behind Docker / reverse proxies the client IP arrives in X-Forwarded-For.
+  // express-rate-limit requires trust proxy when that header is present.
+  // Default: enabled in production. Set TRUST_PROXY=false to disable, or TRUST_PROXY=2 for hop count.
+  const trustProxyEnv = (process.env.TRUST_PROXY || (dev ? 'false' : '1')).trim().toLowerCase();
+  if (trustProxyEnv !== 'false' && trustProxyEnv !== '0') {
+    if (trustProxyEnv === 'true' || trustProxyEnv === '1') {
+      server.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1) || 1);
+    } else if (/^\d+$/.test(trustProxyEnv)) {
+      server.set('trust proxy', Number(trustProxyEnv));
+    } else {
+      server.set('trust proxy', trustProxyEnv);
+    }
+  }
+
   // Security: Helmet for HTTP headers
   server.use(helmet({
     contentSecurityPolicy: false, // Disable for Next.js compatibility

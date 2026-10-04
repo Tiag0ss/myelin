@@ -19,6 +19,11 @@ export function loadLitServer(locale: Locale): LiteralMap {
 
   const file = FILE_BY_LOCALE[locale];
   const full = path.join(process.cwd(), 'lib/i18n/locales', file);
+  if (!fs.existsSync(full)) {
+    throw new Error(
+      `Missing lit locale file at ${full}. In Docker images, ensure lib/i18n/locales is copied into the runtime stage.`
+    );
+  }
   const parsed = JSON.parse(fs.readFileSync(full, 'utf8')) as LiteralMap;
   cache.set(locale, parsed);
   return parsed;
