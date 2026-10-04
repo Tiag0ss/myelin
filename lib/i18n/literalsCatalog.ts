@@ -1,12 +1,6 @@
-/** Key-based UI literals. Data lives in ./locales/*.json (keeps Next/SWC heap sane). */
-import litEnJson from './locales/litEn.json';
-import litPtJson from './locales/litPt.json';
-import litEsJson from './locales/litEs.json';
-import litFrJson from './locales/litFr.json';
-
-export type LiteralMap = Record<string, string>;
-
-export const litEn: LiteralMap = litEnJson as LiteralMap;
-export const litPt: LiteralMap = litPtJson as LiteralMap;
-export const litEs: LiteralMap = litEsJson as LiteralMap;
-export const litFr: LiteralMap = litFrJson as LiteralMap;
+/**
+ * Locale JSON lives in ./locales/*.json and is loaded via fs (server) or
+ * `/api/i18n/lit/[locale]` (client). Do not statically import those files here —
+ * bundling all four into the client graph was the OOM root cause in dev.
+ */
+export type { LiteralMap } from './translate';

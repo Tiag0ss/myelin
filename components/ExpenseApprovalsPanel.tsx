@@ -1,14 +1,5 @@
 'use client';
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return (readLocaleStorage() as Locale) || 'en';
-}
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
+import { t } from '@/lib/i18n/runtime';
 
 import { useI18n } from '@/lib/i18n/provider';
 import { useState, useEffect, useCallback } from 'react';

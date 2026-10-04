@@ -16,18 +16,7 @@ import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import { Pin, PinOff } from 'lucide-react';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return readLocaleStorage() ?? 'en';
-}
-
-/** Path translate without hook — for nested helpers/components that cannot call useI18n. */
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
+import { t } from '@/lib/i18n/runtime';
 
 const MEMO_CALENDAR_LOCALE = 'en-US';
 const MEMO_CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

@@ -1,15 +1,9 @@
 'use client';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { LOCALES, LOCALE_LABELS, readLocaleStorage, type Locale } from '@/lib/i18n/config';
+import { t } from '@/lib/i18n/runtime';
+import { LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n/config';
 import { useI18n } from '@/lib/i18n/provider';
 
-function localeNow(): Locale {
-  return (readLocaleStorage() as Locale) || 'en';
-}
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
 /* Migrated into AppShell — Navbar removed; chrome from AuthenticatedAppGate */
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 

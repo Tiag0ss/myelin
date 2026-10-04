@@ -1,13 +1,3 @@
-
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return (readLocaleStorage() as Locale) || 'en';
-}
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { DM_Sans, Geist, Geist_Mono, IBM_Plex_Mono } from "next/font/google";
@@ -24,6 +14,8 @@ import { getPublicBranding, inferFaviconType } from "@/lib/branding/publicBrandi
 import { I18nProvider } from "@/lib/i18n/provider";
 import { LOCALE_COOKIE, htmlLang } from "@/lib/i18n/config";
 import { detectLocaleFromHints } from "@/lib/i18n/detectLocale";
+import { loadLitServer } from "@/lib/i18n/loadLit.server";
+import { t as tServer } from "@/lib/i18n/messages.server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,10 +51,22 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const { companyName, faviconUrl } = await getPublicBranding();
   const faviconType = inferFaviconType(faviconUrl);
+  const cookieStore = await cookies();
+  const hdrs = await headers();
+  const locale = detectLocaleFromHints(
+    cookieStore.get(LOCALE_COOKIE)?.value,
+    String(
+      hdrs.get("cf-ipcountry") ||
+        hdrs.get("x-country-code") ||
+        hdrs.get("x-vercel-ip-country") ||
+        ""
+    ),
+    String(hdrs.get("accept-language") || "")
+  );
 
   return {
     title: companyName,
-    description: t('lit.manageYourProjectsEfficiently'),
+    description: tServer(locale, 'lit.manageYourProjectsEfficiently'),
     manifest: "/manifest.webmanifest",
     appleWebApp: {
       capable: true,
@@ -100,6 +104,8 @@ export default async function RootLayout({
     ),
     String(hdrs.get("accept-language") || "")
   );
+  const initialLit = loadLitServer(locale);
+  const initialFallbackLit = locale === 'en' ? initialLit : loadLitServer('en');
 
   return (
     <html lang={htmlLang(locale)} suppressHydrationWarning>
@@ -109,7 +115,11 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${ibmPlexMono.variable} antialiased`}
       >
-        <I18nProvider initialLocale={locale}>
+        <I18nProvider
+          initialLocale={locale}
+          initialLit={initialLit}
+          initialFallbackLit={initialFallbackLit}
+        >
           <AuthProvider>
             <PermissionsProvider>
               <ToastProvider>

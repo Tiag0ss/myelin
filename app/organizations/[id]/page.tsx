@@ -34,18 +34,7 @@ import ExpenseTaxonomyManager from '@/components/ExpenseTaxonomyManager';
 import OrganizationIntegrationsPanel from '@/components/OrganizationIntegrationsPanel';
 import { useUrlTab } from '@/hooks/useUrlTab';
 
-import { t as tPath } from '@/lib/i18n/messages';
-import { readLocaleStorage, type Locale } from '@/lib/i18n/config';
-
-function localeNow(): Locale {
-  return readLocaleStorage() ?? 'en';
-}
-
-/** Path translate without hook — for nested helpers/components that cannot call useI18n. */
-function t(path: string, vars?: Record<string, string | number>): string {
-  return tPath(localeNow(), path, vars);
-}
-
+import { t } from '@/lib/i18n/runtime';
 
 const ORGANIZATION_DETAIL_TABS = [
   'overview',
