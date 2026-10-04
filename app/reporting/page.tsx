@@ -22,6 +22,7 @@ import { stripHtml } from '@/lib/stripHtml';
 import { useFormatHours } from '@/lib/useFormatHours';
 import { WebReportsExplorer } from '@/app/web-reports/page';
 import { OrganizationCharts } from '@/components/reporting/OrganizationCharts';
+import { OrganizationDetailAnalytics } from '@/components/reporting/OrganizationDetailAnalytics';
 import { TaskAnalyticsCharts } from '@/components/reporting/TaskAnalyticsCharts';
 
 const MANAGER_TABS = [
@@ -54,29 +55,41 @@ function formatMoney(n: number | string | null | undefined) {
   return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const ORG_METRIC_GRID = 'grid grid-cols-2 lg:grid-cols-4 gap-3';
+
 function MetricCard({
   label,
   value,
   delta,
   onClick,
+  accent = 'border-blue-500',
+  hint,
 }: {
   label: string;
   value: string;
   delta?: string;
   onClick?: () => void;
+  accent?: string;
+  hint?: string;
 }) {
   const Comp = onClick ? 'button' : 'div';
   return (
     <Comp
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 text-left ${
-        onClick ? 'hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer' : ''
+      title={label}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow p-3 sm:p-4 border-l-4 ${accent} text-left min-h-[5.5rem] ${
+        onClick ? 'hover:opacity-90 cursor-pointer transition-opacity' : ''
       }`}
     >
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{value}</div>
-      {delta ? <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">vs previous: {delta}</div> : null}
+      <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
+        {label}
+      </p>
+      <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1 tabular-nums">{value}</p>
+      {delta ? (
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">vs previous: {delta}</p>
+      ) : null}
+      {hint ? <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">{hint}</p> : null}
     </Comp>
   );
 }
@@ -942,68 +955,170 @@ function ReportingHubInner() {
             )}
 
             {activeTab === 'organization' && overview && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Organization overview for the selected period. Click a card to open the matching pack
-                  (Portfolio, Delivery, or Data Quality) with the same organization context.
+                  {t('lit.organizationAnalyticsIntro')}
                 </p>
-                <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.health')}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                <section className="space-y-3">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.health')}</h2>
+                  <div className={ORG_METRIC_GRID}>
                     <MetricCard
                       label={t('lit.projects')}
                       value={String(overview.health?.projectCount || 0)}
+                      accent="border-blue-500"
                       onClick={() => drillTo('portfolio', { rag: 'all' })}
                     />
                     <MetricCard
                       label={t('lit.green')}
                       value={String(overview.health?.counts?.green || 0)}
+                      accent="border-green-500"
                       onClick={() => drillTo('portfolio', { rag: 'green' })}
                     />
                     <MetricCard
                       label={t('lit.amber')}
                       value={String(overview.health?.counts?.amber || 0)}
+                      accent="border-amber-500"
                       onClick={() => drillTo('portfolio', { rag: 'amber' })}
                     />
                     <MetricCard
                       label={t('lit.red')}
                       value={String(overview.health?.counts?.red || 0)}
+                      accent="border-red-500"
                       onClick={() => drillTo('portfolio', { rag: 'red' })}
                     />
                   </div>
                 </section>
+
+                <section className="space-y-3">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {t('lit.effort')} & {t('lit.delivery')}
+                  </h2>
+                  <div className={ORG_METRIC_GRID}>
+                    <MetricCard
+                      label={t('lit.estimatedLeaf')}
+                      value={formatHours(overview.effort?.estimatedLeafHours || 0)}
+                      accent="border-purple-500"
+                      onClick={() => drillTo('portfolio', { rag: 'all' })}
+                    />
+                    <MetricCard
+                      label={t('lit.plannedPeriod')}
+                      value={formatHours(overview.effort?.plannedHours?.current || 0)}
+                      delta={formatDeltaMetric(overview.effort?.plannedHours, true)}
+                      accent="border-blue-500"
+                      onClick={() => drillTo('capacity')}
+                    />
+                    <MetricCard
+                      label={t('lit.loggedPeriod')}
+                      value={formatHours(overview.effort?.loggedHours?.current || 0)}
+                      delta={formatDeltaMetric(overview.effort?.loggedHours, true)}
+                      accent="border-green-500"
+                      onClick={() => drillTo('capacity')}
+                    />
+                    <MetricCard
+                      label={t('lit.throughputClosed')}
+                      value={String(overview.delivery?.throughput?.current || 0)}
+                      delta={formatDeltaMetric(overview.delivery?.throughput)}
+                      accent="border-indigo-500"
+                      onClick={() => drillTo('delivery', { delivery: 'closed' })}
+                    />
+                    <MetricCard
+                      label={t('lit.activeSprints')}
+                      value={String(overview.delivery?.activeSprints || 0)}
+                      accent="border-violet-500"
+                      onClick={() => drillTo('delivery', { delivery: 'sprints' })}
+                    />
+                    <MetricCard
+                      label={t('lit.openTasks')}
+                      value={String(overview.tasks?.open || 0)}
+                      accent="border-cyan-500"
+                      onClick={() => drillTo('portfolio', { rag: 'all' })}
+                    />
+                    <MetricCard
+                      label={t('lit.completed')}
+                      value={String(overview.tasks?.closed ?? 0)}
+                      accent="border-emerald-500"
+                      onClick={() => drillTo('delivery', { delivery: 'closed' })}
+                    />
+                    <MetricCard
+                      label={t('lit.overdueTasks2')}
+                      value={String(overview.tasks?.overdue || 0)}
+                      accent="border-red-500"
+                      onClick={() => drillTo('data-quality', { dq: 'staleOverdue' })}
+                    />
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.dataQuality')}</h2>
+                  <div className={ORG_METRIC_GRID}>
+                    <MetricCard
+                      label={t('lit.unplanned')}
+                      value={String(overview.detailAnalytics?.tasks?.unplanned || 0)}
+                      accent="border-orange-500"
+                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
+                    />
+                    <MetricCard
+                      label={t('lit.leafWithHours')}
+                      value={String(overview.tasks?.leafWithHours || 0)}
+                      accent="border-teal-500"
+                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
+                    />
+                    <MetricCard
+                      label={t('lit.unestimatedLeaf')}
+                      value={String(overview.risk?.unestimatedLeaf || 0)}
+                      accent="border-amber-500"
+                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
+                    />
+                    <MetricCard
+                      label={t('lit.unassigned')}
+                      value={String(overview.risk?.unassigned || 0)}
+                      accent="border-rose-500"
+                      onClick={() => drillTo('data-quality', { dq: 'unassigned' })}
+                    />
+                  </div>
+                </section>
+
                 {overview.expenses && (
-                  <section>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.expensesApproved')}</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-3">
+                  <section className="space-y-3">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {t('lit.expensesApproved')}
+                    </h2>
+                    <div className={ORG_METRIC_GRID}>
                       <MetricCard
                         label={t('lit.projectExpenses')}
                         value={formatMoney(overview.expenses.totals?.ProjectTotal)}
+                        accent="border-indigo-500"
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
                         label={t('lit.internalExpenses')}
                         value={formatMoney(overview.expenses.totals?.InternalTotal)}
+                        accent="border-slate-500"
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
                         label={t('lit.reimbursableCap')}
                         value={formatMoney(overview.expenses.totals?.ReimbursableCapTotal)}
+                        accent="border-cyan-500"
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
                         label={t('lit.reimbursed')}
                         value={formatMoney(overview.expenses.totals?.ReimbursedTotal)}
+                        accent="border-teal-500"
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
                         label={t('lit.remainingToReimburse')}
                         value={formatMoney(overview.expenses.totals?.RemainingTotal)}
+                        accent="border-orange-500"
                         onClick={() => drillTo('expenses')}
                       />
                       <MetricCard
                         label={t('lit.fullyReimbursed')}
                         value={String(overview.expenses.totals?.FullyReimbursedCount || 0)}
+                        accent="border-green-500"
                         onClick={() => drillTo('expenses')}
                       />
                     </div>
@@ -1012,74 +1127,15 @@ function ReportingHubInner() {
                     </p>
                   </section>
                 )}
-                <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.effort')}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <MetricCard
-                      label={t('lit.estimatedLeaf')}
-                      value={formatHours(overview.effort?.estimatedLeafHours || 0)}
-                      onClick={() => drillTo('portfolio', { rag: 'all' })}
-                    />
-                    <MetricCard
-                      label={t('lit.plannedPeriod')}
-                      value={formatHours(overview.effort?.plannedHours?.current || 0)}
-                      delta={formatDeltaMetric(overview.effort?.plannedHours, true)}
-                      onClick={() => drillTo('capacity')}
-                    />
-                    <MetricCard
-                      label={t('lit.loggedPeriod')}
-                      value={formatHours(overview.effort?.loggedHours?.current || 0)}
-                      delta={formatDeltaMetric(overview.effort?.loggedHours, true)}
-                      onClick={() => drillTo('capacity')}
-                    />
-                    <MetricCard
-                      label={t('lit.openTasks')}
-                      value={String(overview.tasks?.open || 0)}
-                      onClick={() => drillTo('portfolio', { rag: 'all' })}
-                    />
-                    <MetricCard
-                      label={t('lit.leafWithHours')}
-                      value={String(overview.tasks?.leafWithHours || 0)}
-                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
-                    />
-                    <MetricCard
-                      label={t('lit.unscheduledLeaf')}
-                      value={String(overview.tasks?.unscheduledLeaf || 0)}
-                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
-                    />
-                  </div>
-                </section>
-                <section>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('lit.deliveryRisk')}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <MetricCard
-                      label={t('lit.throughputClosed')}
-                      value={String(overview.delivery?.throughput?.current || 0)}
-                      delta={formatDeltaMetric(overview.delivery?.throughput)}
-                      onClick={() => drillTo('delivery', { delivery: 'closed' })}
-                    />
-                    <MetricCard
-                      label={t('lit.activeSprints')}
-                      value={String(overview.delivery?.activeSprints || 0)}
-                      onClick={() => drillTo('delivery', { delivery: 'sprints' })}
-                    />
-                    <MetricCard
-                      label={t('lit.overdueTasks2')}
-                      value={String(overview.tasks?.overdue || 0)}
-                      onClick={() => drillTo('data-quality', { dq: 'staleOverdue' })}
-                    />
-                    <MetricCard
-                      label={t('lit.unestimatedLeaf')}
-                      value={String(overview.risk?.unestimatedLeaf || 0)}
-                      onClick={() => drillTo('data-quality', { dq: 'unestimated' })}
-                    />
-                    <MetricCard
-                      label={t('lit.unassigned')}
-                      value={String(overview.risk?.unassigned || 0)}
-                      onClick={() => drillTo('data-quality', { dq: 'unassigned' })}
-                    />
-                  </div>
-                </section>
+
+                {overview.detailAnalytics && (
+                  <OrganizationDetailAnalytics
+                    data={overview.detailAnalytics}
+                    formatHours={formatHours}
+                    showTickets={internalTicketsEnabled}
+                    periodLabel={`${dateFrom} → ${dateTo}`}
+                  />
+                )}
 
                 <OrganizationCharts charts={overview.charts} formatHours={formatHours} />
 

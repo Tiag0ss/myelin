@@ -256,6 +256,160 @@ function TrendLines({ points }: { points: TrendPoint[] }) {
   );
 }
 
+const SERIES_COLORS = [
+  '#73bf69',
+  '#f2cc0c',
+  '#5794f2',
+  '#ff780a',
+  '#f2495c',
+  '#b877d9',
+  '#37872d',
+  '#fade2a',
+  '#8ab8ff',
+  '#ff9830',
+  '#e02f44',
+  '#8f3bb8',
+];
+
+export type VolumeTrendPoint = { date: string; tasks: number; projects: number };
+export type MultiSeriesChart = {
+  seriesKeys: string[];
+  points: { date: string; values: Record<string, number> }[];
+};
+
+function MultiSeriesLines({
+  seriesKeys,
+  points,
+  formatValue,
+  legendMode = 'none',
+  yTickFormat,
+}: {
+  seriesKeys: string[];
+  points: { date: string; values: Record<string, number> }[];
+  formatValue?: (n: number) => string;
+  legendMode?: 'none' | 'sum' | 'last';
+  yTickFormat?: (n: number) => string;
+}) {
+  const width = 400;
+  const height = 200;
+  const pad = { top: 12, right: 10, bottom: 28, left: 40 };
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
+  const max = Math.max(
+    1,
+    ...points.flatMap((p) => seriesKeys.map((key) => p.values[key] || 0))
+  );
+  const niceMax = max <= 1 ? 1 : Math.ceil(max / 4) * 4;
+  const step = points.length > 1 ? innerW / (points.length - 1) : innerW;
+  const y = (v: number) => pad.top + innerH - (v / niceMax) * innerH;
+  const labelEvery = Math.max(1, Math.ceil(points.length / 7));
+  const lastPoint = points[points.length - 1];
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => niceMax * ratio);
+  const formatTick = yTickFormat || ((n: number) => String(Math.round(n)));
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-52">
+        {yTicks.map((tick) => (
+          <g key={`yt-${tick}`}>
+            <line
+              x1={pad.left}
+              x2={width - pad.right}
+              y1={y(tick)}
+              y2={y(tick)}
+              className="stroke-gray-200 dark:stroke-gray-700"
+              strokeWidth="1"
+            />
+            <text
+              x={pad.left - 6}
+              y={y(tick)}
+              textAnchor="end"
+              dominantBaseline="middle"
+              className="fill-gray-500 dark:fill-gray-400"
+              style={{ fontSize: 9 }}
+            >
+              {formatTick(tick)}
+            </text>
+          </g>
+        ))}
+        {seriesKeys.map((key, seriesIndex) => {
+          const d = points
+            .map((p, i) => {
+              const x = pad.left + i * step;
+              const yy = y(p.values[key] || 0);
+              return `${i === 0 ? 'M' : 'L'} ${x} ${yy}`;
+            })
+            .join(' ');
+          return (
+            <path
+              key={key}
+              d={d}
+              fill="none"
+              stroke={SERIES_COLORS[seriesIndex % SERIES_COLORS.length]}
+              strokeWidth="2.25"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {points.map((p, i) =>
+          i % labelEvery === 0 || i === points.length - 1 ? (
+            <text
+              key={p.date}
+              x={pad.left + i * step}
+              y={height - 8}
+              textAnchor="middle"
+              className="fill-gray-500 dark:fill-gray-400"
+              style={{ fontSize: 9 }}
+            >
+              {p.date.slice(5)}
+            </text>
+          ) : null
+        )}
+      </svg>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+        {seriesKeys.map((key, index) => {
+          let legendValue: number | null = null;
+          if (legendMode === 'sum') {
+            legendValue = points.reduce((sum, p) => sum + (p.values[key] || 0), 0);
+          } else if (legendMode === 'last' && lastPoint) {
+            legendValue = lastPoint.values[key] || 0;
+          }
+          return (
+            <span key={key} className="inline-flex items-center gap-1">
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: SERIES_COLORS[index % SERIES_COLORS.length] }}
+              />
+              <span className="truncate max-w-[10rem]" title={key}>
+                {key}
+              </span>
+              {legendValue != null && formatValue ? (
+                <span className="text-gray-400">({formatValue(legendValue)})</span>
+              ) : null}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VolumeTrendLines({ points }: { points: VolumeTrendPoint[] }) {
+  const { t } = useI18n();
+  const tasksLabel = t('lit.tasks');
+  const projectsLabel = t('lit.projects');
+  return (
+    <MultiSeriesLines
+      seriesKeys={[tasksLabel, projectsLabel]}
+      points={points.map((p) => ({
+        date: p.date,
+        values: { [tasksLabel]: p.tasks, [projectsLabel]: p.projects },
+      }))}
+    />
+  );
+}
+
 export type OrganizationChartsData = {
   rag?: ChartSlice[];
   hoursCompare?: CompareRow[];
@@ -265,6 +419,14 @@ export type OrganizationChartsData = {
   taskHours?: ChartSlice[];
   schedule?: ChartSlice[];
   ragTrend?: TrendPoint[];
+  volumeTrend?: VolumeTrendPoint[];
+  tasksByStatus?: MultiSeriesChart;
+  tasksByUser?: MultiSeriesChart;
+  tasksByType?: MultiSeriesChart;
+  hoursByUser?: MultiSeriesChart;
+  completionsByUser?: NamedHours[];
+  openByCustomer?: ChartSlice[];
+  taskTypeMix?: ChartSlice[];
 };
 
 export function OrganizationCharts({
@@ -285,13 +447,96 @@ export function OrganizationCharts({
   const taskHours = charts.taskHours || [];
   const schedule = charts.schedule || [];
   const ragTrend = charts.ragTrend || [];
+  const volumeTrend = charts.volumeTrend || [];
+  const tasksByStatus = charts.tasksByStatus;
+  const tasksByUser = charts.tasksByUser;
+  const tasksByType = charts.tasksByType;
+  const hoursByUser = charts.hoursByUser;
+  const completionsByUser = charts.completionsByUser || [];
+  const openByCustomer = charts.openByCustomer || [];
+  const taskTypeMix = charts.taskTypeMix || [];
 
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lit.charts')}</h2>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <ChartCard
+          title={t('lit.tasksPerStatus')}
+          empty={!tasksByStatus || tasksByStatus.seriesKeys.length === 0}
+          hint={t('lit.cumulativeStockHint')}
+        >
+          {tasksByStatus && tasksByStatus.seriesKeys.length > 0 ? (
+            <MultiSeriesLines
+              seriesKeys={tasksByStatus.seriesKeys}
+              points={tasksByStatus.points}
+              formatValue={(n) => String(Math.round(n))}
+              legendMode="last"
+            />
+          ) : null}
+        </ChartCard>
+        <ChartCard
+          title={t('lit.tasksPerUser')}
+          empty={!tasksByUser || tasksByUser.seriesKeys.length === 0}
+          hint={t('lit.cumulativeCompletionsHint')}
+        >
+          {tasksByUser && tasksByUser.seriesKeys.length > 0 ? (
+            <MultiSeriesLines
+              seriesKeys={tasksByUser.seriesKeys}
+              points={tasksByUser.points}
+              formatValue={(n) => String(Math.round(n))}
+              legendMode="last"
+            />
+          ) : null}
+        </ChartCard>
+        <ChartCard
+          title={t('lit.tasksPerType')}
+          empty={!tasksByType || tasksByType.seriesKeys.length === 0}
+          hint={t('lit.cumulativeStockHint')}
+        >
+          {tasksByType && tasksByType.seriesKeys.length > 0 ? (
+            <MultiSeriesLines
+              seriesKeys={tasksByType.seriesKeys}
+              points={tasksByType.points}
+              formatValue={(n) => String(Math.round(n))}
+              legendMode="last"
+            />
+          ) : null}
+        </ChartCard>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard
+          title={t('lit.tasksAndProjectsEvolution')}
+          empty={volumeTrend.length === 0}
+          hint={t('lit.cumulativeStockHint')}
+        >
+          {volumeTrend.length > 0 ? <VolumeTrendLines points={volumeTrend} /> : null}
+        </ChartCard>
+        <ChartCard
+          title={t('lit.hoursLoggedByUser')}
+          empty={!hoursByUser || hoursByUser.seriesKeys.length === 0}
+          hint={t('lit.hoursLoggedByUserHint')}
+        >
+          {hoursByUser && hoursByUser.seriesKeys.length > 0 ? (
+            <MultiSeriesLines
+              seriesKeys={hoursByUser.seriesKeys}
+              points={hoursByUser.points}
+              formatValue={formatHours}
+              legendMode="last"
+              yTickFormat={(n) => (n >= 10 ? String(Math.round(n)) : n.toFixed(1))}
+            />
+          ) : null}
+        </ChartCard>
+        <ChartCard title={t('lit.completedTasksByAssignee')} empty={completionsByUser.length === 0}>
+          <HBars rows={completionsByUser} formatValue={(n) => String(Math.round(n))} />
+        </ChartCard>
+        <ChartCard title={t('lit.openTasksByCustomer')} empty={openByCustomer.every((s) => s.value === 0)}>
+          <Donut slices={openByCustomer} centerLabel={t('lit.openTasks')} />
+        </ChartCard>
+        <ChartCard title={t('lit.tasksByType')} empty={taskTypeMix.every((s) => s.value === 0)}>
+          <Donut slices={taskTypeMix} centerLabel={t('lit.tasks')} />
+        </ChartCard>
         <ChartCard title={t('lit.projectHealthRag')} empty={rag.every((s) => s.value === 0)}>
-          <Donut slices={rag} centerLabel="projects" />
+          <Donut slices={rag} centerLabel={t('lit.projects')} />
         </ChartCard>
         <ChartCard
           title={t('lit.plannedVsLoggedHours')}
@@ -314,17 +559,17 @@ export function OrganizationCharts({
           <VBars rows={openVsOverdue} />
         </ChartCard>
         <ChartCard title={t('lit.leafTasksWithWithoutEstimate')} empty={taskHours.every((s) => s.value === 0)}>
-          <Donut slices={taskHours} centerLabel="leaf" />
+          <Donut slices={taskHours} centerLabel={t('lit.tasks')} />
         </ChartCard>
         <ChartCard title={t('lit.scheduledVsUnscheduledLeafTasks')} empty={schedule.every((s) => s.value === 0)}>
-          <Donut slices={schedule} centerLabel="leaf" />
+          <Donut slices={schedule} centerLabel={t('lit.tasks')} />
         </ChartCard>
         <ChartCard
           title={t('lit.ragTrendHealthSnapshots')}
           empty={ragTrend.length === 0}
           hint={
             ragTrend.length === 0
-              ? 'Trend needs weekly snapshots. Empty until the snapshot job has run at least once.'
+              ? t('lit.ragTrendEmptyHint')
               : undefined
           }
         >

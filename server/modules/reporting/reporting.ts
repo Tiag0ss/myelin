@@ -15,6 +15,13 @@ import {
 } from '../../utils/reportingAccess';
 import { isExpensesModuleEnabled, normalizeExpenseReportPeriod, queryExpenseReporting } from '../../queries/expenseReporting';
 import { queryTaskAnalytics } from '../../queries/taskAnalytics';
+import {
+  aggregateRowsByWeek,
+  buildCumulativeMultiSeries,
+  buildCumulativeSeries,
+  enumerateDays,
+  enumerateWeeks,
+} from '../../utils/organizationEvolutionCharts';
 
 const router = Router();
 
@@ -466,6 +473,507 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       }
     }
 
+    // Richer analytics panels (formerly Dashboard → Analytics), org-scoped.
+    const toDate = new Date(`${to}T12:00:00`);
+    const weekdayIndexMondayBased = (toDate.getDay() + 6) % 7;
+    const weekStart = new Date(toDate);
+    weekStart.setDate(toDate.getDate() - weekdayIndexMondayBased);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const weekFrom = formatLocalDate(weekStart);
+    const weekTo = formatLocalDate(weekEnd);
+
+    const [customerStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(DISTINCT co.CustomerId) AS total
+       FROM CustomerOrganizations co
+       WHERE co.OrganizationId = ?`,
+      [organizationId]
+    );
+
+    const [userStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COUNT(*) AS totalUsers,
+         SUM(CASE WHEN u.isAdmin = 1 THEN 1 ELSE 0 END) AS adminUsers,
+         SUM(CASE WHEN u.isAdmin = 0 AND u.CustomerId IS NULL THEN 1 ELSE 0 END) AS regularUsers
+       FROM OrganizationMembers om
+       INNER JOIN Users u ON u.Id = om.UserId
+       WHERE om.OrganizationId = ?`,
+      [organizationId]
+    );
+
+    const [projectDetailStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COUNT(*) AS totalProjects,
+         SUM(CASE WHEN COALESCE(ps.IsClosed, 0) = 0 AND COALESCE(ps.IsCancelled, 0) = 0 THEN 1 ELSE 0 END) AS activeProjects,
+         SUM(CASE WHEN COALESCE(ps.IsClosed, 0) = 1 THEN 1 ELSE 0 END) AS completedProjects
+       FROM Projects p
+       LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
+       WHERE p.OrganizationId = ?${projectFilter}`,
+      baseParams
+    );
+
+    const [taskDetailStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         SUM(CASE WHEN COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0 THEN 1 ELSE 0 END) AS totalTasks,
+         SUM(CASE WHEN COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0 AND COALESCE(tsv.IsClosed, 0) = 1 THEN 1 ELSE 0 END) AS completedTasks,
+         SUM(CASE WHEN COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0 AND COALESCE(tsv.IsClosed, 0) = 0 AND COALESCE(tsv.IsCancelled, 0) = 0 AND t.PlannedStartDate IS NOT NULL THEN 1 ELSE 0 END) AS inProgressTasks,
+         SUM(CASE WHEN COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0 AND t.PlannedEndDate IS NOT NULL AND t.PlannedEndDate < CURRENT_TIMESTAMP AND COALESCE(tsv.IsClosed, 0) = 0 AND COALESCE(tsv.IsCancelled, 0) = 0 THEN 1 ELSE 0 END) AS overdueTasks
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.ParentTaskId IS NULL`,
+      taskParams
+    );
+
+    const [unplannedDetailStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) AS unplannedTasks
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskAllocations ta ON t.Id = ta.TaskId
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.ParentTaskId IS NULL
+         AND ta.TaskId IS NULL
+         AND COALESCE(t.UnscheduledWork, 0) = 0
+         AND COALESCE(tsv.IsClosed, 0) = 0
+         AND COALESCE(tsv.IsCancelled, 0) = 0
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0`,
+      taskParams
+    );
+
+    const hoursDetailParams: Array<number | string> = [organizationId];
+    if (projectId) hoursDetailParams.push(projectId);
+    const [hoursEstimated] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN t.EstimatedHours ELSE 0 END), 0) AS totalEstimatedHours,
+         COALESCE(SUM(CASE WHEN p.IsHobby = 1 THEN t.EstimatedHours ELSE 0 END), 0) AS totalEstimatedHoursHobby
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+         AND NOT EXISTS (SELECT 1 FROM Tasks tChild WHERE tChild.ProjectId = t.ProjectId AND tChild.ParentTaskId = t.Id)`,
+      taskParams
+    );
+
+    const [hoursWorkedAll] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN te.Hours ELSE 0 END), 0) AS totalWorkedHours,
+         COALESCE(SUM(CASE WHEN p.IsHobby = 1 THEN te.Hours ELSE 0 END), 0) AS totalWorkedHoursHobby
+       FROM TimeEntries te
+       INNER JOIN Tasks t ON te.TaskId = t.Id
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${hoursProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0`,
+      hoursDetailParams
+    );
+
+    const weekParams: Array<number | string> = [organizationId, weekFrom, weekTo];
+    if (projectId) weekParams.push(projectId);
+    const [hoursWeek] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN te.Hours ELSE 0 END), 0) AS normalHours,
+         COALESCE(SUM(CASE WHEN p.IsHobby = 1 THEN te.Hours ELSE 0 END), 0) AS hobbyHours
+       FROM TimeEntries te
+       INNER JOIN Tasks t ON te.TaskId = t.Id
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ? AND te.WorkDate >= ? AND te.WorkDate <= ?${hoursProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0`,
+      weekParams
+    );
+
+    const periodHoursParams: Array<number | string> = [organizationId, from, to];
+    if (projectId) periodHoursParams.push(projectId);
+    const [hoursPeriod] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN te.Hours ELSE 0 END), 0) AS normalHours,
+         COALESCE(SUM(CASE WHEN p.IsHobby = 1 THEN te.Hours ELSE 0 END), 0) AS hobbyHours
+       FROM TimeEntries te
+       INNER JOIN Tasks t ON te.TaskId = t.Id
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ? AND te.WorkDate >= ? AND te.WorkDate <= ?${hoursProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0`,
+      periodHoursParams
+    );
+
+    const topUserParams: Array<number | string> = [organizationId, from, to];
+    if (projectId) topUserParams.push(projectId);
+    const [topUsers] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.Id, u.FirstName, u.LastName, u.Username, COALESCE(SUM(te.Hours), 0) AS Hours
+       FROM TimeEntries te
+       INNER JOIN Users u ON te.UserId = u.Id
+       INNER JOIN Tasks t ON te.TaskId = t.Id
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ? AND te.WorkDate >= ? AND te.WorkDate <= ?${hoursProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+       GROUP BY u.Id, u.FirstName, u.LastName, u.Username
+       HAVING COALESCE(SUM(te.Hours), 0) > 0
+       ORDER BY Hours DESC`,
+      topUserParams
+    );
+
+    const ticketParams: Array<number | string> = [organizationId];
+    let ticketProjectSql = '';
+    if (projectId) {
+      ticketProjectSql = ' AND t.ProjectId = ?';
+      ticketParams.push(projectId);
+    }
+    const [ticketStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COUNT(*) AS totalTickets,
+         SUM(CASE WHEN tsv.StatusType = 'open' THEN 1 ELSE 0 END) AS openTickets,
+         SUM(CASE WHEN tsv.StatusType = 'in_progress' THEN 1 ELSE 0 END) AS inProgressTickets,
+         SUM(CASE WHEN tsv.StatusType = 'waiting' THEN 1 ELSE 0 END) AS waitingResponseTickets,
+         SUM(CASE WHEN tsv.StatusType = 'resolved' THEN 1 ELSE 0 END) AS resolvedTickets,
+         SUM(CASE WHEN tsv.StatusType = 'closed' THEN 1 ELSE 0 END) AS closedTickets,
+         SUM(CASE WHEN COALESCE(tsv.IsClosed, 0) = 0 THEN 1 ELSE 0 END) AS unresolvedTickets
+       FROM Tickets t
+       LEFT JOIN TicketStatusValues tsv ON t.StatusId = tsv.Id
+       WHERE t.OrganizationId = ?${ticketProjectSql}`,
+      ticketParams
+    );
+
+    const detailAnalytics = {
+      customers: { total: Number(customerStats[0]?.total || 0) },
+      users: {
+        total: Number(userStats[0]?.totalUsers || 0),
+        admins: Number(userStats[0]?.adminUsers || 0),
+        regular: Number(userStats[0]?.regularUsers || 0),
+      },
+      projects: {
+        total: Number(projectDetailStats[0]?.totalProjects || 0),
+        active: Number(projectDetailStats[0]?.activeProjects || 0),
+        completed: Number(projectDetailStats[0]?.completedProjects || 0),
+      },
+      tasks: {
+        total: Number(taskDetailStats[0]?.totalTasks || 0),
+        completed: Number(taskDetailStats[0]?.completedTasks || 0),
+        inProgress: Number(taskDetailStats[0]?.inProgressTasks || 0),
+        overdue: Number(taskDetailStats[0]?.overdueTasks || 0),
+        unplanned: Number(unplannedDetailStats[0]?.unplannedTasks || 0),
+      },
+      tickets: {
+        total: Number(ticketStats[0]?.totalTickets || 0),
+        open: Number(ticketStats[0]?.openTickets || 0),
+        inProgress: Number(ticketStats[0]?.inProgressTickets || 0),
+        waitingResponse: Number(ticketStats[0]?.waitingResponseTickets || 0),
+        resolved: Number(ticketStats[0]?.resolvedTickets || 0),
+        closed: Number(ticketStats[0]?.closedTickets || 0),
+        unresolvedCount: Number(ticketStats[0]?.unresolvedTickets || 0),
+      },
+      hours: {
+        totalEstimated: Number(hoursEstimated[0]?.totalEstimatedHours || 0),
+        totalWorked: Number(hoursWorkedAll[0]?.totalWorkedHours || 0),
+        thisWeek: Number(hoursWeek[0]?.normalHours || 0),
+        thisPeriod: Number(hoursPeriod[0]?.normalHours || 0),
+        totalEstimatedHobby: Number(hoursEstimated[0]?.totalEstimatedHoursHobby || 0),
+        totalWorkedHobby: Number(hoursWorkedAll[0]?.totalWorkedHoursHobby || 0),
+        thisWeekHobby: Number(hoursWeek[0]?.hobbyHours || 0),
+        thisPeriodHobby: Number(hoursPeriod[0]?.hobbyHours || 0),
+      },
+      topProjects: topProjects.slice(0, 5).map((row) => ({
+        id: Number(row.Id),
+        name: String(row.ProjectName || ''),
+        hours: Number(row.Hours || 0),
+      })),
+      topUsers: topUsers.slice(0, 5).map((row) => ({
+        id: Number(row.Id),
+        name:
+          row.FirstName && row.LastName
+            ? `${row.FirstName} ${row.LastName}`
+            : String(row.Username || ''),
+        hours: Number(row.Hours || 0),
+      })),
+    };
+
+    // Evolution series (Grafana-style): cumulative volume, hours by user, completions, mix charts.
+    const evolutionDays = enumerateDays(from, to);
+
+    const [taskBaselineRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.CreatedAt < ?`,
+      [...taskParams, `${from} 00:00:00`]
+    );
+    const [taskDailyRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(t.CreatedAt) AS Day, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.CreatedAt >= ? AND t.CreatedAt < ?
+       GROUP BY DATE(t.CreatedAt)`,
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+
+    const projectFilterSql = projectId ? ' AND p.Id = ?' : '';
+    const [projectBaselineRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) AS Cnt
+       FROM Projects p
+       WHERE p.OrganizationId = ?${projectFilterSql}
+         AND p.CreatedAt < ?`,
+      projectId
+        ? [organizationId, projectId, `${from} 00:00:00`]
+        : [organizationId, `${from} 00:00:00`]
+    );
+    const [projectDailyRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(p.CreatedAt) AS Day, COUNT(*) AS Cnt
+       FROM Projects p
+       WHERE p.OrganizationId = ?${projectFilterSql}
+         AND p.CreatedAt >= ? AND p.CreatedAt < ?
+       GROUP BY DATE(p.CreatedAt)`,
+      projectId
+        ? [organizationId, projectId, `${from} 00:00:00`, `${to} 23:59:59.999`]
+        : [organizationId, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+
+    const taskDailyMap = new Map<string, number>();
+    for (const row of taskDailyRows) {
+      taskDailyMap.set(String(row.Day).slice(0, 10), Number(row.Cnt || 0));
+    }
+    const projectDailyMap = new Map<string, number>();
+    for (const row of projectDailyRows) {
+      projectDailyMap.set(String(row.Day).slice(0, 10), Number(row.Cnt || 0));
+    }
+    const taskCumulative = buildCumulativeSeries(
+      evolutionDays,
+      taskDailyMap,
+      Number(taskBaselineRows[0]?.Cnt || 0)
+    );
+    const projectCumulative = buildCumulativeSeries(
+      evolutionDays,
+      projectDailyMap,
+      Number(projectBaselineRows[0]?.Cnt || 0)
+    );
+    const volumeTrend = evolutionDays.map((date, index) => ({
+      date,
+      tasks: taskCumulative[index]?.value || 0,
+      projects: projectCumulative[index]?.value || 0,
+    }));
+
+    const displayUserName = (row: RowDataPacket) =>
+      row.FirstName && row.LastName
+        ? `${row.FirstName} ${row.LastName}`
+        : String(row.Username || 'Unassigned');
+
+    // Cumulative stock by current status / type (CreatedAt), and cumulative completions by assignee.
+    const [statusBaselineRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(tsv.StatusName, 'No status') AS Metric, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.CreatedAt < ?
+       GROUP BY COALESCE(tsv.StatusName, 'No status')`,
+      [...taskParams, `${from} 00:00:00`]
+    );
+    const [statusDailyRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(t.CreatedAt) AS Day, COALESCE(tsv.StatusName, 'No status') AS Metric, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND t.CreatedAt >= ? AND t.CreatedAt < ?
+       GROUP BY DATE(t.CreatedAt), COALESCE(tsv.StatusName, 'No status')`,
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+    const statusBaselines = new Map<string, number>();
+    for (const row of statusBaselineRows) {
+      statusBaselines.set(String(row.Metric || 'No status'), Number(row.Cnt || 0));
+    }
+    const tasksByStatus = buildCumulativeMultiSeries(
+      evolutionDays,
+      statusDailyRows.map((row) => ({
+        date: String(row.Day).slice(0, 10),
+        metric: String(row.Metric || 'No status'),
+        value: Number(row.Cnt || 0),
+      })),
+      statusBaselines,
+      12
+    );
+
+    const [typeBaselineRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(tt.TypeName, 'No type') AS Metric, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskTypeValues tt ON tt.Id = t.TaskType
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+         AND t.CreatedAt < ?
+       GROUP BY COALESCE(tt.TypeName, 'No type')`,
+      [...taskParams, `${from} 00:00:00`]
+    );
+    const [typeDailyRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(t.CreatedAt) AS Day, COALESCE(tt.TypeName, 'No type') AS Metric, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskTypeValues tt ON tt.Id = t.TaskType
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+         AND t.CreatedAt >= ? AND t.CreatedAt < ?
+       GROUP BY DATE(t.CreatedAt), COALESCE(tt.TypeName, 'No type')`,
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+    const typeBaselines = new Map<string, number>();
+    for (const row of typeBaselineRows) {
+      typeBaselines.set(String(row.Metric || 'No type'), Number(row.Cnt || 0));
+    }
+    const tasksByType = buildCumulativeMultiSeries(
+      evolutionDays,
+      typeDailyRows.map((row) => ({
+        date: String(row.Day).slice(0, 10),
+        metric: String(row.Metric || 'No type'),
+        value: Number(row.Cnt || 0),
+      })),
+      typeBaselines,
+      8
+    );
+
+    const [userCompleteBaselineRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.Id AS UserId, u.FirstName, u.LastName, u.Username, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       LEFT JOIN Users u ON u.Id = t.AssignedTo
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.IsClosed, 0) = 1
+         AND COALESCE(tsv.IsCancelled, 0) = 0
+         AND t.UpdatedAt < ?
+       GROUP BY u.Id, u.FirstName, u.LastName, u.Username`,
+      [...taskParams, `${from} 00:00:00`]
+    );
+    const [userCompleteDailyRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(t.UpdatedAt) AS Day, u.Id AS UserId, u.FirstName, u.LastName, u.Username, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       LEFT JOIN Users u ON u.Id = t.AssignedTo
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.IsClosed, 0) = 1
+         AND COALESCE(tsv.IsCancelled, 0) = 0
+         AND t.UpdatedAt >= ? AND t.UpdatedAt < ?
+       GROUP BY DATE(t.UpdatedAt), u.Id, u.FirstName, u.LastName, u.Username`,
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+    const userCompleteBaselines = new Map<string, number>();
+    for (const row of userCompleteBaselineRows) {
+      userCompleteBaselines.set(displayUserName(row), Number(row.Cnt || 0));
+    }
+    const tasksByUser = buildCumulativeMultiSeries(
+      evolutionDays,
+      userCompleteDailyRows.map((row) => ({
+        date: String(row.Day).slice(0, 10),
+        metric: displayUserName(row),
+        value: Number(row.Cnt || 0),
+      })),
+      userCompleteBaselines,
+      8
+    );
+
+    const [hoursByUserRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DATE(te.WorkDate) AS Day, u.Id AS UserId, u.FirstName, u.LastName, u.Username,
+              COALESCE(SUM(te.Hours), 0) AS Hours
+       FROM TimeEntries te
+       INNER JOIN Users u ON u.Id = te.UserId
+       INNER JOIN Tasks t ON te.TaskId = t.Id
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       WHERE p.OrganizationId = ? AND te.WorkDate >= ? AND te.WorkDate <= ?${hoursProjectSql}
+         AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)
+       GROUP BY DATE(te.WorkDate), u.Id, u.FirstName, u.LastName, u.Username`,
+      hoursParamsCurrent
+    );
+    const hoursByUserDaily = hoursByUserRows
+      .map((row) => ({
+        date: String(row.Day).slice(0, 10),
+        metric:
+          row.FirstName && row.LastName
+            ? `${row.FirstName} ${row.LastName}`
+            : String(row.Username || `User ${row.UserId}`),
+        value: Number(row.Hours || 0),
+      }))
+      .filter((row) => row.value > 0);
+    // Weekly cumulative hours — daily spikes are unreadable over long ranges.
+    const hoursByUserWeekly = aggregateRowsByWeek(hoursByUserDaily);
+    const hoursWeeks = enumerateWeeks(from, to);
+    const hoursByUserSeries = buildCumulativeMultiSeries(
+      hoursWeeks,
+      hoursByUserWeekly,
+      new Map(),
+      5
+    );
+
+    const [completionsByUserRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.Id AS UserId, u.FirstName, u.LastName, u.Username, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       LEFT JOIN Users u ON u.Id = t.AssignedTo
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.IsClosed, 0) = 1
+         AND COALESCE(tsv.IsCancelled, 0) = 0
+         AND t.UpdatedAt >= ? AND t.UpdatedAt < ?
+       GROUP BY u.Id, u.FirstName, u.LastName, u.Username
+       ORDER BY Cnt DESC`,
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+    );
+    const completionsByUser = completionsByUserRows.slice(0, 8).map((row) => ({
+      name:
+        row.FirstName && row.LastName
+          ? `${row.FirstName} ${row.LastName}`
+          : String(row.Username || 'Unassigned'),
+      hours: Number(row.Cnt || 0),
+    }));
+
+    const [openByCustomerRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(c.ExternalName, c.Name, 'No customer') AS CustomerName, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Customers c ON c.Id = COALESCE(t.CustomerId, p.CustomerId)
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.IsClosed, 0) = 0
+         AND COALESCE(tsv.IsCancelled, 0) = 0
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+       GROUP BY COALESCE(c.ExternalName, c.Name, 'No customer')
+       ORDER BY Cnt DESC`,
+      taskParams
+    );
+    const customerColors = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#64748b', '#9ca3af'];
+    const openByCustomer = openByCustomerRows.slice(0, 8).map((row, index) => ({
+      key: `customer-${index}`,
+      label: String(row.CustomerName || 'No customer'),
+      value: Number(row.Cnt || 0),
+      color: customerColors[index % customerColors.length],
+    }));
+
+    const [taskTypeRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(tt.TypeName, 'No type') AS TypeName, COUNT(*) AS Cnt
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskTypeValues tt ON tt.Id = t.TaskType
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       WHERE p.OrganizationId = ?${taskProjectSql}
+         AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+       GROUP BY COALESCE(tt.TypeName, 'No type')
+       ORDER BY Cnt DESC`,
+      taskParams
+    );
+    const typeColors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#64748b'];
+    const taskTypeMix = taskTypeRows.slice(0, 7).map((row, index) => ({
+      key: `type-${index}`,
+      label: String(row.TypeName || 'No type'),
+      value: Number(row.Cnt || 0),
+      color: typeColors[index % typeColors.length],
+    }));
+
     return res.json({
       success: true,
       data: {
@@ -509,6 +1017,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
           redProjects: healthCounts.red,
           amberProjects: healthCounts.amber,
         },
+        detailAnalytics,
         charts: {
           rag: [
             { key: 'green', label: 'Green', value: healthCounts.green, color: '#16a34a' },
@@ -541,6 +1050,17 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
             { key: 'unscheduled', label: 'Unscheduled', value: Number(taskHoursSplit[0]?.UnscheduledLeaf || 0), color: '#ea580c' },
           ],
           ragTrend: Array.from(trendByDate.values()),
+          volumeTrend,
+          tasksByStatus,
+          tasksByUser,
+          tasksByType,
+          hoursByUser: {
+            seriesKeys: hoursByUserSeries.seriesKeys,
+            points: hoursByUserSeries.points,
+          },
+          completionsByUser,
+          openByCustomer,
+          taskTypeMix,
         },
         taskAnalytics: await queryTaskAnalytics({
           organizationId,
