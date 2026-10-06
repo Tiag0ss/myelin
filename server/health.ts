@@ -43,6 +43,16 @@ export async function healthHandler(_req: Request, res: Response): Promise<void>
   }
 }
 
+/** Process is listening — used by Docker/Portainer. Must not depend on DB/Redis. */
+export function liveHealthHandler(_req: Request, res: Response): void {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+}
+
 export function registerHealthRoute(server: Application): void {
+  server.get('/health/live', liveHealthHandler);
   server.get('/health', healthHandler);
 }

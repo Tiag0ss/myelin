@@ -254,6 +254,7 @@ docker run -d \
 
 ```
 GET http://localhost:3000/health
+GET http://localhost:3000/health/live
 ```
 
 Example response:
@@ -268,7 +269,9 @@ Example response:
 }
 ```
 
-`redis` is `connected`, `disabled`, or `error`. Redis failures do **not** fail the health check — the app falls back to the database.
+`redis` is `connected`, `disabled`, or `error`. Redis failures do **not** fail `/health` — the app falls back to the database.
+
+Docker/Portainer liveness uses **`/health/live`** (HTTP 200 once the process is listening). It does not probe the database, so a slow or brief DB blip cannot mark the container unhealthy during image upgrades.
 
 If you see stale lists after a create/update with Redis enabled, confirm invalidation is wired on that write route; as a fallback, restart the API or flush Redis keys matching your `REDIS_KEY_PREFIX` (default `pm:*`).
 

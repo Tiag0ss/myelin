@@ -33,6 +33,13 @@ describe('Health Check Endpoint', () => {
     mockedTestRedisConnection.mockResolvedValue(true);
   });
 
+  it('returns 200 on /health/live without probing the database', async () => {
+    const response = await request(app).get('/health/live');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('healthy');
+    expect(mockedTestConnection).not.toHaveBeenCalled();
+  });
+
   it('should return 200 when database is connected', async () => {
     const response = await request(app).get('/health');
     expect(response.status).toBe(200);
