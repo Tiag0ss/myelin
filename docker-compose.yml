@@ -49,7 +49,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "const r=require('http').get('http://127.0.0.1:3000/health/live',res=>process.exit(res.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(7000,()=>{r.destroy();process.exit(1);})",
+          "const p=process.env.PORT||'3000';const r=require('http').get('http://127.0.0.1:'+p+'/health/live',res=>process.exit(res.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(7000,()=>{r.destroy();process.exit(1);})",
         ]
       interval: 30s
       timeout: 8s

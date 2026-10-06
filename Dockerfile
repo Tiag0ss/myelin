@@ -82,16 +82,16 @@ RUN mkdir -p public/uploads/branding public/uploads/applications logs \
 
 USER nodejs
 
-# Expose port
+# Default listen port (override with PORT at runtime). Host publish can be any host:container mapping.
 EXPOSE 3000
 
-# Set environment variables
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Liveness only (127.0.0.1 avoids Alpine localhost→::1). /health still probes DB for operators.
+# Liveness inside the container only — uses PORT (not the host-mapped port).
+# 127.0.0.1 avoids Alpine localhost→::1. /health still probes DB for operators.
 HEALTHCHECK --interval=30s --timeout=8s --start-period=120s --retries=5 \
-  CMD node -e "const r=require('http').get('http://127.0.0.1:3000/health/live',res=>process.exit(res.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(7000,()=>{r.destroy();process.exit(1);})"
+  CMD node -e "const p=process.env.PORT||'3000';const r=require('http').get('http://127.0.0.1:'+p+'/health/live',res=>process.exit(res.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(7000,()=>{r.destroy();process.exit(1);})"
 
 # Start the application
 CMD ["node", "dist/server/index.js"]

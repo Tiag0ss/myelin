@@ -271,7 +271,9 @@ Example response:
 
 `redis` is `connected`, `disabled`, or `error`. Redis failures do **not** fail `/health` — the app falls back to the database.
 
-Docker/Portainer liveness uses **`/health/live`** (HTTP 200 once the process is listening). It does not probe the database, so a slow or brief DB blip cannot mark the container unhealthy during image upgrades.
+Docker/1Panel/Portainer liveness uses **`/health/live`** (HTTP 200 once the process is listening). It does not probe the database, so a slow or brief DB blip cannot mark the container unhealthy during image upgrades.
+
+The image `HEALTHCHECK` runs **inside** the container against `127.0.0.1:$PORT` (default `3000`). Host port mapping (`8080:3000`, `3001:3000`, …) does **not** affect it. If you change the internal listen port, set `PORT` to that same value so the app and the health check stay aligned.
 
 If you see stale lists after a create/update with Redis enabled, confirm invalidation is wired on that write route; as a fallback, restart the API or flush Redis keys matching your `REDIS_KEY_PREFIX` (default `pm:*`).
 
