@@ -90,7 +90,7 @@ export const chromePt: ChromeMessages = {
   openMenu: 'Abrir menu',
   closeMenu: 'Fechar menu',
   userMenu: 'Menu do utilizador',
-  organizationSwitcher: 'Seletor de organização',
+  organizationSwitcher: 'Selector de organização',
   activeOrganization: 'Organização activa',
   help: 'Ajuda',
   documentation: 'Documentação',

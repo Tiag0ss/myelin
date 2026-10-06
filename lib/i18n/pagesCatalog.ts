@@ -516,7 +516,7 @@ export const pagesPt = pages({
   approvals: {
     title: 'Aprovações',
     vacations: 'Férias',
-    outOfOffice: 'Fora do escritório',
+    outOfOffice: 'Ausência',
     pending: 'Pendente',
     approved: 'Aprovado',
     rejected: 'Rejeitado',
