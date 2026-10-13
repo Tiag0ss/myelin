@@ -86,3 +86,6 @@ package-lock.json
 !/public/uploads/branding/.gitkeep
 /public/uploads/applications/*
 !/public/uploads/applications/.gitkeep
+
+# Generated Synapse vault pack (rebuild with scripts/pack-synapse-myelin-docs.sh)
+docs/synapse-myelin-manual.zip
