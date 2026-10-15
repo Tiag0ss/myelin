@@ -1,6 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useI18n } from '@/lib/i18n/provider';
+import { LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n/config';
 
 export const authFieldClass =
   'w-full rounded-md border border-[var(--pm-border)] bg-[var(--pm-surface)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none placeholder:text-[var(--pm-muted)] focus:border-[var(--pm-accent)]';
@@ -35,11 +37,31 @@ export default function AuthShell({
   footer,
   children,
 }: AuthShellProps) {
+  const { t, locale, setLocale } = useI18n();
   const brand = (companyName || '').trim() || 'Myelin';
   const initial = brand.charAt(0).toUpperCase() || 'P';
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+        <label className="sr-only" htmlFor="auth-locale-select">
+          {t('chrome.language')}
+        </label>
+        <select
+          id="auth-locale-select"
+          className="rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-2.5 py-1.5 text-xs text-[var(--pm-text)] shadow-sm outline-none focus:border-[var(--pm-accent)]"
+          value={locale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+          aria-label={t('chrome.language')}
+        >
+          {LOCALES.map((l) => (
+            <option key={l} value={l}>
+              {LOCALE_LABELS[l]}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className={`w-full ${maxWidthClassName}`}>
         <div className="mb-5 flex flex-col items-center text-center">
           {companyLogoUrl ? (

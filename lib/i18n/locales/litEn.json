@@ -3718,5 +3718,10 @@
   "tasksPerUser": "Tasks per user",
   "tasksPerType": "Tasks per type",
   "cumulativeCompletionsHint": "Cumulative completed tasks credited to the current assignee.",
-  "hoursLoggedByUserHint": "Cumulative hours by week (top contributors in the selected period)."
+  "hoursLoggedByUserHint": "Cumulative hours by week (top contributors in the selected period).",
+  "whatsNewCurrentVersion": "Current version: {version}",
+  "whatsNewEmpty": "No release notes to show.",
+  "whatsNewGotIt": "Got it",
+  "whatsNewSaving": "Saving…",
+  "whatsNewSinceLastVisit": "What’s new since your last visit"
 }

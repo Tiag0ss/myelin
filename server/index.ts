@@ -98,6 +98,7 @@ import reportsRoutes from './modules/reporting/reports';
 import reportingRoutes from './modules/reporting/reporting';
 import ssoRoutes from './modules/auth/sso';
 import i18nLitRoutes from './modules/i18n/lit';
+import whatsNewRoutes from './modules/whats-new/whatsNew';
 import { ensureAiAssistantViews } from './utils/aiAssistantViews';
 import { startWorkSummaryScheduler } from './utils/workSummaryScheduler';
 import { startDueDateReminderScheduler } from './utils/dueDateReminderScheduler';
@@ -340,6 +341,7 @@ app.prepare().then(async () => {
   server.use('/api/sso', ssoRoutes);
   // Public lit catalogs — Express owns /api/*, so this cannot be Next App Router only.
   server.use('/api/i18n', i18nLitRoutes);
+  server.use('/api/whats-new', whatsNewRoutes);
 
   // Error handling middleware
   server.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

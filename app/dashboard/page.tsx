@@ -33,7 +33,13 @@ import PageStickyChrome from '@/components/PageStickyChrome';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import EmptyState from '@/components/EmptyState';
 import ConfirmAlertModal from '@/components/ConfirmAlertModal';
+import WhatsNewModal from '@/components/WhatsNewModal';
 import TaskDetailModal from '@/components/TaskDetailModal';
+import {
+  fetchWhatsNew,
+  markWhatsNewSeen,
+  type WhatsNewEntry,
+} from '@/lib/api/whatsNew';
 import { TaskAnalyticsCharts } from '@/components/reporting/TaskAnalyticsCharts';
 import type { TaskAnalyticsData } from '@/lib/reporting/taskAnalytics';
 import SegmentedTagBadge from '@/components/tags/SegmentedTagBadge';
@@ -1277,6 +1283,11 @@ function DashboardContent() {
     message: string;
     onConfirm?: () => void;
   } | null>(null);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [whatsNewEntries, setWhatsNewEntries] = useState<WhatsNewEntry[]>([]);
+  const [whatsNewCurrentVersion, setWhatsNewCurrentVersion] = useState('');
+  const [whatsNewAcknowledging, setWhatsNewAcknowledging] = useState(false);
+  const whatsNewCheckedRef = useRef(false);
   const [summaryStats, setSummaryStats] = useState({
     totalProjects: 0,
     totalTasks: 0,
@@ -2737,6 +2748,63 @@ function DashboardContent() {
 
     loadKanbanTasks();
   }, [user, token, featureFlagsLoaded, isCustomerUser, activeTab]);
+
+  useEffect(() => {
+    if (!user || !token || !featureFlagsLoaded || isCustomerUser) return;
+    if (whatsNewCheckedRef.current) return;
+    whatsNewCheckedRef.current = true;
+
+    let cancelled = false;
+    const loadWhatsNew = async () => {
+      try {
+        const payload = await fetchWhatsNew(token);
+        if (cancelled) return;
+        setWhatsNewCurrentVersion(payload.currentVersion);
+        setWhatsNewEntries(payload.entries);
+        if (payload.entries.length === 0) return;
+        try {
+          const dismissed = sessionStorage.getItem(
+            `myelin.whatsNew.dismissed.${payload.currentVersion}`
+          );
+          if (dismissed === '1') return;
+        } catch {
+          // sessionStorage may be unavailable
+        }
+        setWhatsNewOpen(true);
+      } catch {
+        // Non-blocking: dashboard still works if What’s New fails
+      }
+    };
+
+    void loadWhatsNew();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, token, featureFlagsLoaded, isCustomerUser]);
+
+  const handleWhatsNewAcknowledge = async () => {
+    if (!token) {
+      setWhatsNewOpen(false);
+      return;
+    }
+    setWhatsNewAcknowledging(true);
+    try {
+      try {
+        sessionStorage.setItem(
+          `myelin.whatsNew.dismissed.${whatsNewCurrentVersion || 'current'}`,
+          '1'
+        );
+      } catch {
+        // ignore
+      }
+      await markWhatsNewSeen(token);
+    } catch {
+      // Still close; user can reopen from the menu
+    } finally {
+      setWhatsNewAcknowledging(false);
+      setWhatsNewOpen(false);
+    }
+  };
   
   if (isLoading) {
     return (
@@ -4510,6 +4578,20 @@ function DashboardContent() {
       )}
 
       <ScrollToTopButton scrollContainerRef={isCustomerUser ? undefined : scrollContainerRef} />
+
+      {!isCustomerUser && (
+        <WhatsNewModal
+          isOpen={whatsNewOpen}
+          mode="delta"
+          currentVersion={whatsNewCurrentVersion}
+          entries={whatsNewEntries}
+          acknowledgeOnClose
+          acknowledging={whatsNewAcknowledging}
+          onClose={() => {
+            void handleWhatsNewAcknowledge();
+          }}
+        />
+      )}
     </div>
   );
 }

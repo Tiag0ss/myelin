@@ -26,7 +26,8 @@
     "desktop:pack": "electron-builder --projectDir extras/desktop --dir",
     "desktop:build": "electron-builder --projectDir extras/desktop --win nsis",
     "desktop:build:linux": "electron-builder --projectDir extras/desktop --linux AppImage",
-    "test:unit": "jest --testPathPattern=unit"
+    "test:unit": "jest --testPathPattern=unit",
+    "whats-new:generate": "node scripts/generate-whats-new-changelog.mjs"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.5",

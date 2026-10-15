@@ -34,6 +34,7 @@ export type ChromeMessages = {
   signedInAs: string;
   downloads: string;
   userManual: string;
+  whatsNew: string;
 };
 
 export const chromeEn: ChromeMessages = {
@@ -72,6 +73,7 @@ export const chromeEn: ChromeMessages = {
   signedInAs: 'Signed in as {name}',
   downloads: 'Downloads',
   userManual: 'User Manual',
+  whatsNew: "What's New",
 };
 
 export const chromePt: ChromeMessages = {
@@ -110,6 +112,7 @@ export const chromePt: ChromeMessages = {
   signedInAs: 'Sessão iniciada como {name}',
   downloads: 'Transferências',
   userManual: 'Manual do utilizador',
+  whatsNew: 'Novidades',
 };
 
 export const chromeEs: ChromeMessages = {
@@ -148,6 +151,7 @@ export const chromeEs: ChromeMessages = {
   signedInAs: 'Sesión iniciada como {name}',
   downloads: 'Descargas',
   userManual: 'Manual de usuario',
+  whatsNew: 'Novedades',
 };
 
 export const chromeFr: ChromeMessages = {
@@ -186,4 +190,5 @@ export const chromeFr: ChromeMessages = {
   signedInAs: 'Connecté en tant que {name}',
   downloads: 'Téléchargements',
   userManual: 'Manuel utilisateur',
+  whatsNew: 'Nouveautés',
 };

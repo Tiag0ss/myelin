@@ -19,6 +19,7 @@ const MODULES = [
   'portal',
   'integrations',
   'search',
+  'whats-new',
 ];
 
 describe('server/modules layout', () => {

@@ -3718,5 +3718,10 @@
   "tasksPerUser": "Tâches par utilisateur",
   "tasksPerType": "Tâches par type",
   "cumulativeCompletionsHint": "Tâches terminées cumulées créditées au responsable actuel.",
-  "hoursLoggedByUserHint": "Heures cumulées par semaine (principaux contributeurs sur la période sélectionnée)."
+  "hoursLoggedByUserHint": "Heures cumulées par semaine (principaux contributeurs sur la période sélectionnée).",
+  "whatsNewCurrentVersion": "Current version: {version}",
+  "whatsNewEmpty": "No release notes to show.",
+  "whatsNewGotIt": "Got it",
+  "whatsNewSaving": "Saving…",
+  "whatsNewSinceLastVisit": "What’s new since your last visit"
 }

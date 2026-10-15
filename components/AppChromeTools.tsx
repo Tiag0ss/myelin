@@ -43,8 +43,11 @@ import {
   Download,
   LogOut,
   Settings,
+  Sparkles,
   User,
 } from 'lucide-react';
+import WhatsNewModal from '@/components/WhatsNewModal';
+import { fetchWhatsNew, type WhatsNewEntry } from '@/lib/api/whatsNew';
 
 interface Organization {
   Id: number;
@@ -232,6 +235,10 @@ export default function AppChromeTools({
   } | null>(null);
   const [downloadsCatalogLoading, setDownloadsCatalogLoading] = useState(false);
   const [downloadsCatalogError, setDownloadsCatalogError] = useState('');
+  const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
+  const [whatsNewEntries, setWhatsNewEntries] = useState<WhatsNewEntry[]>([]);
+  const [whatsNewCurrentVersion, setWhatsNewCurrentVersion] = useState('');
+  const [whatsNewLoading, setWhatsNewLoading] = useState(false);
   
   // Modal type: 'task' | 'organization' | 'project' | 'customer' | 'timeEntry' | 'callRecord' | null
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -1506,6 +1513,27 @@ export default function AppChromeTools({
     }
   };
 
+  const openWhatsNewFromMenu = async () => {
+    if (!token || isCustomerUser) return;
+    setDropdownOpen(false);
+    if (isFloatingMode) {
+      setIsFloatingSidebarOpen(false);
+    }
+    setWhatsNewLoading(true);
+    try {
+      const payload = await fetchWhatsNew(token, { full: true });
+      setWhatsNewCurrentVersion(payload.currentVersion);
+      setWhatsNewEntries(payload.entries);
+      setShowWhatsNewModal(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t('chrome.requestFailed');
+      showToast({ type: 'error', title: t('chrome.whatsNew'), message });
+    } finally {
+      setWhatsNewLoading(false);
+    }
+  };
+
   // Close all modals and reset forms
   const closeAllModals = () => {
     setActiveModal(null);
@@ -2706,6 +2734,15 @@ export default function AppChromeTools({
                           <BookOpen size={16} className="shrink-0 text-[var(--pm-muted)]" />
                           {t('chrome.userManual')}
                         </Link>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--pm-text)] hover:bg-[var(--pm-surface-2)] disabled:opacity-60"
+                          onClick={() => void openWhatsNewFromMenu()}
+                          disabled={whatsNewLoading}
+                        >
+                          <Sparkles size={16} className="shrink-0 text-[var(--pm-muted)]" />
+                          {t('chrome.whatsNew')}
+                        </button>
                       </>
                     )}
                     {(!!user.isAdmin || permissions?.canManageUsers) && (
@@ -2812,6 +2849,14 @@ export default function AppChromeTools({
                         >
                           📘 {t('chrome.userManual')}
                         </Link>
+                        <button
+                          type="button"
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60"
+                          onClick={() => void openWhatsNewFromMenu()}
+                          disabled={whatsNewLoading}
+                        >
+                          ✨ {t('chrome.whatsNew')}
+                        </button>
                       </>
                     )}
                     {!isCustomerUser && !shouldUseLeftSidebar && (
@@ -3375,6 +3420,14 @@ export default function AppChromeTools({
         isSubmitting={isSaving}
         onClose={closeAllModals}
         onSubmit={handleSaveCallRecord}
+      />
+
+      <WhatsNewModal
+        isOpen={showWhatsNewModal}
+        mode="full"
+        currentVersion={whatsNewCurrentVersion}
+        entries={whatsNewEntries}
+        onClose={() => setShowWhatsNewModal(false)}
       />
 
       {showDownloadsModal && (

@@ -399,6 +399,13 @@
       "Comment": "Date and time of the most recent successful login or token refresh"
     },
     {
+      "FieldName": "LastSeenAppVersion",
+      "DataType": "varchar(32)",
+      "NotNullable": false,
+      "DefaultValue": null,
+      "Comment": "Last app semver the user acknowledged via What's New dismiss on Dashboard"
+    },
+    {
       "FieldName": "AzureAdObjectId",
       "DataType": "varchar(64)",
       "NotNullable": false,

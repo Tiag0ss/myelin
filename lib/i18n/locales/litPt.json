@@ -3714,5 +3714,10 @@
   "tasksPerUser": "Tarefas por utilizador",
   "tasksPerType": "Tarefas por tipo",
   "cumulativeCompletionsHint": "Tarefas concluídas acumuladas creditadas ao responsável actual.",
-  "hoursLoggedByUserHint": "Horas acumuladas por semana (principais contribuidores no período seleccionado)."
+  "hoursLoggedByUserHint": "Horas acumuladas por semana (principais contribuidores no período seleccionado).",
+  "whatsNewCurrentVersion": "Current version: {version}",
+  "whatsNewEmpty": "No release notes to show.",
+  "whatsNewGotIt": "Got it",
+  "whatsNewSaving": "Saving…",
+  "whatsNewSinceLastVisit": "What’s new since your last visit"
 }

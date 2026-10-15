@@ -71,6 +71,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/server/database ./dist/server/database
 # UI lit catalogs are read at runtime via fs (not bundled into the client graph).
 COPY --from=builder /app/lib/i18n/locales ./lib/i18n/locales
+# What’s New changelog (static JSON; read at runtime by /api/whats-new).
+COPY --from=builder /app/docs/whats-new ./docs/whats-new
 
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules

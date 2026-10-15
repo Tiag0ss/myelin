@@ -1,0 +1,82 @@
+{
+  "versions": [
+    {
+      "version": "1.0.0",
+      "date": "2026-09-06",
+      "title": "Initial release",
+      "items": [
+        "Organizations, members, and role-based permissions",
+        "Customers and customer portal for ticket collaboration",
+        "Projects, tasks, subtasks, tags, and Kanban boards",
+        "Tickets with SLA rules and attachments",
+        "Resource planning Gantt with allocations and calendars",
+        "Time tracking, active timers, and call records",
+        "Dashboard KPIs, portfolio, work summary, and reporting hub",
+        "Applications and releases with PDF export",
+        "Integrations for Jira, GitHub, Gitea, Outlook, and email queue",
+        "Optional Redis cache, API tokens, and IDE Kanban extensions"
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "date": "2026-09-21",
+      "title": "Session, reporting, and navigation",
+      "items": [
+        "Stronger session and token handling for signed-in users",
+        "Theme palette selection across the UI",
+        "Pinned navigation and clearer project filters",
+        "Commit history graph and branch metadata on projects",
+        "Reporting hub CSV export improvements",
+        "Unplanned-task filtering and planning drag auto-scroll"
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-10-03",
+      "title": "Myelin branding and multi-language UI",
+      "items": [
+        "Product rebranded to Myelin across the live app",
+        "UI translations for English, Portuguese, Spanish, and French",
+        "CI tagging support for versioned Docker releases"
+      ]
+    },
+    {
+      "version": "1.1.1",
+      "date": "2026-10-04",
+      "title": "Organization analytics",
+      "items": [
+        "Organization detail analytics with multi-series charts",
+        "Richer reporting metrics by status, user, and task type"
+      ]
+    },
+    {
+      "version": "1.1.2",
+      "date": "2026-10-06",
+      "title": "Runtime locales and proxy support",
+      "items": [
+        "Locale catalogs available at runtime in Docker images",
+        "Trust-proxy settings for correct client IPs behind reverse proxies",
+        "Portuguese translation consistency updates"
+      ]
+    },
+    {
+      "version": "1.1.3",
+      "date": "2026-10-06",
+      "title": "Container health checks",
+      "items": [
+        "Dedicated liveness endpoint for container health checks",
+        "Docker health probe aligned with runtime PORT"
+      ]
+    },
+    {
+      "version": "1.1.4",
+      "date": "2026-10-13",
+      "title": "Manual and ops polish",
+      "items": [
+        "In-app Myelin user manual and getting-started notes",
+        "Dynamic Docker health check port and clearer deploy docs",
+        "Portuguese wording refinements for organization switcher and out of office"
+      ]
+    }
+  ]
+}
