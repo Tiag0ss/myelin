@@ -7,11 +7,14 @@ import logger from '../../utils/logger';
 import {
   toolCreateTask,
   toolGetDoc,
+  toolGetSprint,
   toolGetTask,
   toolListDocs,
   toolListMyTasks,
   toolListProjectMeta,
+  toolListSprints,
   toolResolveContext,
+  toolUpdateSprint,
   toolUpdateTask,
   type McpToolContext,
 } from './toolHandlers';
@@ -36,7 +39,8 @@ function ctxFromReq(req: AuthRequest): McpToolContext {
 function createServerForRequest(req: AuthRequest): McpServer {
   const server = new McpServer({
     name: 'myelin',
-    version: '1.0.0',
+    // Bump when tools change so clients that cache tools/list pick up new tools.
+    version: '1.2.1',
   });
 
   const run = async (
@@ -124,11 +128,63 @@ function createServerForRequest(req: AuthRequest): McpServer {
   );
 
   server.registerTool(
+    'list_sprints',
+    {
+      description:
+        'List sprints for effective MCP projects (optional projectId and status: planned|active|completed|cancelled). Each sprint includes its tasks (with Description). Empty array when the project has no sprints.',
+      inputSchema: {
+        ...commonShape,
+        projectId: z.union([z.number(), z.string()]).optional(),
+        status: z.string().optional(),
+      },
+    },
+    async (args) =>
+      run('list_sprints', () => toolListSprints(ctxFromReq(req), args as Record<string, unknown>))
+  );
+
+  server.registerTool(
+    'get_sprint',
+    {
+      description:
+        'Get one sprint by sprintId within effective MCP project scope, including its tasks (with Description).',
+      inputSchema: { ...commonShape, sprintId: z.union([z.number(), z.string()]) },
+    },
+    async (args) =>
+      run('get_sprint', () => toolGetSprint(ctxFromReq(req), args as Record<string, unknown>))
+  );
+
+  // Named sprint_update (not update_sprint) to avoid Cursor clients caching an older
+  // tools/list snapshot that never included this tool after a mid-session add.
+  server.registerTool(
+    'sprint_update',
+    {
+      description:
+        'Update a sprint in MCP scope (requires Profile McpWritesEnabled and allowWrite true). Fields: name, goal, startDate, endDate, status (planned|active|completed|cancelled), velocity. Omit a field to leave it unchanged; pass empty string for goal/dates to clear.',
+      inputSchema: {
+        ...commonShape,
+        sprintId: z.union([z.number(), z.string()]),
+        name: z.string().optional(),
+        goal: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        status: z.string().optional(),
+        velocity: z.union([z.number(), z.string()]).optional(),
+      },
+    },
+    async (args) =>
+      run('sprint_update', () => toolUpdateSprint(ctxFromReq(req), args as Record<string, unknown>))
+  );
+
+  server.registerTool(
     'list_my_tasks',
     {
       description:
-        'List tasks assigned to the authenticated user within the MCP scope (projectIds and/or Application links).',
-      inputSchema: { ...commonShape, projectId: z.union([z.number(), z.string()]).optional() },
+        'List tasks assigned to the authenticated user within the MCP scope. Each task includes Description and nested sprint { id, name, status } or null if unassigned. Optional sprintId filter.',
+      inputSchema: {
+        ...commonShape,
+        projectId: z.union([z.number(), z.string()]).optional(),
+        sprintId: z.union([z.number(), z.string()]).optional(),
+      },
     },
     async (args) =>
       run('list_my_tasks', () => toolListMyTasks(ctxFromReq(req), args as Record<string, unknown>))
@@ -137,7 +193,8 @@ function createServerForRequest(req: AuthRequest): McpServer {
   server.registerTool(
     'get_task',
     {
-      description: 'Get one of your tasks in MCP scope by taskId.',
+      description:
+        'Get one of your tasks in MCP scope by taskId. Includes nested sprint { id, name, status } or null if unassigned.',
       inputSchema: { ...commonShape, taskId: z.union([z.number(), z.string()]) },
     },
     async (args) =>
@@ -168,6 +225,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
         status: z.union([z.number(), z.string()]).optional(),
         priority: z.union([z.number(), z.string()]).optional(),
         taskType: z.union([z.number(), z.string()]).optional(),
+        sprintId: z.union([z.number(), z.string()]).nullable().optional(),
       },
     },
     async (args) =>
@@ -178,7 +236,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
     'update_task',
     {
       description:
-        'Update one of your tasks in MCP scope (requires Profile McpWritesEnabled and allowWrite true).',
+        'Update one of your tasks in MCP scope (requires Profile McpWritesEnabled and allowWrite true). Pass sprintId to assign, or null to clear.',
       inputSchema: {
         ...commonShape,
         taskId: z.union([z.number(), z.string()]),
@@ -187,6 +245,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
         status: z.union([z.number(), z.string()]).optional(),
         priority: z.union([z.number(), z.string()]).optional(),
         taskType: z.union([z.number(), z.string()]).optional(),
+        sprintId: z.union([z.number(), z.string()]).nullable().optional(),
       },
     },
     async (args) =>

@@ -45,6 +45,93 @@ export function coerceAllowWrite(raw: unknown): boolean {
   return false;
 }
 
+/**
+ * Optional nullable id for MCP args (e.g. sprintId).
+ * - `undefined` / missing → omit (no change)
+ * - `null` / `''` / `'null'` → clear (null)
+ * - positive int → set
+ * - invalid → `{ ok: false }`
+ */
+export function coerceOptionalNullableId(
+  raw: unknown
+): { ok: true; value: number | null | undefined } | { ok: false; message: string } {
+  if (raw === undefined) return { ok: true, value: undefined };
+  if (raw === null || raw === '' || raw === 'null') return { ok: true, value: null };
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return { ok: false, message: 'Invalid id (expected positive integer, null, or omit)' };
+  }
+  return { ok: true, value: Math.trunc(n) };
+}
+
+/** Sprint must belong to the task's project and that project must be in MCP scope. */
+export function sprintAllowedForProject(
+  sprintProjectId: number,
+  taskProjectId: number,
+  effectiveProjectIds: number[]
+): boolean {
+  return (
+    sprintProjectId === taskProjectId &&
+    effectiveProjectIds.includes(taskProjectId) &&
+    effectiveProjectIds.includes(sprintProjectId)
+  );
+}
+
+export type McpSprintRef = {
+  id: number;
+  name: string | null;
+  status: string | null;
+};
+
+/** Nested sprint on task payloads; `null` when the task has no sprint (or sprints unused). */
+export function shapeTaskSprintRef(row: {
+  SprintId?: unknown;
+  SprintName?: unknown;
+  SprintStatus?: unknown;
+}): McpSprintRef | null {
+  if (row.SprintId == null || row.SprintId === '') return null;
+  const id = Number(row.SprintId);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return {
+    id,
+    name: row.SprintName != null ? String(row.SprintName) : null,
+    status: row.SprintStatus != null ? String(row.SprintStatus) : null,
+  };
+}
+
+/** Attach `tasks` arrays to sprint rows (empty array when none). */
+export function attachTasksToSprints<TSprint extends { Id?: unknown; id?: unknown }, TTask>(
+  sprints: TSprint[],
+  tasksBySprintId: Map<number, TTask[]>
+): Array<TSprint & { tasks: TTask[] }> {
+  return sprints.map((sprint) => {
+    const rawId = (sprint as { Id?: unknown }).Id ?? (sprint as { id?: unknown }).id;
+    const id = Number(rawId);
+    return {
+      ...sprint,
+      tasks: Number.isFinite(id) ? tasksBySprintId.get(id) || [] : [],
+    };
+  });
+}
+
+export const MCP_SPRINT_STATUSES = ['planned', 'active', 'completed', 'cancelled'] as const;
+export type McpSprintStatus = (typeof MCP_SPRINT_STATUSES)[number];
+
+export function coerceSprintStatus(
+  raw: unknown
+): { ok: true; value: McpSprintStatus } | { ok: false; message: string } {
+  const value = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if ((MCP_SPRINT_STATUSES as readonly string[]).includes(value)) {
+    return { ok: true, value: value as McpSprintStatus };
+  }
+  return {
+    ok: false,
+    message: `Invalid sprint status (expected ${MCP_SPRINT_STATUSES.join('|')})`,
+  };
+}
+
 /** Filter applications whose RepositoryUrl matches the client remote. */
 export function matchApplicationsByRepositoryUrl(
   apps: MatchedApplication[],

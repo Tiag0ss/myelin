@@ -1,13 +1,18 @@
 import {
   assertNonEmptyScope,
+  attachTasksToSprints,
   buildEffectiveProjectIds,
   canWriteViaMcp,
   coerceAllowWrite,
+  coerceOptionalNullableId,
   coerceProjectIds,
+  coerceSprintStatus,
   coerceStrict,
   matchApplicationsByRepositoryUrl,
   mergeAgentDocs,
   resolveMatchedApplications,
+  shapeTaskSprintRef,
+  sprintAllowedForProject,
   type AgentDocItem,
   type MatchedApplication,
 } from '../../server/modules/mcp/scopeHelpers';
@@ -245,5 +250,50 @@ describe('list_my_tasks scope filter', () => {
         strict: false,
       })
     ).toBe(true);
+  });
+});
+
+describe('coerceOptionalNullableId / sprintAllowedForProject', () => {
+  it('omits, clears, and parses sprint ids', () => {
+    expect(coerceOptionalNullableId(undefined)).toEqual({ ok: true, value: undefined });
+    expect(coerceOptionalNullableId(null)).toEqual({ ok: true, value: null });
+    expect(coerceOptionalNullableId('')).toEqual({ ok: true, value: null });
+    expect(coerceOptionalNullableId('null')).toEqual({ ok: true, value: null });
+    expect(coerceOptionalNullableId(42)).toEqual({ ok: true, value: 42 });
+    expect(coerceOptionalNullableId('7')).toEqual({ ok: true, value: 7 });
+    expect(coerceOptionalNullableId(0).ok).toBe(false);
+    expect(coerceOptionalNullableId('x').ok).toBe(false);
+  });
+
+  it('allows sprint only when it matches the task project in scope', () => {
+    expect(sprintAllowedForProject(10, 10, [10, 11])).toBe(true);
+    expect(sprintAllowedForProject(11, 10, [10, 11])).toBe(false);
+    expect(sprintAllowedForProject(10, 10, [11])).toBe(false);
+  });
+
+  it('shapes nested sprint ref or null when absent', () => {
+    expect(shapeTaskSprintRef({ SprintId: null })).toBeNull();
+    expect(shapeTaskSprintRef({})).toBeNull();
+    expect(shapeTaskSprintRef({ SprintId: 2, SprintName: 'Sprint 2', SprintStatus: 'planned' })).toEqual(
+      { id: 2, name: 'Sprint 2', status: 'planned' }
+    );
+  });
+
+  it('attaches tasks to sprints including empty arrays', () => {
+    const map = new Map<number, Array<{ Id: number }>>([
+      [1, [{ Id: 10 }]],
+      [2, []],
+    ]);
+    expect(attachTasksToSprints([{ Id: 1 }, { Id: 2 }], map)).toEqual([
+      { Id: 1, tasks: [{ Id: 10 }] },
+      { Id: 2, tasks: [] },
+    ]);
+    expect(attachTasksToSprints([], map)).toEqual([]);
+  });
+
+  it('coerces sprint status values', () => {
+    expect(coerceSprintStatus('completed')).toEqual({ ok: true, value: 'completed' });
+    expect(coerceSprintStatus('PLANNED')).toEqual({ ok: true, value: 'planned' });
+    expect(coerceSprintStatus('nope').ok).toBe(false);
   });
 });

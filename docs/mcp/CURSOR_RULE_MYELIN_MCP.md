@@ -26,10 +26,18 @@ Both are merged; project wins on name clash.
       "headers": {
         "Authorization": "Bearer ${env:MYELIN_API_TOKEN}"
       }
+    },
+    "myelin-local": {
+      "url": "http://localhost:3000/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:MYELIN_API_TOKEN_DEV}"
+      }
     }
   }
 }
 ```
+
+You can run **both** entries at once (prod + local). Use separate `pt_…` tokens and env vars per host. Local needs `pnpm dev` (or your API) listening on that port.
 
 Copy-paste template: [cursor.mcp.json.example](cursor.mcp.json.example).
 
@@ -83,8 +91,10 @@ Before calling any Myelin MCP tool:
 4. Pass on **every** tool call: `projectIds`, `strict`, `allowWrite`, and `repositoryUrl`.
 5. If `resolve_context` reports multiple Applications for the remote, pass `applicationId` from the candidate list — do not guess.
 6. Do not invent status/priority/taskType ids; call `list_project_meta` (or use catalogs from context) first.
-7. Task writes require **both** Profile “Allow MCP task writes” and `allowWrite: true` in config. Prefer reads unless the user asked to create/update.
-8. Never put API tokens in `myelin.mcp.json` or commit them to git.
+7. For sprint assignment, call `list_sprints` / `get_sprint` first; only use sprint ids from effective projects. `create_task` / `update_task` accept `sprintId` (`null` clears). Use `sprint_update` to change sprint status/fields.
+8. Task/sprint writes require **both** Profile “Allow MCP task writes” and `allowWrite: true` in config. Prefer reads unless the user asked to create/update.
+9. Never put API tokens in `myelin.mcp.json` or commit them to git.
+10. If a newly added MCP tool does not appear in Cursor after reload, rename the server key in `.cursor/mcp.json` (e.g. `myelin-dev` → `myelin-local`) to force a fresh tools/list cache.
 ```
 
 See [FEATURES.md §21c](../FEATURES.md#21c-remote-mcp-cursor--agents).

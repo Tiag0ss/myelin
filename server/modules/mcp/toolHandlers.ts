@@ -1,8 +1,27 @@
 import { dbProvider, pool, ResultSetHeader, RowDataPacket } from '../../config/database';
 import logger from '../../utils/logger';
 import { invalidateByEntity } from '../../services/cacheInvalidation';
-import { canWriteViaMcp, coerceAllowWrite, coerceProjectIds, coerceStrict } from './scopeHelpers';
+import {
+  attachTasksToSprints,
+  canWriteViaMcp,
+  coerceAllowWrite,
+  coerceOptionalNullableId,
+  coerceProjectIds,
+  coerceSprintStatus,
+  coerceStrict,
+  shapeTaskSprintRef,
+  sprintAllowedForProject,
+} from './scopeHelpers';
 import { loadMergedAgentDocs, resolveMcpScope } from './scopeService';
+
+function mapTaskRowWithSprint(row: RowDataPacket) {
+  const sprint = shapeTaskSprintRef(row);
+  const { SprintName: _n, SprintStatus: _s, ...rest } = row as RowDataPacket & {
+    SprintName?: unknown;
+    SprintStatus?: unknown;
+  };
+  return { ...rest, sprint };
+}
 
 export type McpToolContext = {
   userId: number;
@@ -168,17 +187,28 @@ export async function toolListMyTasks(ctx: McpToolContext, args: Record<string, 
     params.push(pid);
   }
 
+  if (args.sprintId != null && args.sprintId !== '') {
+    const sid = parseInt(String(args.sprintId), 10);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      return textResult({ success: false, message: 'Invalid sprintId' }, true);
+    }
+    conditions.push('t.SprintId = ?');
+    params.push(sid);
+  }
+
   const limitSql =
     dbProvider === 'mssql'
       ? 'ORDER BY t.Id DESC OFFSET 0 ROWS FETCH NEXT 200 ROWS ONLY'
       : 'ORDER BY t.Id DESC LIMIT 200';
 
   const [rows] = await pool.execute<RowDataPacket[]>(
-    `SELECT t.Id, t.TaskName, t.ProjectId, t.ApplicationId, t.Status, t.Priority, t.TaskType, t.AssignedTo,
-            t.DueDate, t.EstimatedHours, p.ProjectName, p.OrganizationId,
-            tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName
+    `SELECT t.Id, t.TaskName, t.Description, t.ProjectId, t.ApplicationId, t.Status, t.Priority, t.TaskType,
+            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId, p.ProjectName, p.OrganizationId,
+            tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName,
+            sp.Name AS SprintName, sp.Status AS SprintStatus
      FROM Tasks t
      INNER JOIN Projects p ON p.Id = t.ProjectId
+     LEFT JOIN Sprints sp ON t.SprintId = sp.Id
      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
      LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
@@ -187,8 +217,9 @@ export async function toolListMyTasks(ctx: McpToolContext, args: Record<string, 
     params
   );
 
-  logger.info('MCP tool list_my_tasks', { userId: ctx.userId, count: rows.length });
-  return textResult({ success: true, data: rows });
+  const data = rows.map(mapTaskRowWithSprint);
+  logger.info('MCP tool list_my_tasks', { userId: ctx.userId, count: data.length });
+  return textResult({ success: true, data });
 }
 
 export async function toolGetTask(ctx: McpToolContext, args: Record<string, unknown>) {
@@ -225,9 +256,11 @@ export async function toolGetTask(ctx: McpToolContext, args: Record<string, unkn
 
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT t.*, p.ProjectName, p.OrganizationId,
-            tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName
+            tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName,
+            sp.Name AS SprintName, sp.Status AS SprintStatus
      FROM Tasks t
      INNER JOIN Projects p ON p.Id = t.ProjectId
+     LEFT JOIN Sprints sp ON t.SprintId = sp.Id
      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
      LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
@@ -237,7 +270,270 @@ export async function toolGetTask(ctx: McpToolContext, args: Record<string, unkn
   if (!rows.length) {
     return textResult({ success: false, message: 'Task not found in your MCP scope' }, true);
   }
-  return textResult({ success: true, data: rows[0] });
+  return textResult({ success: true, data: mapTaskRowWithSprint(rows[0]) });
+}
+
+const SPRINT_LIST_SELECT = `SELECT s.Id, s.ProjectId, s.Name, s.Goal, s.StartDate, s.EndDate, s.Status, s.Velocity,
+            p.ProjectName, p.OrganizationId,
+            COALESCE((SELECT COUNT(*) FROM Tasks t WHERE t.SprintId = s.Id), 0) AS TotalTasks,
+            COALESCE((
+              SELECT SUM(CASE WHEN tsv.IsClosed = 1 THEN 1 ELSE 0 END)
+              FROM Tasks t
+              LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+              WHERE t.SprintId = s.Id
+            ), 0) AS CompletedTasks
+     FROM Sprints s
+     INNER JOIN Projects p ON p.Id = s.ProjectId`;
+
+async function loadTasksGroupedBySprintId(sprintIds: number[]): Promise<Map<number, RowDataPacket[]>> {
+  const bySprint = new Map<number, RowDataPacket[]>();
+  for (const id of sprintIds) bySprint.set(id, []);
+  if (sprintIds.length === 0) return bySprint;
+
+  const [taskRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT t.Id, t.TaskName, t.Description, t.ProjectId, t.ApplicationId, t.Status, t.Priority, t.TaskType,
+            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId,
+            tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName
+     FROM Tasks t
+     LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+     LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+     LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
+     WHERE t.SprintId IN (${sprintIds.map(() => '?').join(',')})
+     ORDER BY t.Id ASC`,
+    sprintIds
+  );
+
+  for (const row of taskRows) {
+    const sid = Number(row.SprintId);
+    const list = bySprint.get(sid);
+    if (list) list.push(row);
+  }
+  return bySprint;
+}
+
+export async function toolListSprints(ctx: McpToolContext, args: Record<string, unknown>) {
+  await requireInternal(ctx);
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (scope.needsDisambiguation) {
+    return textResult(
+      { success: false, message: scope.error, candidates: scope.candidateApplications },
+      true
+    );
+  }
+  if (scope.effectiveProjectIds.length === 0) {
+    return textResult({ success: false, message: scope.error || 'No effective projects' }, true);
+  }
+
+  let projectIds = scope.effectiveProjectIds;
+  if (args.projectId != null) {
+    const pid = parseInt(String(args.projectId), 10);
+    if (!Number.isFinite(pid) || !projectIds.includes(pid)) {
+      return textResult({ success: false, message: 'projectId not in effective MCP scope' }, true);
+    }
+    projectIds = [pid];
+  }
+
+  const conditions: string[] = [
+    `s.ProjectId IN (${projectIds.map(() => '?').join(',')})`,
+  ];
+  const params: unknown[] = [...projectIds];
+
+  if (args.status != null && String(args.status).trim() !== '') {
+    conditions.push('s.Status = ?');
+    params.push(String(args.status).trim());
+  }
+
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `${SPRINT_LIST_SELECT}
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY s.StartDate ASC, s.Id ASC`,
+    params
+  );
+
+  // No sprints in the project is valid — return empty list (not an error).
+  const sprintIds = rows.map((r) => Number(r.Id)).filter((id) => Number.isFinite(id) && id > 0);
+  const tasksBySprint = await loadTasksGroupedBySprintId(sprintIds);
+  const data = attachTasksToSprints(rows, tasksBySprint);
+
+  logger.info('MCP tool list_sprints', { userId: ctx.userId, count: data.length });
+  return textResult({ success: true, data });
+}
+
+export async function toolGetSprint(ctx: McpToolContext, args: Record<string, unknown>) {
+  await requireInternal(ctx);
+  const sprintId = parseInt(String(args.sprintId ?? ''), 10);
+  if (!Number.isFinite(sprintId) || sprintId <= 0) {
+    return textResult({ success: false, message: 'sprintId required' }, true);
+  }
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (scope.needsDisambiguation) {
+    return textResult(
+      { success: false, message: scope.error, candidates: scope.candidateApplications },
+      true
+    );
+  }
+  if (scope.effectiveProjectIds.length === 0) {
+    return textResult({ success: false, message: scope.error || 'No effective projects' }, true);
+  }
+
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `${SPRINT_LIST_SELECT}
+     WHERE s.Id = ? AND s.ProjectId IN (${scope.effectiveProjectIds.map(() => '?').join(',')})`,
+    [sprintId, ...scope.effectiveProjectIds]
+  );
+  if (!rows.length) {
+    return textResult({ success: false, message: 'Sprint not found in MCP scope' }, true);
+  }
+
+  const tasksBySprint = await loadTasksGroupedBySprintId([sprintId]);
+  const [data] = attachTasksToSprints(rows, tasksBySprint);
+  return textResult({ success: true, data });
+}
+
+export async function toolUpdateSprint(ctx: McpToolContext, args: Record<string, unknown>) {
+  await requireInternal(ctx);
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (
+    !canWriteViaMcp({
+      serverMcpWritesEnabled: scope.serverMcpWritesEnabled,
+      clientAllowWrite: scope.allowWrite,
+    })
+  ) {
+    return textResult(
+      {
+        success: false,
+        message:
+          'MCP writes disabled. Enable Profile → Allow MCP task writes and set allowWrite true in myelin.mcp.json',
+      },
+      true
+    );
+  }
+  if (scope.error || scope.needsDisambiguation) {
+    return textResult({ success: false, message: scope.error || 'Ambiguous application' }, true);
+  }
+
+  const sprintId = parseInt(String(args.sprintId ?? ''), 10);
+  if (!Number.isFinite(sprintId) || sprintId <= 0) {
+    return textResult({ success: false, message: 'sprintId required' }, true);
+  }
+
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    `SELECT s.Id, s.ProjectId, s.Name, s.Goal, s.StartDate, s.EndDate, s.Status, s.Velocity, p.OrganizationId
+     FROM Sprints s
+     INNER JOIN Projects p ON p.Id = s.ProjectId
+     WHERE s.Id = ? AND s.ProjectId IN (${scope.effectiveProjectIds.map(() => '?').join(',')})`,
+    [sprintId, ...scope.effectiveProjectIds]
+  );
+  if (!existing.length) {
+    return textResult({ success: false, message: 'Sprint not found in MCP scope' }, true);
+  }
+
+  const row = existing[0];
+  const projectId = Number(row.ProjectId);
+  let name = row.Name != null ? String(row.Name) : '';
+  let goal: string | null = row.Goal != null ? String(row.Goal) : null;
+  let startDate: string | null = row.StartDate != null ? String(row.StartDate).slice(0, 10) : null;
+  let endDate: string | null = row.EndDate != null ? String(row.EndDate).slice(0, 10) : null;
+  let status = String(row.Status || 'planned');
+  let velocity: number | null =
+    row.Velocity != null && Number.isFinite(Number(row.Velocity)) ? Number(row.Velocity) : null;
+
+  if (args.name != null) name = String(args.name).trim();
+  if (args.goal !== undefined) {
+    const g = args.goal == null ? '' : String(args.goal);
+    goal = g.trim() === '' ? null : g;
+  }
+  if (args.startDate !== undefined) {
+    const d = args.startDate == null ? '' : String(args.startDate).trim();
+    startDate = d === '' ? null : d.slice(0, 10);
+  }
+  if (args.endDate !== undefined) {
+    const d = args.endDate == null ? '' : String(args.endDate).trim();
+    endDate = d === '' ? null : d.slice(0, 10);
+  }
+  if (args.velocity !== undefined) {
+    if (args.velocity == null || args.velocity === '') velocity = null;
+    else {
+      const v = Number(args.velocity);
+      if (!Number.isFinite(v)) {
+        return textResult({ success: false, message: 'Invalid velocity' }, true);
+      }
+      velocity = v;
+    }
+  }
+  if (args.status != null) {
+    const parsed = coerceSprintStatus(args.status);
+    if (!parsed.ok) return textResult({ success: false, message: parsed.message }, true);
+    status = parsed.value;
+  }
+
+  if (!name) {
+    return textResult({ success: false, message: 'Sprint name is required' }, true);
+  }
+
+  if (status === 'active') {
+    const [activeCheck] = await pool.execute<RowDataPacket[]>(
+      `SELECT Id FROM Sprints WHERE ProjectId = ? AND Status = 'active' AND Id != ?`,
+      [projectId, sprintId]
+    );
+    if (activeCheck.length > 0) {
+      return textResult(
+        { success: false, message: 'A project can only have one active sprint at a time' },
+        true
+      );
+    }
+  }
+
+  await pool.execute(
+    `UPDATE Sprints SET Name = ?, Goal = ?, StartDate = ?, EndDate = ?, Status = ?, Velocity = ?
+     WHERE Id = ?`,
+    [name, goal, startDate, endDate, status, velocity, sprintId]
+  );
+
+  try {
+    await invalidateByEntity('sprint', {
+      projectId,
+      orgId: row.OrganizationId,
+    });
+  } catch {
+    /* optional redis */
+  }
+
+  logger.info('MCP tool sprint_update', { userId: ctx.userId, sprintId, status });
+  return textResult({
+    success: true,
+    data: { id: sprintId, projectId, name, status, startDate, endDate, goal, velocity },
+  });
+}
+
+async function resolveSprintIdForProject(
+  sprintRaw: unknown,
+  projectId: number,
+  effectiveProjectIds: number[]
+): Promise<{ ok: true; sprintId: number | null | undefined } | { ok: false; message: string }> {
+  const parsed = coerceOptionalNullableId(sprintRaw);
+  if (!parsed.ok) return parsed;
+  if (parsed.value === undefined) return { ok: true, sprintId: undefined };
+  if (parsed.value === null) return { ok: true, sprintId: null };
+
+  const [sprints] = await pool.execute<RowDataPacket[]>(
+    'SELECT Id, ProjectId FROM Sprints WHERE Id = ?',
+    [parsed.value]
+  );
+  if (!sprints.length) {
+    return { ok: false, message: 'Sprint not found' };
+  }
+  const sprintProjectId = Number(sprints[0].ProjectId);
+  if (!sprintAllowedForProject(sprintProjectId, projectId, effectiveProjectIds)) {
+    return {
+      ok: false,
+      message: 'Sprint is not in the task project / MCP scope',
+    };
+  }
+  return { ok: true, sprintId: parsed.value };
 }
 
 export async function toolListProjectMeta(ctx: McpToolContext, args: Record<string, unknown>) {
@@ -381,10 +677,31 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
   const appId =
     applicationId && Number.isFinite(applicationId) ? applicationId : null;
 
+  const sprintResolved = await resolveSprintIdForProject(
+    args.sprintId,
+    projectId,
+    scope.effectiveProjectIds
+  );
+  if (!sprintResolved.ok) {
+    return textResult({ success: false, message: sprintResolved.message }, true);
+  }
+  const sprintId = sprintResolved.sprintId === undefined ? null : sprintResolved.sprintId;
+
   const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO Tasks (ProjectId, TaskName, Description, Status, Priority, TaskType, AssignedTo, ApplicationId, CreatedBy)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [projectId, taskName, description, statusId, priorityId, taskTypeId, ctx.userId, appId, ctx.userId]
+    `INSERT INTO Tasks (ProjectId, TaskName, Description, Status, Priority, TaskType, AssignedTo, ApplicationId, CreatedBy, SprintId)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      projectId,
+      taskName,
+      description,
+      statusId,
+      priorityId,
+      taskTypeId,
+      ctx.userId,
+      appId,
+      ctx.userId,
+      sprintId,
+    ]
   );
 
   await pool.execute(
@@ -409,6 +726,7 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
       priority: priorityId,
       taskType: taskTypeId,
       assignedTo: ctx.userId,
+      sprintId,
     },
   });
 }
@@ -440,6 +758,19 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   const getResult = await toolGetTask(ctx, { ...args, taskId });
   if (getResult.isError) return getResult;
 
+  let parsedGet: { data?: { ProjectId?: number } } = {};
+  try {
+    parsedGet = JSON.parse(getResult.content[0]?.text || '{}') as {
+      data?: { ProjectId?: number };
+    };
+  } catch {
+    parsedGet = {};
+  }
+  const taskProjectId = Number(parsedGet.data?.ProjectId);
+  if (!Number.isFinite(taskProjectId)) {
+    return textResult({ success: false, message: 'Could not resolve task project' }, true);
+  }
+
   const updates: string[] = [];
   const params: unknown[] = [];
   if (args.taskName != null) {
@@ -461,6 +792,20 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   if (args.taskType != null) {
     updates.push('TaskType = ?');
     params.push(parseInt(String(args.taskType), 10));
+  }
+  if (args.sprintId !== undefined) {
+    const sprintResolved = await resolveSprintIdForProject(
+      args.sprintId,
+      taskProjectId,
+      scope.effectiveProjectIds
+    );
+    if (!sprintResolved.ok) {
+      return textResult({ success: false, message: sprintResolved.message }, true);
+    }
+    if (sprintResolved.sprintId !== undefined) {
+      updates.push('SprintId = ?');
+      params.push(sprintResolved.sprintId);
+    }
   }
   if (updates.length === 0) {
     return textResult({ success: false, message: 'No fields to update' }, true);
