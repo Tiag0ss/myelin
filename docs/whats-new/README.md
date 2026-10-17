@@ -17,9 +17,14 @@ The tag is created **after** the version bump, so the changelog must never wait 
 
 ```bash
 pnpm whats-new:generate
+# optional: keep hand-curated bullets for older versions
+pnpm whats-new:generate -- --keep-curated
 ```
 
 - Does **not** overwrite the hand-authored `1.0.0` entry
-- Uses commits that changed `package.json` version history
+- By default **rebuilds every version after 1.0.0** from git commit subjects (full messages, not truncated)
+- Finds each version’s **introduction** commit (first `package.json` bump to that version)
+- For the **current** `package.json` version, lists subjects from the previous introduction through `HEAD`
 - Includes the **current working-tree** `package.json` version even if not committed yet
 - Does **not** invent entries from `V*` tags
+- After generate, curate titles/bullets in `changelog.json` as needed

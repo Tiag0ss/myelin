@@ -22,12 +22,27 @@
       "date": "2026-09-21",
       "title": "Session, reporting, and navigation",
       "items": [
-        "Stronger session and token handling for signed-in users",
-        "Theme palette selection across the UI",
-        "Pinned navigation and clearer project filters",
-        "Commit history graph and branch metadata on projects",
-        "Reporting hub CSV export improvements",
-        "Unplanned-task filtering and planning drag auto-scroll"
+        "Enhance session management and token handling",
+        "Enhance authentication handling in AuthContext and session management",
+        "Refactor Woodpecker CI configuration and update TypeScript settings",
+        "Enhance CSV export functionality in ReportingHub",
+        "Enhance Woodpecker CI configuration with additional steps for versioning and linting",
+        "Add Woodpecker CI configuration for Docker build and push",
+        "Implement theme palette selection and application functionality",
+        "Refactor task assignment notification logic",
+        "Implement commit branch metadata and enhance commit history visualization",
+        "Implement commit graph layout and branch management features",
+        "Implement unplanned tasks filtering and drag auto-scroll functionality",
+        "Enhance application documentation and update integration testing scenarios",
+        "Refactor navigation links in AppChromeTools component",
+        "Refactor various components for improved layout and consistency",
+        "Update filter behavior in ProjectsTab component to show completed projects by default",
+        "Implement pinned navigation project metadata functionality",
+        "Refactor filter clearing functionality in ProjectsTab component",
+        "Enhance filter functionality across multiple pages",
+        "Implement new project management tabs and enhance reporting features",
+        "Refactor applications, customers, memos, planning, and projects pages to implement persisted filters and pinned item functionality",
+        "Refactor Dockerfile and update .dockerignore for release artifacts"
       ]
     },
     {
@@ -35,9 +50,11 @@
       "date": "2026-10-03",
       "title": "Myelin branding and multi-language UI",
       "items": [
-        "Product rebranded to Myelin across the live app",
-        "UI translations for English, Portuguese, Spanish, and French",
-        "CI tagging support for versioned Docker releases"
+        "Add UI i18n for pt/en/es/fr across the live app",
+        "Add status badge to README",
+        "Refactor project references and update naming conventions to Myelin",
+        "Update Woodpecker CI configuration to support tagging and streamline version extraction",
+        "Enhance silent access token handling in session management"
       ]
     },
     {
@@ -45,8 +62,10 @@
       "date": "2026-10-04",
       "title": "Organization analytics",
       "items": [
-        "Organization detail analytics with multi-series charts",
-        "Richer reporting metrics by status, user, and task type"
+        "Update Portuguese translations for consistency in the i18n locale files, correcting the term for \"sprints\" from \"Corridas\" to \"Sprints\"",
+        "Implement organization detail analytics component and enhance reporting page with new metrics and visualizations. Introduce multi-series charting for tasks by status, user, and type, and update UI elements for improved user experience",
+        "Refactor i18n handling by removing unused imports and functions, and implement a new server-side loading mechanism for locale literals. Update the I18nProvider to utilize the new loading method and streamline locale management across components",
+        "Remove unused i18n imports and related functions from various components and pages to streamline code and improve maintainability"
       ]
     },
     {
@@ -54,9 +73,7 @@
       "date": "2026-10-06",
       "title": "Runtime locales and proxy support",
       "items": [
-        "Locale catalogs available at runtime in Docker images",
-        "Trust-proxy settings for correct client IPs behind reverse proxies",
-        "Portuguese translation consistency updates"
+        "Enhance Dockerfile to include runtime locale files and improve error handling for missing locale files in the server-side loading mechanism. Implement trust proxy settings in the server configuration for better handling of client IPs behind Docker and reverse proxies"
       ]
     },
     {
@@ -64,8 +81,7 @@
       "date": "2026-10-06",
       "title": "Container health checks",
       "items": [
-        "Dedicated liveness endpoint for container health checks",
-        "Docker health probe aligned with runtime PORT"
+        "Implement liveness check endpoint and update health check logic in Docker configuration. Update version to 1.1.3 in package.json and enhance Portuguese translations for consistency"
       ]
     },
     {
@@ -73,9 +89,19 @@
       "date": "2026-10-13",
       "title": "Manual and ops polish",
       "items": [
-        "In-app Myelin user manual and getting-started notes",
-        "Dynamic Docker health check port and clearer deploy docs",
-        "Portuguese wording refinements for organization switcher and out of office"
+        "Add Myelin manual and navigation documentation, including sections on user roles, first login, global search, and email preferences. Update .gitignore to include generated documentation ZIP file",
+        "Update Docker configuration to use dynamic port for health check, ensuring alignment with runtime PORT environment variable. Enhance README to clarify health check behavior and internal port usage",
+        "Refine Portuguese translations in i18n files for improved clarity and consistency, updating terms for \"organization switcher\" and \"out of office\""
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-10-17",
+      "title": "Remote MCP, agent docs, and What's New",
+      "items": [
+        "Implement settings tab in application and organization detail views, allowing users to edit application and organization details directly within the UI. Enhance navigation by adding settings to the existing tab structure",
+        "Enhance application UI by integrating Agent Docs panel and PageTabs for improved navigation in organization and application detail views. Update .gitignore to exclude cursor configuration files. Add MCP preferences management in user profile settings. Add MCP server to read, update and create tasks in Myelin",
+        "Implement \"What's New\" feature to display changelog entries in the dashboard and app chrome tools. Add API endpoints for fetching changelog data and marking versions as seen. Update Dockerfile to include changelog documentation and enhance localization for new UI elements"
       ]
     }
   ]

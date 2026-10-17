@@ -15,7 +15,11 @@
  *   4. Commit package.json + changelog together
  *   5. Create the V* tag → Woodpecker builds Docker (changelog is already in the tree)
  *
- * Usage: node scripts/generate-whats-new-changelog.mjs
+ * By default every version after 1.0.0 is rebuilt from git commit subjects
+ * (introduction of previous version → this version / HEAD for current).
+ * Pass --keep-curated to skip versions that already have items (except current).
+ *
+ * Usage: node scripts/generate-whats-new-changelog.mjs [--keep-curated]
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -26,6 +30,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const CHANGELOG_PATH = path.join(ROOT, 'docs/whats-new/changelog.json');
 const PACKAGE_PATH = path.join(ROOT, 'package.json');
+const MAX_SUBJECTS = 100;
+const KEEP_CURATED = process.argv.includes('--keep-curated');
 
 function run(cmd) {
   try {
@@ -66,14 +72,13 @@ function loadChangelog() {
 }
 
 /**
- * Version history from commits that touched package.json.
- * First (newest) occurrence of each version wins.
+ * Commits that touched package.json, oldest → newest, with version at that commit.
  */
-function collectVersionBumpsFromPackageHistory() {
-  const log = run('git log --format=%H%x09%ci%x09%s -- package.json');
+function packageJsonVersionTimeline() {
+  const log = run('git log --reverse --format=%H%x09%ci%x09%s -- package.json');
   if (!log) return [];
 
-  const bumps = [];
+  const rows = [];
   for (const line of log.split('\n')) {
     const [hash, date, ...subjectParts] = line.split('\t');
     const subject = subjectParts.join('\t');
@@ -88,43 +93,68 @@ function collectVersionBumpsFromPackageHistory() {
     }
     if (!version) continue;
 
-    const dateOnly = String(date || '').slice(0, 10);
-    bumps.push({ version, date: dateOnly, hash, subject });
+    rows.push({
+      version,
+      date: String(date || '').slice(0, 10),
+      hash,
+      subject,
+    });
+  }
+  return rows;
+}
+
+/**
+ * First commit where each version appears (introduction / bump commit).
+ * Sorted ascending by semver.
+ */
+function collectVersionIntroductions() {
+  const timeline = packageJsonVersionTimeline();
+  const introductions = [];
+  let previous = null;
+
+  for (const row of timeline) {
+    if (previous === row.version) continue;
+    introductions.push(row);
+    previous = row.version;
   }
 
-  const seen = new Set();
-  const unique = [];
-  for (const bump of bumps) {
-    if (seen.has(bump.version)) continue;
-    seen.add(bump.version);
-    unique.push(bump);
+  const byVersion = new Map();
+  for (const intro of introductions) {
+    if (!byVersion.has(intro.version)) {
+      byVersion.set(intro.version, intro);
+    }
   }
-  return unique.sort((a, b) => compareSemver(a.version, b.version));
+
+  return [...byVersion.values()].sort((a, b) => compareSemver(a.version, b.version));
 }
 
 /**
  * Ensure the working-tree package.json version is present even when the bump
  * is not committed yet (normal: bump → generate changelog → commit → tag).
  */
-function ensureWorkingTreeVersion(bumps, currentVersion) {
-  if (!currentVersion) return bumps;
-  if (bumps.some((b) => b.version === currentVersion)) return bumps;
+function ensureWorkingTreeVersion(intros, currentVersion) {
+  if (!currentVersion) return intros;
+  if (intros.some((b) => b.version === currentVersion)) return intros;
 
-  const head = run('git rev-parse HEAD') || null;
   return [
-    ...bumps,
+    ...intros,
     {
       version: currentVersion,
       date: todayIsoDate(),
-      hash: head,
+      hash: null,
       subject: `Working tree package.json ${currentVersion}`,
+      workingTree: true,
     },
   ].sort((a, b) => compareSemver(a.version, b.version));
 }
 
-function subjectsBetween(olderHash, newerHash) {
-  if (!newerHash) return [];
-  const range = olderHash ? `${olderHash}..${newerHash}` : newerHash;
+/**
+ * Commit subjects after olderHash up to and including newerRef.
+ * newerRef may be a commit hash or HEAD.
+ */
+function subjectsBetween(olderHash, newerRef) {
+  if (!newerRef) return [];
+  const range = olderHash ? `${olderHash}..${newerRef}` : newerRef;
   const out = run(`git log --format=%s ${range}`);
   if (!out) return [];
   return out
@@ -132,17 +162,31 @@ function subjectsBetween(olderHash, newerHash) {
     .map((s) => s.trim())
     .filter(Boolean)
     .filter((s) => !/^Update version to /i.test(s))
-    .slice(0, 8);
+    .slice(0, MAX_SUBJECTS);
 }
 
 function summarizeItems(subjects) {
   if (subjects.length === 0) {
     return ['Maintenance and stability updates'];
   }
-  return subjects.map((s) => {
-    const trimmed = s.replace(/\.$/, '');
-    return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
-  });
+  // Keep full commit subjects — do not truncate (UI can wrap).
+  return subjects.map((s) => s.replace(/\.$/, ''));
+}
+
+function defaultTitle(version, existingTitle, subjects) {
+  // Prefer a curated title — never "Version x.y.z" (the version is shown separately).
+  if (
+    existingTitle &&
+    existingTitle.trim() &&
+    !/^Version\s+/i.test(existingTitle)
+  ) {
+    return existingTitle;
+  }
+  // Placeholder until curated: short hint from the first subject.
+  const first = (subjects && subjects[0]) || '';
+  if (first.length > 0 && first.length <= 72) return first;
+  if (first.length > 72) return `${first.slice(0, 69)}…`;
+  return `Release ${version}`;
 }
 
 function main() {
@@ -161,30 +205,53 @@ function main() {
     JSON.parse(fs.readFileSync(PACKAGE_PATH, 'utf8')).version
   );
 
-  let bumps = collectVersionBumpsFromPackageHistory();
-  bumps = ensureWorkingTreeVersion(bumps, currentVersion);
+  let intros = collectVersionIntroductions();
+  intros = ensureWorkingTreeVersion(intros, currentVersion);
 
-  for (let i = 0; i < bumps.length; i += 1) {
-    const bump = bumps[i];
+  const head = run('git rev-parse HEAD') || null;
+  let rebuilt = 0;
+  let kept = 0;
+
+  for (let i = 0; i < intros.length; i += 1) {
+    const intro = intros[i];
     // Baseline and earlier pre-release package versions are out of scope.
-    if (compareSemver(bump.version, '1.0.0') <= 0) continue;
-    if (compareSemver(bump.version, currentVersion) > 0) continue;
+    if (compareSemver(intro.version, '1.0.0') <= 0) continue;
+    if (compareSemver(intro.version, currentVersion) > 0) continue;
 
-    const existingEntry = byVersion.get(bump.version);
-    if (existingEntry && Array.isArray(existingEntry.items) && existingEntry.items.length > 0) {
-      // Keep curated items; only fill missing date/title if absent.
-      if (!existingEntry.date && bump.date) existingEntry.date = bump.date;
+    const existingEntry = byVersion.get(intro.version);
+    const isCurrent = intro.version === currentVersion;
+    if (
+      KEEP_CURATED &&
+      !isCurrent &&
+      existingEntry &&
+      Array.isArray(existingEntry.items) &&
+      existingEntry.items.length > 0
+    ) {
+      if (!existingEntry.date && intro.date) existingEntry.date = intro.date;
+      kept += 1;
       continue;
     }
 
-    const older = bumps[i - 1];
-    const subjects = subjectsBetween(older?.hash || null, bump.hash);
-    byVersion.set(bump.version, {
-      version: bump.version,
-      date: bump.date || existingEntry?.date || null,
-      title: existingEntry?.title || `Version ${bump.version}`,
+    const older = intros[i - 1];
+    // Current release: include all commits since previous introduction through HEAD
+    // (working-tree bump may not have its own commit yet).
+    const newerRef = isCurrent ? head || intro.hash : intro.hash;
+    const subjects = subjectsBetween(older?.hash || null, newerRef);
+    byVersion.set(intro.version, {
+      version: intro.version,
+      date: intro.date || existingEntry?.date || todayIsoDate(),
+      title: defaultTitle(intro.version, existingEntry?.title, subjects),
       items: summarizeItems(subjects),
     });
+    rebuilt += 1;
+  }
+
+  // Drop any leftover entries above current or below baseline that are not 1.0.0
+  for (const key of [...byVersion.keys()]) {
+    if (key === '1.0.0') continue;
+    if (compareSemver(key, '1.0.0') < 0 || compareSemver(key, currentVersion) > 0) {
+      byVersion.delete(key);
+    }
   }
 
   const versions = [...byVersion.values()]
@@ -198,9 +265,19 @@ function main() {
   const payload = { versions };
   fs.mkdirSync(path.dirname(CHANGELOG_PATH), { recursive: true });
   fs.writeFileSync(CHANGELOG_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+
+  const current = versions.find((v) => v.version === currentVersion);
   console.log(
     `Wrote ${CHANGELOG_PATH} (${versions.length} versions, package.json=${currentVersion}; tags are not used)`
   );
+  console.log(
+    KEEP_CURATED
+      ? `Rebuilt ${rebuilt} version(s), kept curated ${kept} (pass without --keep-curated to rebuild all after 1.0.0)`
+      : `Rebuilt ${rebuilt} version(s) from git (1.0.0 preserved; use --keep-curated to skip existing entries)`
+  );
+  if (current) {
+    console.log(`Current ${currentVersion}: ${current.items.length} item(s)`);
+  }
 }
 
 main();
