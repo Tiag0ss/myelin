@@ -157,7 +157,7 @@ export default function DevSupportManagementPage() {
 
     try {
       const response = await fetch(`${getApiUrl()}/api/dev-support/team-members/${addMemberId}/configure`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

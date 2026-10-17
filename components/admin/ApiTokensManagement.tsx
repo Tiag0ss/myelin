@@ -89,7 +89,7 @@ export default function ApiTokensManagement({ mode = 'self' }: ApiTokensManageme
     setError('');
     try {
       const res = await fetch(`${API_URL}/api/api-tokens`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

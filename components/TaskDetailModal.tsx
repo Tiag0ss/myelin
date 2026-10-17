@@ -962,7 +962,7 @@ export default function TaskDetailModal({
     setError('');
     try {
       const response = await fetch(`${getApiUrl()}/api/tasks/${task.Id}/move-project`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1366,7 +1366,7 @@ export default function TaskDetailModal({
     }
 
     try {
-      const method = mode === 'edit' ? 'PUT' : t('lit.post');
+      const method = mode === 'edit' ? 'PUT' : 'POST';
       const url = mode === 'edit' 
         ? `${getApiUrl()}/api/task-allocations/manual/${allocationId}`
         : `${getApiUrl()}/api/task-allocations/manual`;

@@ -3588,7 +3588,7 @@ function TagsTab({
         : `${getApiUrl()}/api/tags`;
 
       const response = await fetch(url, {
-        method: editingTag ? 'PUT' : t('lit.post'),
+        method: editingTag ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -4298,7 +4298,7 @@ function SlaTab({
         isActive: form.isActive,
       };
       const url = editingRule ? `${API_URL}/api/sla-rules/${editingRule.Id}` : `${API_URL}/api/sla-rules`;
-      const method = editingRule ? 'PUT' : t('lit.post');
+      const method = editingRule ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

@@ -115,7 +115,7 @@ export default function CallRecordsPage() {
         : `${getApiUrl()}/api/call-records`;
 
       const response = await fetch(url, {
-        method: editingRecord ? 'PUT' : t('lit.post'),
+        method: editingRecord ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

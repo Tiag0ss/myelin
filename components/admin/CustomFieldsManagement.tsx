@@ -200,7 +200,7 @@ export default function CustomFieldsManagement() {
     try {
       const isEditing = editingFieldId !== null;
       const response = await fetch(`${getApiUrl()}/api/custom-fields${isEditing ? `/${editingFieldId}` : ''}`, {
-        method: isEditing ? 'PUT' : t('lit.post'),
+        method: isEditing ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

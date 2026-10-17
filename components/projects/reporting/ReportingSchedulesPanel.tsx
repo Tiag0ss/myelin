@@ -113,7 +113,7 @@ projectId,
         ? `${getApiUrl()}/api/project-report-schedules/${editingSchedule.Id}`
         : `${getApiUrl()}/api/project-report-schedules`;
       const res = await fetch(url, {
-        method: editingSchedule ? 'PUT' : t('lit.post'),
+        method: editingSchedule ? 'PUT' : 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });

@@ -100,7 +100,7 @@ projectId,
     setIsSaving(true);
     try {
       const url = editingSprint ? `${API_URL}/api/sprints/${editingSprint.Id}` : `${API_URL}/api/sprints`;
-      const method = editingSprint ? 'PUT' : t('lit.post');
+      const method = editingSprint ? 'PUT' : 'POST';
       const body = editingSprint
         ? { ...sprintForm }
         : { projectId, ...sprintForm };

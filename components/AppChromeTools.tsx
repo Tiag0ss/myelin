@@ -1300,7 +1300,7 @@ export default function AppChromeTools({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/organizations`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1399,7 +1399,7 @@ export default function AppChromeTools({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/time-entries`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1436,7 +1436,7 @@ export default function AppChromeTools({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/call-records`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -1659,7 +1659,7 @@ export default function AppChromeTools({
 
     try {
       const res = await fetch(`${getApiUrl()}/api/tasks`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

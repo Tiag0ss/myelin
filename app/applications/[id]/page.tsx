@@ -585,7 +585,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         ? `${getApiUrl()}/api/applications/${id}/versions/${editingVersion.Id}`
         : `${getApiUrl()}/api/applications/${id}/versions`;
 
-      const method = editingVersion ? 'PUT' : t('lit.post');
+      const method = editingVersion ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -836,7 +836,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/applications/${id}/versions/improve-patch-notes`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

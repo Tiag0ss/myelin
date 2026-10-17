@@ -236,7 +236,7 @@ export function ApplyTemplateModal({
     setError('');
     try {
       const res = await fetch(`${getApiUrl()}/api/task-templates/${selectedId}/apply`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId, selectedItemIds: Array.from(selectedPreviewItemIds) }),
       });

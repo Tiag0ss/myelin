@@ -734,7 +734,7 @@ export default function TicketDetailPage() {
       const res = await fetch(
         `${getApiUrl()}/api/tickets/${ticketId}/comments`,
         {
-          method: t('lit.post'),
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

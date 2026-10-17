@@ -130,7 +130,7 @@ export default function HolidaysManagement() {
       setSuccess('');
 
       const response = await fetch(`${getApiUrl()}/api/holidays`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ export default function HolidaysManagement() {
       setSuccess('');
 
       const response = await fetch(`${getApiUrl()}/api/holidays/import/nager-date`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -236,7 +236,7 @@ export default function HolidaysManagement() {
       setSuccess('');
 
       const response = await fetch(`${getApiUrl()}/api/holidays/import/openholidays`, {
-        method: t('lit.post'),
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

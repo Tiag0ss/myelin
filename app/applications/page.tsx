@@ -617,7 +617,7 @@ export default function ApplicationsPage() {
         ? `${getApiUrl()}/api/applications/${editingApp.Id}`
         : `${getApiUrl()}/api/applications`;
 
-      const method = editingApp ? 'PUT' : t('lit.post');
+      const method = editingApp ? 'PUT' : 'POST';
 
       const vcsFields = (() => {
         if (formData.GitHubIntegrationId) {

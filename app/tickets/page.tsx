@@ -635,7 +635,7 @@ export default function TicketsPage() {
       const res = await fetch(
         `${getApiUrl()}/api/tickets`,
         {
-          method: t('lit.post'),
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

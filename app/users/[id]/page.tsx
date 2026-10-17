@@ -219,7 +219,7 @@ export default function UserDetailPage() {
       const res = await fetch(
         `${getApiUrl()}/api/users/${userId}/memberships`,
         {
-          method: t('lit.post'),
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
