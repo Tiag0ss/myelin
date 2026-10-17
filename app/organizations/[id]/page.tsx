@@ -50,6 +50,7 @@ const ORGANIZATION_DETAIL_TABS = [
   'workflow-policies',
   'task-form',
   'agent-docs',
+  'settings',
   'attachments',
   'history',
 ] as const;
@@ -79,8 +80,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
   const { permissions } = usePermissions();
   const router = useRouter();
   
-  // Edit organization state
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Organization settings form
   const [editForm, setEditForm] = useState({ name: '', abbreviation: '', description: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [internalTicketsEnabled, setInternalTicketsEnabled] = useState(true);
@@ -170,6 +170,11 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
       setIsLoading(true);
       const response = await organizationsApi.getById(orgId, token);
       setOrganization(response.organization);
+      setEditForm({
+        name: response.organization.Name || '',
+        abbreviation: response.organization.Abbreviation || '',
+        description: response.organization.Description || '',
+      });
       setError('');
     } catch (err: any) {
       setError(err.message || t('lit.failedToLoadOrganization'));
@@ -208,7 +213,6 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
       }
 
       await loadOrganization();
-      setShowEditModal(false);
     } catch (err: any) {
       setError(err.message || t('lit.failedToUpdateOrganization'));
     } finally {
@@ -365,6 +369,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
           { id: 'sla' as const, label: t('lit.slaRules') },
           { id: 'workflow-policies' as const, label: t('lit.workflowTransitionPoliciesDorDod') },
           { id: 'task-form' as const, label: t('lit.taskForm') },
+          { id: 'settings' as const, label: t('pages.organizations.settings') },
         ]
       : []),
     { id: 'agent-docs' as const, label: t('lit.mcpAgentDocsTab') },
@@ -379,22 +384,6 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold text-[var(--pm-text)] truncate">{organization.Name}</h1>
-            {canManageSettings && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditForm({
-                    name: organization.Name,
-                    abbreviation: organization.Abbreviation || '',
-                    description: organization.Description || '',
-                  });
-                  setShowEditModal(true);
-                }}
-                className="mt-1 text-sm text-[var(--pm-accent)] hover:underline"
-              >
-                {t('common.edit')}
-              </button>
-            )}
           </div>
           <Link
             href="/administration?tab=organizations"
@@ -475,6 +464,54 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                 />
               </div>
             )}
+            {activeTab === 'settings' && canManageSettings && (
+              <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="mb-6 text-lg font-bold text-gray-900 dark:text-white">
+                  {t('lit.organizationSettings')}
+                </h3>
+                <form id="organization-settings-form" onSubmit={handleSaveOrganization} className="max-w-xl space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('lit.name')}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('lit.abbreviation')}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.abbreviation}
+                      onChange={(e) => setEditForm({ ...editForm, abbreviation: e.target.value })}
+                      maxLength={10}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      placeholder={t('lit.eGAcme')}
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {t('lit.abbreviationMustBe10CharactersOrLess')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('common.description')}
+                    </label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={4}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </form>
+              </div>
+            )}
             {activeTab === 'attachments' && (
               <AttachmentsTab 
                 orgId={orgId} 
@@ -514,74 +551,17 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
         </PageStickyActions>
       )}
 
-      {/* Edit Organization Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {t('lit.editOrganization2')}
-              </h2>
-            </div>
-            <form onSubmit={handleSaveOrganization} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('lit.name')}
-                </label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('lit.abbreviation')}
-                </label>
-                <input
-                  type="text"
-                  value={editForm.abbreviation}
-                  onChange={(e) => setEditForm({ ...editForm, abbreviation: e.target.value })}
-                  maxLength={10}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder={t('lit.eGAcme')}
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {t('lit.abbreviationMustBe10CharactersOrLess')}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('common.description')}
-                </label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
-                >
-                  {isSaving ? t('lit.saving') : t('lit.saveChanges')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {activeTab === 'settings' && canManageSettings && (
+        <PageStickyActions>
+          <button
+            type="submit"
+            form="organization-settings-form"
+            disabled={isSaving}
+            className={pageActionButtonClass.primary}
+          >
+            {isSaving ? t('lit.saving2') : t('lit.saveChanges')}
+          </button>
+        </PageStickyActions>
       )}
 
       <ScrollToTopButton scrollContainerRef={scrollContainerRef} />

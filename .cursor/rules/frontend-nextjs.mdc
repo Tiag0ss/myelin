@@ -54,6 +54,7 @@ export default function PageName() {
 - **Do not** invent pill clusters, segmented button bars, or underline-button “fake tabs” for switching views (skills/rules, overview/versions, etc.).
 - Action buttons (Add / Save / Import) stay as buttons beside or below `PageTabs`, not as a substitute for tabs.
 - Nested sub-views also use `PageTabs` (see hours sub-tabs in `TaskDetailModal`).
+- **Entity edit on detail pages:** use a **Settings** tab (+ `PageStickyActions` save) like Projects/Customers — not a header edit modal or redundant “Edit” link under the title. Detail pages that use sticky actions need the shell `flex min-h-0 flex-1 flex-col overflow-hidden` + scrollable `main`.
 
 ## API calls
 

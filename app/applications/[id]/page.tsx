@@ -5,7 +5,7 @@ import { sanitizeRichTextHtml } from '@/lib/sanitizeHtml';
 
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
-import { useState, useEffect, use, useMemo, Suspense } from 'react';
+import { useState, useEffect, use, useMemo, useRef, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useRouter } from 'next/navigation'
@@ -28,9 +28,11 @@ import { layoutCommitGraph } from '@/lib/git/commitGraphLayout';
 import { decorateLaneHeadBranchNames } from '@/lib/git/commitLaneHeadLabels';
 import AgentDocsPanel from '@/components/mcp/AgentDocsPanel';
 import PageTabs from '@/components/PageTabs';
+import PageStickyChrome from '@/components/PageStickyChrome';
+import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
 
-type Tab = 'overview' | 'versions' | 'commits' | 'agent-docs';
-const APPLICATION_DETAIL_TABS = ['overview', 'versions', 'commits', 'agent-docs'] as const;
+type Tab = 'overview' | 'versions' | 'commits' | 'agent-docs' | 'settings';
+const APPLICATION_DETAIL_TABS = ['overview', 'versions', 'commits', 'agent-docs', 'settings'] as const;
 
 interface RemoteCommit {
   sha: string;
@@ -147,6 +149,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useUrlTab<Tab>(APPLICATION_DETAIL_TABS, 'overview');
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   const [commits, setCommits] = useState<RemoteCommit[]>([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
@@ -159,6 +162,16 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const [commitBranch, setCommitBranch] = useState(ALL_BRANCHES_VALUE);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchesLoaded, setBranchesLoaded] = useState(false);
+
+  // Application settings form
+  const [isSavingApp, setIsSavingApp] = useState(false);
+  const [editAppError, setEditAppError] = useState('');
+  const [editAppForm, setEditAppForm] = useState({
+    Name: '',
+    Description: '',
+    RepositoryUrl: '',
+    IsCustomerSpecific: false,
+  });
 
   // Version modal state
   const [showVersionModal, setShowVersionModal] = useState(false);
@@ -273,12 +286,58 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       });
       if (!res.ok) throw new Error(t('lit.applicationNotFound'));
       const data = await res.json();
-      setApplication(data.application);
-      await loadAllCustomers(data.application?.OrganizationId);
+      const app = data.application;
+      setApplication(app);
+      if (app) {
+        setEditAppForm({
+          Name: app.Name || '',
+          Description: app.Description || '',
+          RepositoryUrl: app.RepositoryUrl || '',
+          IsCustomerSpecific: !!app.IsCustomerSpecific,
+        });
+        setEditAppError('');
+      }
+      await loadAllCustomers(app?.OrganizationId);
     } catch (err: any) {
       setError(err.message || t('lit.failedToLoadApplication'));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !application) return;
+    if (!editAppForm.Name.trim()) {
+      setEditAppError(t('lit.nameIsRequired'));
+      return;
+    }
+    setIsSavingApp(true);
+    setEditAppError('');
+    try {
+      const res = await fetch(`${getApiUrl()}/api/applications/${application.Id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          Name: editAppForm.Name.trim(),
+          Description: editAppForm.Description.trim() || null,
+          RepositoryUrl: editAppForm.RepositoryUrl.trim() || null,
+          IsCustomerSpecific: editAppForm.IsCustomerSpecific,
+          CustomerIds: application.Customers?.map((c) => c.Id) || [],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || t('lit.failedToSaveApplication'));
+      }
+      await loadApplication();
+    } catch (err: unknown) {
+      setEditAppError(err instanceof Error ? err.message : t('lit.failedToSaveApplication'));
+    } finally {
+      setIsSavingApp(false);
     }
   };
 
@@ -829,14 +888,12 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="w-full mx-auto px-4 py-8">
-
-        {/* Back + Header */}
-        <div className="mb-6">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <PageStickyChrome>
+        <div className="mb-3">
           <Link
             href="/applications"
-            className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="mb-3 inline-flex items-center gap-1 text-sm text-[var(--pm-muted)] hover:text-[var(--pm-accent)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -847,7 +904,6 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               {application.ImagePath ? (
-                 
                 <img
                   src={application.ImagePath}
                   alt=""
@@ -859,8 +915,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 </span>
               )}
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{application.Name}</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{application.OrganizationName}</p>
+                <h1 className="text-xl font-semibold text-[var(--pm-text)] truncate">{application.Name}</h1>
+                <p className="text-sm text-[var(--pm-muted)]">{application.OrganizationName}</p>
               </div>
             </div>
             {application.RepositoryUrl && (
@@ -868,7 +924,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 href={application.RepositoryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 border border-[var(--pm-border)] rounded-lg text-sm text-[var(--pm-text)] hover:bg-[var(--pm-surface)] transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -879,22 +935,25 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        <div className="mb-6">
-          <PageTabs
-            tabs={[
-              { id: 'overview', label: t('lit.overview') },
-              {
-                id: 'versions',
-                label: `${t('lit.versions')} (${application.Versions?.length ?? 0})`,
-              },
-              { id: 'commits', label: t('lit.commits') },
-              { id: 'agent-docs', label: t('lit.mcpAgentDocsTab') },
-            ]}
-            activeId={activeTab}
-            onChange={(id) => setActiveTab(id as Tab)}
-          />
-        </div>
+        <PageTabs
+          tabs={[
+            { id: 'overview', label: t('lit.overview') },
+            {
+              id: 'versions',
+              label: `${t('lit.versions')} (${application.Versions?.length ?? 0})`,
+            },
+            { id: 'commits', label: t('lit.commits') },
+            { id: 'agent-docs', label: t('lit.mcpAgentDocsTab') },
+            ...(permissions?.canManageApplications
+              ? [{ id: 'settings' as const, label: t('pages.organizations.settings') }]
+              : []),
+          ]}
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as Tab)}
+        />
+      </PageStickyChrome>
 
+      <main ref={scrollContainerRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto pt-3">
         {/* ── OVERVIEW TAB ──────────────────────────────────────────────── */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1422,7 +1481,85 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
             />
           </div>
         )}
-      </div>
+
+        {activeTab === 'settings' && permissions?.canManageApplications && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="mb-6 text-lg font-bold text-gray-900 dark:text-white">
+              {t('lit.editApplication')}
+            </h3>
+            <form
+              id="application-settings-form"
+              onSubmit={(e) => void handleSaveApplication(e)}
+              className="max-w-xl space-y-4"
+            >
+              {editAppError ? (
+                <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
+                  {editAppError}
+                </div>
+              ) : null}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('common.name')}
+                </label>
+                <input
+                  type="text"
+                  value={editAppForm.Name}
+                  onChange={(e) => setEditAppForm({ ...editAppForm, Name: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('common.description')}
+                </label>
+                <textarea
+                  value={editAppForm.Description}
+                  onChange={(e) => setEditAppForm({ ...editAppForm, Description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('lit.repositoryUrl')}
+                </label>
+                <input
+                  type="url"
+                  value={editAppForm.RepositoryUrl}
+                  onChange={(e) => setEditAppForm({ ...editAppForm, RepositoryUrl: e.target.value })}
+                  placeholder="https://github.com/org/repo"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={editAppForm.IsCustomerSpecific}
+                  onChange={(e) =>
+                    setEditAppForm({ ...editAppForm, IsCustomerSpecific: e.target.checked })
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                {t('lit.customerSpecificProductVersion')}
+              </label>
+            </form>
+          </div>
+        )}
+      </main>
+
+      {activeTab === 'settings' && permissions?.canManageApplications && (
+        <PageStickyActions>
+          <button
+            type="submit"
+            form="application-settings-form"
+            disabled={isSavingApp}
+            className={pageActionButtonClass.primary}
+          >
+            {isSavingApp ? t('lit.saving2') : t('lit.saveChanges')}
+          </button>
+        </PageStickyActions>
+      )}
 
       {/* ── Version Modal ─────────────────────────────────────────────────── */}
       {showVersionModal && (
@@ -1809,7 +1946,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         confirmVariant="danger"
       />
 
-      <ScrollToTopButton />
+      <ScrollToTopButton scrollContainerRef={scrollContainerRef} />
     </div>
   );
 }
