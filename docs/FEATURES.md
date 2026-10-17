@@ -33,6 +33,7 @@ Comprehensive documentation of all features available in the application. Use th
 19. [Search & Navigation](#19-search--navigation)
 20. [Administration](#20-administration)
 21. [API Tokens](#21-api-tokens)
+21c. [Remote MCP (Cursor / agents)](#21c-remote-mcp-cursor--agents)
 22. [Outlook Calendar Integration](#22-outlook-calendar-integration)
 23. [Email Task Queue (Cloudflare)](#23-email-task-queue-cloudflare)
 24. [GitHub & Gitea Integration](#24-github--gitea-integration)
@@ -92,6 +93,7 @@ Organizations are the top-level grouping entity. Projects, tasks, tickets, and t
 - Admin users can create organizations at `/organizations`
 - Each organization has a name and rich-text description
 - Member who creates an org is automatically added as a member
+- Organization detail includes an **Agent docs** tab for org-scoped MCP skills and rules (see [Remote MCP](#21c-remote-mcp-cursor--agents))
 
 ### Members & Roles
 Users are added to organizations with a **role** (`Developer`, `Support`, `Manager`) and an optional **Permission Group**.
@@ -180,7 +182,8 @@ Applications represent software products that projects may be building or mainta
 - Customers are linked via a searchable multi-select (many-to-many)
 - Projects and tasks can reference an application; tasks can further reference a specific **version**
 - Detail and list pages show the uploaded image (or a package icon fallback)
-- Sidebar tabs on detail pages persist in `?tab=` (overview / versions / commits) so refresh keeps the active panel
+- Sidebar tabs on detail pages persist in `?tab=` (overview / versions / commits / agent-docs) so refresh keeps the active panel
+- **Agent docs** tab: Application-scoped agent skills and rules (merged after org docs for MCP clients)
 
 ### Application Versions (Releases)
 Each application can have multiple versioned releases:
@@ -1118,6 +1121,103 @@ Admins can also open **Administration → API Tokens** to see **all** users’ t
 
 Admins can view all tokens under Administration; regular users manage only their own under My Profile.
 
+Near API Tokens on **My Profile**, the **Myelin MCP** panel toggles **Allow MCP task writes** (`Users.McpWritesEnabled`, default off). See [Remote MCP](#21c-remote-mcp-cursor--agents).
+
+---
+
+## 21c. Remote MCP (Cursor / agents)
+
+Streamable HTTP MCP endpoint so Cursor (or other MCP clients) can resolve repo context, read org/app agent skills & rules, list/get the token owner’s tasks in scope, and optionally create/update those tasks.
+
+### Connect (Cursor MCP client — self-hosted URL)
+
+Myelin is self-hosted: **you** choose the host. Point Cursor at **your** origin + `/api/mcp` (same host as the Myelin API/UI you already use).
+
+| Piece | Where |
+|---|---|
+| Server URL + Bearer token | Cursor: `.cursor/mcp.json` (project) and/or `~/.cursor/mcp.json` (global) |
+| Tool scope (`projectIds`, `strict`, `allowWrite`) | Repo root `myelin.mcp.json` (optional; no secrets) |
+
+**Cursor `mcp.json` example** (replace the host; keep the token out of git):
+
+```json
+{
+  "mcpServers": {
+    "myelin": {
+      "url": "https://YOUR-MYELIN-HOST/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:MYELIN_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+- **`url`:** e.g. `https://pm.company.internal/api/mcp` or `http://localhost:4000/api/mcp` — not a fixed public SaaS URL.
+- **`Authorization`:** personal `pt_…` from **My Profile → API Tokens**. Prefer `${env:MYELIN_API_TOKEN}` (Cursor expands `${env:NAME}` in `url` / `headers`).
+- **Transport:** Streamable HTTP (`url` entry). If a given Cursor build cannot send Bearer headers this way, check that build’s MCP docs; SSE-only clients are out of scope for v1.
+- **Internal users only** — customer-portal users receive 403.
+- Stricter rate limiting than the general API; tool calls are audited (tool name, userId, success/failure; no token logged).
+
+Templates: [docs/mcp/cursor.mcp.json.example](mcp/cursor.mcp.json.example), full walkthrough [docs/mcp/CURSOR_RULE_MYELIN_MCP.md](mcp/CURSOR_RULE_MYELIN_MCP.md).
+
+### Repo config: `myelin.mcp.json`
+
+Optional file at the **repo root**. The Myelin server never reads the disk — the agent must pass these fields on every tool call (see [sample Cursor rule](mcp/CURSOR_RULE_MYELIN_MCP.md)).
+
+```json
+{
+  "projectIds": [12, 34],
+  "strict": false,
+  "allowWrite": false
+}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `projectIds` | `[]` | Myelin project ids for this repo (validated for the token user’s access) |
+| `strict` | `false` | `true`: scope is **only** those ids (no repo→Application expansion). `false`: union with Path B below |
+| `allowWrite` | `false` | Client-side write flag; **not sufficient alone** (dual gate) |
+
+Also pass `repositoryUrl` from `git remote get-url origin` on tool calls.
+
+### Scope (reads)
+
+- **Assigned to me:** `Tasks.AssignedTo` or `TaskAssignees` for the token user
+- **And** in scope: `ProjectId` ∈ effective project ids **or** (when not strict) `ApplicationId` ∈ matched applications
+- **Path B** (only when `strict` is false): normalize `repositoryUrl` → match `Applications.RepositoryUrl` → linked projects via `ApplicationProjects` + tasks with that `ApplicationId`
+- **URL normalize:** strip `.git`, trailing slash, lower-case host; accept `https://` and `git@host:path`
+- **0 matches:** clear error; **1 match:** use it; **N matches:** `resolve_context` returns candidates — other tools require explicit `applicationId`
+- Empty scope (`strict` + empty `projectIds`, or no ids and no usable remote) errors before querying
+
+### Writes (dual gate)
+
+Both required:
+
+1. **Server:** Profile → **Allow MCP task writes** (`Users.McpWritesEnabled = 1`)
+2. **Client:** `allowWrite: true` in config / tool args
+
+Then: target `projectId` ∈ effective scope; create assigns to self; update only tasks already in read-scope. No delete / no reassign-to-others in v1. Successful writes invalidate task/project cache like normal task routes.
+
+### Agent skills & rules
+
+- Stored in Myelin only (Organization + Application). No git import/export in v1.
+- UI: Organization → **Agent docs**; Application → **Agent docs**
+- MCP merge order: organization docs first, then application docs
+- Tools: list/get skills and rules (no mutation via MCP in v1)
+
+### MCP tools (summary)
+
+| Tool | Role |
+|---|---|
+| `resolve_context` | Scope, matched apps, write capability, ambiguity |
+| `list_*` / `get_*` skills & rules | Merged agent docs |
+| `list_project_meta` | Status / priority / task-type catalogs per effective project |
+| `list_my_tasks` / `get_task` | Assignee-scoped reads |
+| `create_task` / `update_task` | Dual-gated writes |
+
+Docs: [connect + agent rule](mcp/CURSOR_RULE_MYELIN_MCP.md) · [Cursor mcp.json example](mcp/cursor.mcp.json.example) · [myelin.mcp.json example](mcp/myelin.mcp.json.example).
+
 ---
 
 ## 21b. SSO for companion apps (Synapse)
@@ -1306,6 +1406,9 @@ Planning remains desktop-first for editing.
 | `PasswordResetTokens` | Single-use tokens for password recovery |
 | `OrganizationJiraIntegrations` | Jira credentials per org (two-tier) |
 | `ApiTokens` | Personal API tokens (`TokenHash`, prefix, expiry) |
+| `OrganizationAgentSkills` / `OrganizationAgentRules` | Org-scoped MCP agent skills and rules |
+| `ApplicationAgentSkills` / `ApplicationAgentRules` | Application-scoped MCP agent skills and rules |
+| `Users.McpWritesEnabled` | Server-side preference for MCP task writes (default off) |
 | `EmailTaskQueue` | Pending emails for task import per user |
 | `SLARules` | Per-org per-priority SLA thresholds |
 | `ProjectReportSchedules` | Scheduled PDF report config |

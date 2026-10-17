@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "myelin": {
+      "url": "https://YOUR-MYELIN-HOST/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:MYELIN_API_TOKEN}"
+      }
+    }
+  }
+}

@@ -3723,5 +3723,22 @@
   "whatsNewEmpty": "No release notes to show.",
   "whatsNewGotIt": "Got it",
   "whatsNewSaving": "Saving…",
-  "whatsNewSinceLastVisit": "What’s new since your last visit"
+  "whatsNewSinceLastVisit": "What’s new since your last visit",
+  "mcpAgentSkills": "Agent skills",
+  "mcpAgentRules": "Agent rules",
+  "mcpNoAgentDocs": "No agent documents yet.",
+  "mcpDeleteAgentDocConfirm": "Delete this agent document?",
+  "mcpSettingsTitle": "Myelin MCP",
+  "mcpSettingsHint": "Personal API tokens can connect Cursor (or other MCP clients) to Myelin. Task writes also require allowWrite in myelin.mcp.json.",
+  "mcpAllowWrites": "Allow MCP task writes (create/update my tasks)",
+  "mcpPreferencesSaved": "MCP preferences saved.",
+  "mcpEndpointHint": "MCP endpoint: <your-myelin-origin>{path} (Authorization: Bearer pt_…). Self-hosted — use your deployment host.",
+  "mcpCursorConfigHint": "In Cursor, set .cursor/mcp.json (or ~/.cursor/mcp.json) with url + Bearer token. See docs/mcp/CURSOR_RULE_MYELIN_MCP.md.",
+  "mcpAgentDocsTab": "Agent docs",
+  "mcpDocSlug": "Slug",
+  "mcpDocSlugOptional": "optional",
+  "mcpAddAgentSkill": "Add agent skill",
+  "mcpAddAgentRule": "Add agent rule",
+  "mcpEditAgentSkill": "Edit agent skill",
+  "mcpEditAgentRule": "Edit agent rule"
 }

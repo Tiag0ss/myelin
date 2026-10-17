@@ -32,6 +32,7 @@ import TaskFormVisibilitySettingsPanel, {
 } from '@/components/admin/TaskFormVisibilitySettingsPanel';
 import ExpenseTaxonomyManager from '@/components/ExpenseTaxonomyManager';
 import OrganizationIntegrationsPanel from '@/components/OrganizationIntegrationsPanel';
+import AgentDocsPanel from '@/components/mcp/AgentDocsPanel';
 import { useUrlTab } from '@/hooks/useUrlTab';
 
 import { t } from '@/lib/i18n/runtime';
@@ -48,6 +49,7 @@ const ORGANIZATION_DETAIL_TABS = [
   'sla',
   'workflow-policies',
   'task-form',
+  'agent-docs',
   'attachments',
   'history',
 ] as const;
@@ -79,7 +81,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
   
   // Edit organization state
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', description: '' });
+  const [editForm, setEditForm] = useState({ name: '', abbreviation: '', description: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [internalTicketsEnabled, setInternalTicketsEnabled] = useState(true);
   const [featureFlagsLoaded, setFeatureFlagsLoaded] = useState(false);
@@ -194,6 +196,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
           },
           body: JSON.stringify({
             name: editForm.name,
+            abbreviation: editForm.abbreviation.trim() || null,
             description: editForm.description,
           }),
         }
@@ -364,6 +367,7 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
           { id: 'task-form' as const, label: t('lit.taskForm') },
         ]
       : []),
+    { id: 'agent-docs' as const, label: t('lit.mcpAgentDocsTab') },
     { id: 'attachments' as const, label: t('lit.attachments') },
     { id: 'history' as const, label: t('lit.history') },
   ];
@@ -379,7 +383,11 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
               <button
                 type="button"
                 onClick={() => {
-                  setEditForm({ name: organization.Name, description: organization.Description || '' });
+                  setEditForm({
+                    name: organization.Name,
+                    abbreviation: organization.Abbreviation || '',
+                    description: organization.Description || '',
+                  });
                   setShowEditModal(true);
                 }}
                 className="mt-1 text-sm text-[var(--pm-accent)] hover:underline"
@@ -458,6 +466,15 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                 }}
               />
             )}
+            {activeTab === 'agent-docs' && token && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <AgentDocsPanel
+                  token={token}
+                  basePath={`/api/organizations/${orgId}`}
+                  canManage={canManageSettings || !!user?.isAdmin}
+                />
+              </div>
+            )}
             {activeTab === 'attachments' && (
               <AttachmentsTab 
                 orgId={orgId} 
@@ -518,6 +535,22 @@ function OrganizationDetailPageContent({ params }: { params: Promise<{ id: strin
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('lit.abbreviation')}
+                </label>
+                <input
+                  type="text"
+                  value={editForm.abbreviation}
+                  onChange={(e) => setEditForm({ ...editForm, abbreviation: e.target.value })}
+                  maxLength={10}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder={t('lit.eGAcme')}
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {t('lit.abbreviationMustBe10CharactersOrLess')}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

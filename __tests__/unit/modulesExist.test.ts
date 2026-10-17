@@ -20,6 +20,7 @@ const MODULES = [
   'integrations',
   'search',
   'whats-new',
+  'mcp',
 ];
 
 describe('server/modules layout', () => {

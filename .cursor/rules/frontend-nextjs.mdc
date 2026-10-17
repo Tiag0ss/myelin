@@ -48,6 +48,13 @@ export default function PageName() {
 - Dark mode on every new element: pair light/dark classes.
 - `'use client'` only when using hooks, events, or browser APIs.
 
+## Tabs (mandatory)
+
+- Section / panel / page navigation **must** use [`PageTabs`](../../components/PageTabs.tsx) — same pattern as org detail, ExpenseTaxonomyManager, TaskDetailModal.
+- **Do not** invent pill clusters, segmented button bars, or underline-button “fake tabs” for switching views (skills/rules, overview/versions, etc.).
+- Action buttons (Add / Save / Import) stay as buttons beside or below `PageTabs`, not as a substitute for tabs.
+- Nested sub-views also use `PageTabs` (see hours sub-tabs in `TaskDetailModal`).
+
 ## API calls
 
 ```typescript

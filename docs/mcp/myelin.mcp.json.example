@@ -1,0 +1,5 @@
+{
+  "projectIds": [12, 34],
+  "strict": false,
+  "allowWrite": false
+}

@@ -60,7 +60,7 @@ docs/                   # FEATURES, ROLE_PERMISSIONS, etc.
 - Keep **stable `/api/...` paths**. Live server mounts **only** `server/modules/*` — never import or load `old/backend`.
 
 ### Frontend
-- New UI: Synapse tokens, AppShell, PageTabs; top-bar org switcher; account-only user menu.
+- New UI: Synapse tokens, AppShell, **PageTabs** for all section switches (never pill/segmented button bars as fake tabs); top-bar org switcher; account-only user menu.
 - Full-width pages: outer `w-full` — **no** `container` unless user asks.
 - **No** `alert()` / `confirm()` — use ConfirmAlertModal.
 - API URL: `getApiUrl()` from `@/lib/api/config`.

@@ -26,9 +26,11 @@ import { recordRecentNavAccess } from '@/lib/recentNavAccess';
 import { NavModuleIcon } from '@/lib/navIcons';
 import { layoutCommitGraph } from '@/lib/git/commitGraphLayout';
 import { decorateLaneHeadBranchNames } from '@/lib/git/commitLaneHeadLabels';
+import AgentDocsPanel from '@/components/mcp/AgentDocsPanel';
+import PageTabs from '@/components/PageTabs';
 
-type Tab = 'overview' | 'versions' | 'commits';
-const APPLICATION_DETAIL_TABS = ['overview', 'versions', 'commits'] as const;
+type Tab = 'overview' | 'versions' | 'commits' | 'agent-docs';
+const APPLICATION_DETAIL_TABS = ['overview', 'versions', 'commits', 'agent-docs'] as const;
 
 interface RemoteCommit {
   sha: string;
@@ -877,27 +879,20 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-          <nav className="-mb-px flex space-x-6">
-            {(['overview', 'versions', 'commits'] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-3 px-1 border-b-2 text-sm font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab === 'versions'
-                  ? `Versions (${application.Versions?.length ?? 0})`
-                  : tab === 'commits'
-                    ? t('lit.commits')
-                    : t('lit.overview')}
-              </button>
-            ))}
-          </nav>
+        <div className="mb-6">
+          <PageTabs
+            tabs={[
+              { id: 'overview', label: t('lit.overview') },
+              {
+                id: 'versions',
+                label: `${t('lit.versions')} (${application.Versions?.length ?? 0})`,
+              },
+              { id: 'commits', label: t('lit.commits') },
+              { id: 'agent-docs', label: t('lit.mcpAgentDocsTab') },
+            ]}
+            activeId={activeTab}
+            onChange={(id) => setActiveTab(id as Tab)}
+          />
         </div>
 
         {/* ── OVERVIEW TAB ──────────────────────────────────────────────── */}
@@ -1414,6 +1409,17 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── AGENT DOCS TAB ─────────────────────────────────────────────── */}
+        {activeTab === 'agent-docs' && token && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <AgentDocsPanel
+              token={token}
+              basePath={`/api/applications/${application.Id}`}
+              canManage={!!permissions?.canManageApplications || !!user?.isAdmin}
+            />
           </div>
         )}
       </div>

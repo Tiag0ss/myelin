@@ -1,0 +1,58 @@
+{
+  "TableName": "OrganizationAgentSkills",
+  "PrimaryKeyFields": "Id",
+  "Fields": [
+    {
+      "FieldName": "Id",
+      "DataType": "int",
+      "NotNullable": true,
+      "AutoIncrement": true,
+      "Comment": "Primary key - organization agent skill"
+    },
+    {
+      "FieldName": "OrganizationId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - Organizations.Id this skill belongs to"
+    },
+    {
+      "FieldName": "Name",
+      "DataType": "varchar(255)",
+      "NotNullable": true,
+      "Comment": "Display name of the skill"
+    },
+    {
+      "FieldName": "Slug",
+      "DataType": "varchar(128)",
+      "NotNullable": true,
+      "Comment": "Stable slug identifier within the organization"
+    },
+    {
+      "FieldName": "Content",
+      "DataType": "mediumtext",
+      "NotNullable": false,
+      "Comment": "Markdown skill content served via MCP"
+    },
+    {
+      "FieldName": "SortOrder",
+      "DataType": "int",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Display and merge order (lower first)"
+    },
+    {
+      "FieldName": "UpdatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+      "Comment": "Auto-updated timestamp of last modification"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the skill was created"
+    }
+  ]
+}

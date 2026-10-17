@@ -89,3 +89,4 @@ package-lock.json
 
 # Generated Synapse vault pack (rebuild with scripts/pack-synapse-myelin-docs.sh)
 docs/synapse-myelin-manual.zip
+/.cursor/mcp.json

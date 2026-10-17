@@ -18,6 +18,7 @@ import PasswordInput, { clearPasswordInput, readPasswordInput } from '@/componen
 import ConfirmAlertModal from '@/components/ConfirmAlertModal';
 import ProfileTaskFormVisibility from '@/components/profile/ProfileTaskFormVisibility';
 import ApiTokensManagement from '@/components/admin/ApiTokensManagement';
+import McpPreferencesPanel from '@/components/mcp/McpPreferencesPanel';
 import PageTabs from '@/components/PageTabs';
 import PageStickyChrome from '@/components/PageStickyChrome';
 import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
@@ -1462,58 +1463,66 @@ function ProfilePageContent() {
               )}
 
               {activeTab === 'security' && (
-                <div className="max-w-md space-y-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                    {t('pages.profile.changePassword')}
-                  </h2>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('auth.currentPassword')}
-                    </label>
-                    <PasswordInput
-                      ref={currentPasswordRef}
-                      name="currentPassword"
-                      onInput={syncPasswordFormState}
-                      autoComplete="current-password"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
+                <div className="max-w-xl space-y-6">
+                  <div className="max-w-md space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                      {t('pages.profile.changePassword')}
+                    </h2>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('auth.currentPassword')}
+                      </label>
+                      <PasswordInput
+                        ref={currentPasswordRef}
+                        name="currentPassword"
+                        onInput={syncPasswordFormState}
+                        autoComplete="current-password"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('auth.newPassword')}
+                      </label>
+                      <PasswordInput
+                        ref={newPasswordRef}
+                        name="newPassword"
+                        onInput={syncPasswordFormState}
+                        autoComplete="new-password"
+                        preventAutofill
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('lit.mustBeAtLeast6Characters')}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('auth.confirmPassword')}
+                      </label>
+                      <PasswordInput
+                        ref={confirmPasswordRef}
+                        name="confirmPassword"
+                        onInput={syncPasswordFormState}
+                        autoComplete="new-password"
+                        preventAutofill
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('auth.newPassword')}
-                    </label>
-                    <PasswordInput
-                      ref={newPasswordRef}
-                      name="newPassword"
-                      onInput={syncPasswordFormState}
-                      autoComplete="new-password"
-                      preventAutofill
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('lit.mustBeAtLeast6Characters')}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('auth.confirmPassword')}
-                    </label>
-                    <PasswordInput
-                      ref={confirmPasswordRef}
-                      name="confirmPassword"
-                      onInput={syncPasswordFormState}
-                      autoComplete="new-password"
-                      preventAutofill
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
+                  {!isCustomerUser && token ? <McpPreferencesPanel token={token} /> : null}
                 </div>
               )}
 
-              {activeTab === 'apiTokens' && !isCustomerUser && <ApiTokensManagement mode="self" />}
+              {activeTab === 'apiTokens' && !isCustomerUser && (
+                <div className="space-y-4">
+                  {token ? <McpPreferencesPanel token={token} /> : null}
+                  <ApiTokensManagement mode="self" />
+                </div>
+              )}
 
               {activeTab === 'workHours' && (
                 <div className="space-y-3">

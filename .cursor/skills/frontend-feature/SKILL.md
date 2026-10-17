@@ -41,6 +41,7 @@ Out of scope:
 ## Execution Rules
 
 1. Use existing Tailwind tokens and dark-mode classes only.
+1b. View switches (page sections, panel modes, nested sub-views) **must** use `PageTabs` — never custom pill/segmented button bars as fake tabs. Keep Add/Save/etc. as normal action buttons beside the tabs.
 2. Use full-width page wrappers (`w-full`) for screens; do not introduce `container` wrappers unless explicitly requested.
 3. Keep changes minimal and localized to requested files.
 4. For API calls, always:

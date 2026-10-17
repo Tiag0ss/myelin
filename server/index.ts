@@ -99,6 +99,10 @@ import reportingRoutes from './modules/reporting/reporting';
 import ssoRoutes from './modules/auth/sso';
 import i18nLitRoutes from './modules/i18n/lit';
 import whatsNewRoutes from './modules/whats-new/whatsNew';
+import mcpPreferencesRoutes from './modules/mcp/preferences';
+import mcpHttpRoutes from './modules/mcp/mcpHttp';
+import organizationAgentDocsRoutes from './modules/mcp/organizationAgentDocs';
+import applicationAgentDocsRoutes from './modules/mcp/applicationAgentDocs';
 import { ensureAiAssistantViews } from './utils/aiAssistantViews';
 import { startWorkSummaryScheduler } from './utils/workSummaryScheduler';
 import { startDueDateReminderScheduler } from './utils/dueDateReminderScheduler';
@@ -224,6 +228,14 @@ app.prepare().then(async () => {
     legacyHeaders: false,
   });
 
+  const mcpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 300,
+    message: 'Too many MCP requests, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   // Middleware - increase limit for base64 file uploads (10MB files become ~13.5MB in base64)
   server.use(express.json({ limit: '50mb' }));
   server.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -273,6 +285,7 @@ app.prepare().then(async () => {
   server.use('/api/users', usersRoutes);
   server.use('/api/tasks', tasksRoutes);
   server.use('/api/organizations', organizationsRoutes);
+  server.use('/api/organizations', organizationAgentDocsRoutes);
   server.use('/api/permission-groups', permissionGroupsRoutes);
   server.use('/api/status-values', statusValuesRoutes);
   server.use('/api/task-allocations', taskAllocationsRoutes);
@@ -291,6 +304,7 @@ app.prepare().then(async () => {
   server.use('/api/search', searchRoutes);
   server.use('/api/customers', customersRoutes);
   server.use('/api/applications', applicationsRoutes);
+  server.use('/api/applications', applicationAgentDocsRoutes);
   server.use('/api/statistics', statisticsRoutes);
   server.use('/api/dashboard-kpis', dashboardKpisRoutes);
   server.use('/api/tickets', ticketsRoutes);
@@ -342,6 +356,8 @@ app.prepare().then(async () => {
   // Public lit catalogs — Express owns /api/*, so this cannot be Next App Router only.
   server.use('/api/i18n', i18nLitRoutes);
   server.use('/api/whats-new', whatsNewRoutes);
+  server.use('/api/mcp', mcpLimiter, mcpPreferencesRoutes);
+  server.use('/api/mcp', mcpLimiter, mcpHttpRoutes);
 
   // Error handling middleware
   server.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

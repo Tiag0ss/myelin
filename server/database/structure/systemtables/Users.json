@@ -406,6 +406,13 @@
       "Comment": "Last app semver the user acknowledged via What's New dismiss on Dashboard"
     },
     {
+      "FieldName": "McpWritesEnabled",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Server-side gate allowing MCP create/update task tools when client also sends allowWrite"
+    },
+    {
       "FieldName": "AzureAdObjectId",
       "DataType": "varchar(64)",
       "NotNullable": false,
