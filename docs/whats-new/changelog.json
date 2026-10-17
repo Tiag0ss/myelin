@@ -99,9 +99,19 @@
       "date": "2026-10-17",
       "title": "Remote MCP, agent docs, and What's New",
       "items": [
+        "Bump version to 1.2.0 and update changelog with new features and enhancements, including settings tab integration, improved navigation, and enhanced session management",
         "Implement settings tab in application and organization detail views, allowing users to edit application and organization details directly within the UI. Enhance navigation by adding settings to the existing tab structure",
         "Enhance application UI by integrating Agent Docs panel and PageTabs for improved navigation in organization and application detail views. Update .gitignore to exclude cursor configuration files. Add MCP preferences management in user profile settings. Add MCP server to read, update and create tasks in Myelin",
         "Implement \"What's New\" feature to display changelog entries in the dashboard and app chrome tools. Add API endpoints for fetching changelog data and marking versions as seen. Update Dockerfile to include changelog documentation and enhance localization for new UI elements"
+      ]
+    },
+    {
+      "version": "1.2.1",
+      "date": "2026-10-17",
+      "title": "Implement new sprint management features, including the ability to li…",
+      "items": [
+        "Implement new sprint management features, including the ability to list sprints with associated tasks, retrieve individual sprint details, and update sprint information. Enhance task management by allowing optional sprint assignments and including sprint details in task responses. Update documentation to reflect these changes",
+        "Standardize HTTP method usage across various components by replacing localized 'post' translations with the explicit 'POST' method. This change ensures consistency in API requests throughout the application"
       ]
     }
   ]
