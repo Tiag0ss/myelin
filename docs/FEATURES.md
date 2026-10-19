@@ -1197,7 +1197,7 @@ Both required:
 1. **Server:** Profile → **Allow MCP task writes** (`Users.McpWritesEnabled = 1`)
 2. **Client:** `allowWrite: true` in config / tool args
 
-Then: target `projectId` ∈ effective scope; create assigns to self; update only tasks already in read-scope. No delete / no reassign-to-others in v1. Successful writes invalidate task/project cache like normal task routes.
+Then: target `projectId` ∈ effective scope; create assigns to self; update only tasks already in read-scope. No delete / no reassign-to-others in v1. Successful writes invalidate task/project cache like normal task routes. MCP create/update also writes **TaskHistory** and **ActivityLogs** (same as the UI API), so the task change log stays complete.
 
 ### Agent skills & rules
 

@@ -1,6 +1,8 @@
 import { dbProvider, pool, ResultSetHeader, RowDataPacket } from '../../config/database';
 import logger from '../../utils/logger';
 import { invalidateByEntity } from '../../services/cacheInvalidation';
+import { logActivity } from '../admin/activityLogs';
+import { recordTaskHistory } from '../projects/taskHistory';
 import {
   attachTasksToSprints,
   canWriteViaMcp,
@@ -13,6 +15,23 @@ import {
   sprintAllowedForProject,
 } from './scopeHelpers';
 import { loadMergedAgentDocs, resolveMcpScope } from './scopeService';
+
+async function usernameForUserId(userId: number): Promise<string | null> {
+  try {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT Username FROM Users WHERE Id = ?',
+      [userId]
+    );
+    return rows[0]?.Username != null ? String(rows[0].Username) : null;
+  } catch {
+    return null;
+  }
+}
+
+function historyStr(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  return String(value);
+}
 
 function mapTaskRowWithSprint(row: RowDataPacket) {
   const sprint = shapeTaskSprintRef(row);
@@ -709,6 +728,18 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
     [result.insertId, ctx.userId, ctx.userId]
   );
 
+  await recordTaskHistory(result.insertId, ctx.userId, 'created', undefined, undefined, undefined);
+  const username = await usernameForUserId(ctx.userId);
+  await logActivity(
+    ctx.userId,
+    username,
+    'TASK_CREATE',
+    'Task',
+    result.insertId,
+    taskName,
+    `Created task via MCP: ${taskName} in project ID ${projectId}`
+  );
+
   try {
     await invalidateByEntity('task', { projectId });
   } catch {
@@ -758,40 +789,80 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   const getResult = await toolGetTask(ctx, { ...args, taskId });
   if (getResult.isError) return getResult;
 
-  let parsedGet: { data?: { ProjectId?: number } } = {};
+  let oldTask: Record<string, unknown> = {};
   try {
-    parsedGet = JSON.parse(getResult.content[0]?.text || '{}') as {
-      data?: { ProjectId?: number };
+    const parsed = JSON.parse(getResult.content[0]?.text || '{}') as {
+      data?: Record<string, unknown>;
     };
+    oldTask = parsed.data || {};
   } catch {
-    parsedGet = {};
+    oldTask = {};
   }
-  const taskProjectId = Number(parsedGet.data?.ProjectId);
+  const taskProjectId = Number(oldTask.ProjectId);
   if (!Number.isFinite(taskProjectId)) {
     return textResult({ success: false, message: 'Could not resolve task project' }, true);
   }
 
   const updates: string[] = [];
   const params: unknown[] = [];
+  const changes: Array<{ field: string; oldVal: string | null; newVal: string | null }> = [];
+
   if (args.taskName != null) {
-    updates.push('TaskName = ?');
-    params.push(String(args.taskName).trim());
+    const next = String(args.taskName).trim();
+    const prev = historyStr(oldTask.TaskName) || '';
+    if (next !== prev) {
+      updates.push('TaskName = ?');
+      params.push(next);
+      changes.push({ field: 'TaskName', oldVal: prev, newVal: next });
+    }
   }
   if (args.description !== undefined) {
-    updates.push('Description = ?');
-    params.push(args.description == null ? null : String(args.description));
+    const next = args.description == null ? null : String(args.description);
+    const prev = historyStr(oldTask.Description);
+    if ((next || null) !== (prev || null)) {
+      updates.push('Description = ?');
+      params.push(next);
+      changes.push({ field: 'Description', oldVal: prev, newVal: next });
+    }
   }
   if (args.status != null) {
-    updates.push('Status = ?');
-    params.push(parseInt(String(args.status), 10));
+    const next = parseInt(String(args.status), 10);
+    const prev = Number(oldTask.Status);
+    if (Number.isFinite(next) && next !== prev) {
+      updates.push('Status = ?');
+      params.push(next);
+      changes.push({
+        field: 'Status',
+        oldVal: historyStr(oldTask.Status),
+        newVal: String(next),
+      });
+    }
   }
   if (args.priority != null) {
-    updates.push('Priority = ?');
-    params.push(parseInt(String(args.priority), 10));
+    const next = parseInt(String(args.priority), 10);
+    const prev = Number(oldTask.Priority);
+    if (Number.isFinite(next) && next !== prev) {
+      updates.push('Priority = ?');
+      params.push(next);
+      changes.push({
+        field: 'Priority',
+        oldVal: historyStr(oldTask.Priority),
+        newVal: String(next),
+      });
+    }
   }
   if (args.taskType != null) {
-    updates.push('TaskType = ?');
-    params.push(parseInt(String(args.taskType), 10));
+    const next = parseInt(String(args.taskType), 10);
+    const prev = Number(oldTask.TaskType);
+    if (Number.isFinite(next) && next !== prev) {
+      updates.push('TaskType = ?');
+      params.push(next);
+      changes.push({
+        field: 'TaskType',
+        oldVal: historyStr(oldTask.TaskType),
+        newVal: String(next),
+      });
+    }
   }
   if (args.sprintId !== undefined) {
     const sprintResolved = await resolveSprintIdForProject(
@@ -803,8 +874,19 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
       return textResult({ success: false, message: sprintResolved.message }, true);
     }
     if (sprintResolved.sprintId !== undefined) {
-      updates.push('SprintId = ?');
-      params.push(sprintResolved.sprintId);
+      const next = sprintResolved.sprintId;
+      const prevRaw = oldTask.SprintId;
+      const prev = prevRaw == null || prevRaw === '' ? null : Number(prevRaw);
+      const prevNorm = prev != null && Number.isFinite(prev) ? prev : null;
+      if (next !== prevNorm) {
+        updates.push('SprintId = ?');
+        params.push(next);
+        changes.push({
+          field: 'SprintId',
+          oldVal: prevNorm == null ? null : String(prevNorm),
+          newVal: next == null ? null : String(next),
+        });
+      }
     }
   }
   if (updates.length === 0) {
@@ -813,6 +895,31 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   params.push(taskId);
   await pool.execute(`UPDATE Tasks SET ${updates.join(', ')} WHERE Id = ?`, params);
 
+  for (const change of changes) {
+    await recordTaskHistory(
+      taskId,
+      ctx.userId,
+      'updated',
+      change.field,
+      change.oldVal ?? undefined,
+      change.newVal ?? undefined
+    );
+  }
+
+  if (changes.length > 0) {
+    const username = await usernameForUserId(ctx.userId);
+    const displayName = historyStr(args.taskName) || historyStr(oldTask.TaskName) || `Task ${taskId}`;
+    await logActivity(
+      ctx.userId,
+      username,
+      'TASK_UPDATE',
+      'Task',
+      taskId,
+      displayName,
+      `Updated task via MCP: ${displayName} (Changed: ${changes.map((c) => c.field).join(', ')})`
+    );
+  }
+
   try {
     await invalidateByEntity('task', { taskId });
   } catch {
@@ -820,5 +927,5 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   }
 
   logger.info('MCP tool update_task', { userId: ctx.userId, taskId, ok: true });
-  return textResult({ success: true, data: { id: taskId, updated: true } });
+  return textResult({ success: true, data: { id: taskId, updated: true, changes: changes.map((c) => c.field) } });
 }
