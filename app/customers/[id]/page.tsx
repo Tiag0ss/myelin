@@ -635,9 +635,9 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
         task.AssignedUsername ||
         '';
       return {
-        Id: task.Id,
-        TaskName: task.TaskName,
-        ProjectName: task.ProjectName,
+        Id: String(task.Id),
+        TaskName: task.TaskName || '',
+        ProjectName: task.ProjectName || '',
         StatusName: task.StatusName || '',
         PriorityName: task.PriorityName || '',
         TaskTypeName: task.TaskTypeName || '',
@@ -645,7 +645,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
         DueDate: task.DueDate || '',
         PlannedStartDate: task.PlannedStartDate || '',
         PlannedEndDate: task.PlannedEndDate || '',
-        EstimatedHours: task.EstimatedHours ?? '',
+        EstimatedHours: task.EstimatedHours == null ? '' : String(task.EstimatedHours),
         UnscheduledWork: Number(task.UnscheduledWork || 0) === 1 ? 'Yes' : 'No',
         UpdatedAt: task.UpdatedAt || '',
       };

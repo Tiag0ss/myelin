@@ -42,8 +42,8 @@ describe('grid enhancer column keys', () => {
   });
 
   it('treats incomplete session signatures as stale', () => {
-    const currentSignature = 'task|status|extra-Foo';
-    const staleSessionSignature = 'task|status';
+    const currentSignature: string = 'task|status|extra-Foo';
+    const staleSessionSignature: string = 'task|status';
     expect(staleSessionSignature === currentSignature).toBe(false);
   });
 });
