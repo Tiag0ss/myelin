@@ -138,6 +138,17 @@
         "Log TaskHistory and ActivityLogs for MCP task create/update writes",
         "Woodpecker/Docker release builds now produce Windows desktop NSIS, VS Code/Cursor VSIX, and Rider plugin ZIP alongside the Linux AppImage (Visual Studio VSIX still needs a Windows MSBuild host)"
       ]
+    },
+    {
+      "version": "1.2.3",
+      "date": "2026-10-22",
+      "title": "Jira links, overview pending, and companion branding",
+      "items": [
+        "Show Jira issue key with open-in-Jira on customer Tasks, overview pending tasks, and project task Jira columns (when visible)",
+        "Exclude cancelled statuses from customer overview pending, overdue, and upcoming lists",
+        "Fix Downloads product-name translations and the customer External Name label",
+        "Rename IDE Kanban tool window labels from PM Kanban to Myelin Kanban (VS Code/Cursor, Rider, Visual Studio)"
+      ]
     }
   ]
 }

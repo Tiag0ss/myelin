@@ -7,7 +7,7 @@ using Task = System.Threading.Tasks.Task;
 namespace ProjectManagement.PendingTasks
 {
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [InstalledProductRegistration("Myelin — Kanban", "Project Kanban via API token", "0.3.0")]
+    [InstalledProductRegistration("Myelin — Kanban", "Project Kanban via API token", "0.3.1")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideToolWindow(typeof(PendingTasksToolWindow))]
     [ProvideOptionPage(typeof(PmOptionsPage), "Myelin", "General", 0, 0, true)]

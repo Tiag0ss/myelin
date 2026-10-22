@@ -2,7 +2,7 @@
   "name": "myelin-pending-tasks",
   "displayName": "Myelin — Kanban",
   "description": "Project Kanban board in an editor tab (API token). Drag cards to change status. Send tasks to AI Chat. Works in VS Code and Cursor.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "myelin",
   "engines": {
     "vscode": "^1.85.0"
