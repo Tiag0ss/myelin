@@ -190,7 +190,7 @@ export function TasksTable({
   onEditTask: (task: Task) => void;
   handleInlineEditorKeyDown: (event: React.KeyboardEvent, task: Task) => void;
   taskTagMap: Map<number, Array<{ id: number; name: string; color: string }>>;
-  renderAdditionalTaskColumnValue: (task: Task, rawKey: string) => string;
+  renderAdditionalTaskColumnValue: (task: Task, rawKey: string) => React.ReactNode;
   saveInlineEdit: (task: Task) => void | Promise<void>;
   cancelInlineEdit: () => void;
   onDeleteTask: (id: number) => void;

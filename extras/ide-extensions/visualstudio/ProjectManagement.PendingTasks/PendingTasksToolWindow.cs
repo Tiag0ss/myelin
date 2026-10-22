@@ -19,7 +19,7 @@ namespace ProjectManagement.PendingTasks
     {
         public PendingTasksToolWindow() : base(null)
         {
-            Caption = "PM Kanban";
+            Caption = "Myelin Kanban";
             Content = new KanbanControl(this);
         }
     }

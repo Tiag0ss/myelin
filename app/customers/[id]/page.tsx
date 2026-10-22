@@ -125,6 +125,10 @@ interface CustomerTaskRow {
   AssignedFirstName: string | null;
   AssignedLastName: string | null;
   AssignedUsername: string | null;
+  JiraIssueKey: string | null;
+  ExternalIssueId: string | null;
+  ExternalTicketId: string | null;
+  JiraUrl: string | null;
 }
 
 interface RecentTimeEntry {
@@ -162,6 +166,10 @@ interface PendingTask {
   AssignedUsername: string | null;
   StatusName: string;
   StatusColor: string;
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  ExternalTicketId?: string | null;
+  JiraUrl?: string | null;
 }
 
 interface OverdueTask {
@@ -574,7 +582,8 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
           [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
           task.AssignedUsername ||
           '';
-        const haystack = `${task.TaskName || ''} ${task.ProjectName || ''} ${assignee} ${task.StatusName || ''} ${task.PriorityName || ''}`.toLowerCase();
+        const jiraKey = task.JiraIssueKey || task.ExternalTicketId || task.ExternalIssueId || '';
+        const haystack = `${task.TaskName || ''} ${task.ProjectName || ''} ${assignee} ${task.StatusName || ''} ${task.PriorityName || ''} ${jiraKey}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
@@ -618,6 +627,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
       'Id',
       'TaskName',
       'ProjectName',
+      'Jira',
       'StatusName',
       'PriorityName',
       'TaskTypeName',
@@ -634,10 +644,12 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
         [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
         task.AssignedUsername ||
         '';
+      const jiraKey = task.JiraIssueKey || task.ExternalTicketId || task.ExternalIssueId || '';
       return {
         Id: String(task.Id),
         TaskName: task.TaskName || '',
         ProjectName: task.ProjectName || '',
+        Jira: jiraKey,
         StatusName: task.StatusName || '',
         PriorityName: task.PriorityName || '',
         TaskTypeName: task.TaskTypeName || '',
@@ -1381,6 +1393,12 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                     const assignedName = task.AssignedFirstName
                       ? `${task.AssignedFirstName} ${task.AssignedLastName || ''}`.trim()
                       : task.AssignedUsername;
+                    const jiraKey =
+                      task.JiraIssueKey || task.ExternalTicketId || task.ExternalIssueId || null;
+                    const jiraBrowseUrl =
+                      jiraKey && task.JiraUrl
+                        ? `${String(task.JiraUrl).replace(/\/$/, '')}/browse/${encodeURIComponent(jiraKey)}`
+                        : null;
 
                     return (
                       <div
@@ -1407,6 +1425,31 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                           <span>
                             Assignee: {assignedName || t('lit.unassigned')}
                           </span>
+                          {jiraKey && (
+                            <span className="inline-flex items-center gap-1 min-w-0">
+                              <svg className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
+                              </svg>
+                              <span className="truncate font-medium text-gray-700 dark:text-gray-300" title={jiraKey}>
+                                {jiraKey}
+                              </span>
+                              {jiraBrowseUrl && (
+                                <a
+                                  href={jiraBrowseUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 shrink-0"
+                                  title={t('lit.openInJira', { key: jiraKey })}
+                                  aria-label={t('lit.openInJira', { key: jiraKey })}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -1754,6 +1797,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                       <tr>
                         <th className="px-4 py-3 font-semibold">{t('lit.task')}</th>
                         <th className="px-4 py-3 font-semibold">{t('common.projects')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('lit.jira')}</th>
                         <th className="px-4 py-3 font-semibold">{t('lit.status')}</th>
                         <th className="px-4 py-3 font-semibold">{t('lit.priority')}</th>
                         <th className="px-4 py-3 font-semibold">{t('lit.assignee')}</th>
@@ -1767,6 +1811,12 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                           [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
                           task.AssignedUsername ||
                           t('lit.unassigned');
+                        const jiraKey =
+                          task.JiraIssueKey || task.ExternalTicketId || task.ExternalIssueId || null;
+                        const jiraBrowseUrl =
+                          jiraKey && task.JiraUrl
+                            ? `${String(task.JiraUrl).replace(/\/$/, '')}/browse/${encodeURIComponent(jiraKey)}`
+                            : null;
                         return (
                           <tr
                             key={task.Id}
@@ -1783,6 +1833,35 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-[160px] truncate" title={task.ProjectName}>
                               {task.ProjectName}
+                            </td>
+                            <td className="px-4 py-3">
+                              {jiraKey ? (
+                                <div className="inline-flex items-center gap-1.5 max-w-[160px]">
+                                  <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
+                                  </svg>
+                                  <span className="truncate text-xs font-medium text-gray-800 dark:text-gray-200" title={jiraKey}>
+                                    {jiraKey}
+                                  </span>
+                                  {jiraBrowseUrl && (
+                                    <a
+                                      href={jiraBrowseUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center justify-center w-6 h-6 rounded text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 shrink-0"
+                                      title={t('lit.openInJira', { key: jiraKey })}
+                                      aria-label={t('lit.openInJira', { key: jiraKey })}
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span

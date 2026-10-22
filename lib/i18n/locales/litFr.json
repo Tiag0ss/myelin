@@ -1769,7 +1769,7 @@
   "italianIt": "Italien (IT)",
   "italicCtrlI": "Italique (Ctrl+I)",
   "items": "Items",
-  "jetbrainsRider": "Pilote JetBrains",
+  "jetbrainsRider": "JetBrains Rider",
   "jiraBoardId": "ID du tableau Jira",
   "jiraCheckStatusModal": "Jira vérifie le statut modal",
   "jiraId": "Identifiant Jira",
@@ -3585,8 +3585,8 @@
   "viewUserDetails": "Afficher les détails de l'utilisateur",
   "visibility": "Visibilité",
   "visibleMenus": "Menus visibles",
-  "visualStudio": "Studio visuel",
-  "vsCodeCursor": "Code VS / Curseur",
+  "visualStudio": "Visual Studio",
+  "vsCodeCursor": "VS Code / Cursor",
   "waiting": "en attendant",
   "waiting2": "En attendant",
   "waitingAwaitingCustomerResponse": "En attente - en attente de la réponse du client",
@@ -3742,5 +3742,12 @@
   "mcpAddAgentSkill": "Ajouter une compétence d’agent",
   "mcpAddAgentRule": "Ajouter une règle d’agent",
   "mcpEditAgentSkill": "Modifier la compétence d’agent",
-  "mcpEditAgentRule": "Modifier la règle d’agent"
+  "mcpEditAgentRule": "Modifier la règle d’agent",
+  "jira": "Jira",
+  "openInJira": "Ouvrir dans Jira : {key}",
+  "windowsInstallerExe": "Installateur (.exe)",
+  "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
+  "extensionVsix": "Extension (.vsix)",
+  "pluginPackageZip": "Package de plugin (.zip)",
+  "tampermonkeyInstallHint": "S’ouvre dans le navigateur — Tampermonkey proposera l’installation"
 }

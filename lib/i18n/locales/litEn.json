@@ -3742,5 +3742,12 @@
   "mcpAddAgentSkill": "Add agent skill",
   "mcpAddAgentRule": "Add agent rule",
   "mcpEditAgentSkill": "Edit agent skill",
-  "mcpEditAgentRule": "Edit agent rule"
+  "mcpEditAgentRule": "Edit agent rule",
+  "jira": "Jira",
+  "openInJira": "Open in Jira: {key}",
+  "windowsInstallerExe": "Installer (.exe)",
+  "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
+  "extensionVsix": "Extension (.vsix)",
+  "pluginPackageZip": "Plugin package (.zip)",
+  "tampermonkeyInstallHint": "Opens in the browser — Tampermonkey will offer to install"
 }

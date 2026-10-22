@@ -1,6 +1,6 @@
 # Visual Studio — Myelin Kanban
 
-Tool window (**PM Kanban**) hosted in **WebView2**. Select a project, drag cards to change status.
+Tool window (**Myelin Kanban**) hosted in **WebView2**. Select a project, drag cards to change status.
 
 Requires the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
@@ -8,7 +8,7 @@ Requires the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/w
 
 1. Create a `pt_…` API token in the web app (Profile → API Tokens).
 2. **Tools → Options → Myelin**: Base URL + API token.
-3. **View → PM Kanban**, pick a project.
+3. **View → Myelin Kanban**, pick a project.
 
 ## AI
 

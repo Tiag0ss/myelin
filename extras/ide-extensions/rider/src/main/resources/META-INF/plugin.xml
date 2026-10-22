@@ -15,7 +15,7 @@
   </dependencies>
 
   <extensions defaultExtensionNs="com.intellij">
-    <toolWindow id="PM Kanban"
+    <toolWindow id="Myelin Kanban"
                 anchor="right"
                 factoryClass="com.projectmanagement.pendingtasks.KanbanToolWindowFactory"
                 icon="/icons/pm.svg"/>

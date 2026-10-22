@@ -485,7 +485,7 @@ cp ../shared-kanban/board.css ../shared-kanban/board.js src/main/resources/kanba
 ```
 
 Install: **Settings → Plugins → ⚙ → Install Plugin from Disk** → select the ZIP.  
-Configure: **Settings → Tools → Myelin**. Tool window: **PM Kanban**.
+Configure: **Settings → Tools → Myelin**. Tool window: **Myelin Kanban**.
 
 ### Build & deploy — Visual Studio 2022
 
@@ -494,7 +494,7 @@ Configure: **Settings → Tools → Myelin**. Tool window: **PM Kanban**.
 3. Build **Release** → produces a `.vsix`.
 4. Install on target PCs (double-click `.vsix` or Extensions → Install from disk).
 5. Configure: **Tools → Options → Myelin**.
-6. Open: **View → PM Kanban**.
+6. Open: **View → Myelin Kanban**.
 
 ### Ops notes
 

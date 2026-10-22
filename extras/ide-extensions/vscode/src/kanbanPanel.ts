@@ -96,7 +96,7 @@ export class KanbanPanel {
 
     const panel = vscode.window.createWebviewPanel(
       'pm.kanbanPanel',
-      'PM Kanban',
+      'Myelin Kanban',
       { viewColumn: vscode.ViewColumn.One, preserveFocus: false },
       {
         enableScripts: true,

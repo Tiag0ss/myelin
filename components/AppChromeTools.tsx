@@ -3468,7 +3468,7 @@ export default function AppChromeTools({
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{t('lit.windows')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {downloadsCatalog?.desktop.win ? 'Installer (.exe)' : t('lit.notAvailable')}
+                        {downloadsCatalog?.desktop.win ? t('lit.windowsInstallerExe') : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3483,7 +3483,7 @@ export default function AppChromeTools({
                       <p className="font-medium text-gray-900 dark:text-white">{t('lit.linux')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.desktop.linux
-                          ? 'AppImage (CachyOS, Ubuntu, etc.)'
+                          ? t('lit.linuxAppImageDistros')
                           : t('lit.notAvailable')}
                       </p>
                     </div>
@@ -3506,7 +3506,7 @@ export default function AppChromeTools({
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{t('lit.vsCodeCursor')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {downloadsCatalog?.ide.vscode ? 'Extension (.vsix)' : 'Not available — place .vsix in extras/release'}
+                        {downloadsCatalog?.ide.vscode ? t('lit.extensionVsix') : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3520,7 +3520,7 @@ export default function AppChromeTools({
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{t('lit.jetbrainsRider')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {downloadsCatalog?.ide.rider ? 'Plugin package (.zip)' : 'Not available — place plugin zip in extras/release'}
+                        {downloadsCatalog?.ide.rider ? t('lit.pluginPackageZip') : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3535,8 +3535,8 @@ export default function AppChromeTools({
                       <p className="font-medium text-gray-900 dark:text-white">{t('lit.visualStudio')}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {downloadsCatalog?.ide.visualstudio
-                          ? 'Extension (.vsix)'
-                          : 'Not available — place VS .vsix in extras/release'}
+                          ? t('lit.extensionVsix')
+                          : t('lit.notAvailable')}
                       </p>
                     </div>
                   </button>
@@ -3558,7 +3558,7 @@ export default function AppChromeTools({
                     <p className="font-medium text-gray-900 dark:text-white">{t('lit.tampermonkeyScript')}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {downloadsCatalog?.tampermonkey
-                        ? 'Opens in the browser — Tampermonkey will offer to install'
+                        ? t('lit.tampermonkeyInstallHint')
                         : t('lit.notAvailable')}
                     </p>
                   </div>

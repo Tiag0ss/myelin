@@ -291,7 +291,20 @@ export function TasksTab({
       .trim()
       .replace(/^./, (value) => value.toUpperCase());
 
-  const renderAdditionalTaskColumnValue = (task: Task, rawKey: string): string => {
+  const JIRA_LINK_COLUMN_KEYS = new Set(['JiraIssueKey', 'ExternalTicketId', 'ExternalIssueId']);
+
+  const resolveJiraBrowseBaseUrl = (task: Task, rawKey: string): string | null => {
+    const ticketBase = String(task.JiraUrl || jiraIntegration?.JiraUrl || '').trim().replace(/\/$/, '');
+    const boardBase = String(
+      jiraIntegration?.JiraProjectsUrl || jiraIntegration?.JiraUrl || task.JiraUrl || ''
+    )
+      .trim()
+      .replace(/\/$/, '');
+    if (rawKey === 'ExternalIssueId') return boardBase || null;
+    return ticketBase || null;
+  };
+
+  const getAdditionalTaskColumnText = (task: Task, rawKey: string): string => {
     const record = task as unknown as Record<string, unknown>;
     const value = record[rawKey];
     if (value === null || value === undefined) return '-';
@@ -342,6 +355,40 @@ export function TasksTab({
     }
 
     return trimmed;
+  };
+
+  const renderAdditionalTaskColumnValue = (task: Task, rawKey: string): React.ReactNode => {
+    const text = getAdditionalTaskColumnText(task, rawKey);
+    if (!JIRA_LINK_COLUMN_KEYS.has(rawKey) || text === '-') {
+      return text;
+    }
+
+    const baseUrl = resolveJiraBrowseBaseUrl(task, rawKey);
+    const browseUrl = baseUrl ? `${baseUrl}/browse/${encodeURIComponent(text)}` : null;
+
+    return (
+      <span className="inline-flex items-center gap-1.5 max-w-full">
+        <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11.53 2c0 2.4 1.97 4.35 4.35 4.35h1.78v1.7c0 2.4 1.94 4.34 4.34 4.34V2.84A.84.84 0 0021.16 2zM2 11.53c2.4 0 4.35 1.97 4.35 4.35v1.78h1.7c2.4 0 4.34 1.94 4.34 4.34H2.84A.84.84 0 012 21.16z" />
+        </svg>
+        <span className="truncate" title={text}>{text}</span>
+        {browseUrl && (
+          <a
+            href={browseUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center justify-center w-6 h-6 rounded text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 shrink-0"
+            title={t('lit.openInJira', { key: text })}
+            aria-label={t('lit.openInJira', { key: text })}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )}
+      </span>
+    );
   };
 
   const taskGridPreferenceKey = `project-tasks-local-columns-v1-${Number(project.Id)}`;
@@ -1323,7 +1370,7 @@ export function TasksTab({
       const descriptionText = (task.Description || '').replace(/<[^>]*>/g, ' ').toLowerCase();
       const taskTagsText = (taskTagMap.get(task.Id) || []).map(taskTag => taskTag.name.toLowerCase()).join(' ');
       const additionalColumnsText = additionalTaskColumnKeys
-        .map((columnKey) => renderAdditionalTaskColumnValue(task, columnKey).toLowerCase())
+        .map((columnKey) => getAdditionalTaskColumnText(task, columnKey).toLowerCase())
         .filter((textValue) => textValue && textValue !== '-')
         .join(' ');
       const matches =

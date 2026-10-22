@@ -1353,18 +1353,25 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
          LIMIT 8`,
         [customerId, customerId]
       ),
-      // Pending tasks (all non-closed tasks for this customer scope)
+      // Pending tasks (non-closed, non-cancelled for this customer scope)
       pool.execute<RowDataPacket[]>(
         `SELECT t.Id, t.TaskName, t.PlannedEndDate,
+                t.JiraIssueKey, t.ExternalIssueId,
                 p.Id as ProjectId, p.ProjectName,
                 u.FirstName as AssignedFirstName, u.LastName as AssignedLastName, u.Username as AssignedUsername,
-                tsv.StatusName, tsv.ColorCode as StatusColor
+                tsv.StatusName, tsv.ColorCode as StatusColor,
+                tk.ExternalTicketId,
+                COALESCE(oji.JiraUrl, ojiBoard.JiraProjectsUrl, ojiBoard.JiraUrl) as JiraUrl
          FROM Tasks t
          INNER JOIN Projects p ON t.ProjectId = p.Id
          INNER JOIN TaskStatusValues tsv ON t.Status = tsv.Id
          LEFT JOIN Users u ON t.AssignedTo = u.Id
+         LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+         LEFT JOIN OrganizationJiraIntegrations oji ON tk.OrganizationId = oji.OrganizationId AND oji.IsEnabled = 1
+         LEFT JOIN OrganizationJiraIntegrations ojiBoard ON p.OrganizationId = ojiBoard.OrganizationId AND ojiBoard.IsEnabled = 1
          WHERE ${scopeSql}
            AND COALESCE(tsv.IsClosed, 0) = 0
+           AND COALESCE(tsv.IsCancelled, 0) = 0
            AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
          ORDER BY CASE WHEN t.PlannedEndDate IS NULL THEN 1 ELSE 0 END,
                   t.PlannedEndDate ASC,
@@ -1372,7 +1379,7 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
          LIMIT 20`,
         [customerId, customerId]
       ),
-      // Overdue tasks (PlannedEndDate < today, not closed)
+      // Overdue tasks (PlannedEndDate < today, not closed/cancelled)
       pool.execute<RowDataPacket[]>(
         `SELECT t.Id, t.TaskName, t.PlannedEndDate,
                 p.Id as ProjectId, p.ProjectName,
@@ -1385,12 +1392,13 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
          WHERE ${scopeSql}
            AND t.PlannedEndDate < ?
            AND COALESCE(tsv.IsClosed, 0) = 0
+           AND COALESCE(tsv.IsCancelled, 0) = 0
            AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
          ORDER BY t.PlannedEndDate ASC
          LIMIT 10`,
         [customerId, customerId, todayStr]
       ),
-      // Upcoming tasks in the next 14 days, not yet closed
+      // Upcoming tasks in the next 14 days, not closed/cancelled
       pool.execute<RowDataPacket[]>(
         `SELECT t.Id, t.TaskName, t.PlannedEndDate,
                 p.Id as ProjectId, p.ProjectName,
@@ -1404,6 +1412,7 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
            AND t.PlannedEndDate >= ?
            AND t.PlannedEndDate <= ?
            AND COALESCE(tsv.IsClosed, 0) = 0
+           AND COALESCE(tsv.IsCancelled, 0) = 0
            AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
          ORDER BY t.PlannedEndDate ASC
          LIMIT 10`,
@@ -1460,19 +1469,25 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
       `SELECT t.Id, t.TaskName, t.Status, t.Priority, t.TaskType, t.AssignedTo,
               t.DueDate, t.PlannedStartDate, t.PlannedEndDate, t.EstimatedHours,
               t.UnscheduledWork, t.CreatedAt, t.UpdatedAt,
+              t.JiraIssueKey, t.ExternalIssueId,
               p.Id as ProjectId, p.ProjectName,
               tsv.StatusName, tsv.ColorCode as StatusColor,
               COALESCE(tsv.IsClosed, 0) as IsClosed,
               tpv.PriorityName, tpv.ColorCode as PriorityColor,
               ttv.TypeName as TaskTypeName,
               u.FirstName as AssignedFirstName, u.LastName as AssignedLastName,
-              u.Username as AssignedUsername
+              u.Username as AssignedUsername,
+              tk.ExternalTicketId,
+              COALESCE(oji.JiraUrl, ojiBoard.JiraProjectsUrl, ojiBoard.JiraUrl) as JiraUrl
        FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
        LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
        LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
        LEFT JOIN Users u ON t.AssignedTo = u.Id
+       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+       LEFT JOIN OrganizationJiraIntegrations oji ON tk.OrganizationId = oji.OrganizationId AND oji.IsEnabled = 1
+       LEFT JOIN OrganizationJiraIntegrations ojiBoard ON p.OrganizationId = ojiBoard.OrganizationId AND ojiBoard.IsEnabled = 1
        WHERE ${scopeSql}
        ORDER BY t.UpdatedAt DESC, t.Id DESC`,
       [customerId, customerId]
