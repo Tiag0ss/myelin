@@ -843,7 +843,7 @@ Customer portal users never see org-wide packs or Explore. APIs under `/api/repo
 
 ### Filters
 
-Shared bar: **organization** (required for manager packs), optional **project**, **date range**. Manager packs show metrics vs the **previous period of equal length**. Org context sticks across Organization / Portfolio / Delivery / Capacity / Data Quality.
+Shared bar: **organization** (required for manager packs), optional **customer**, optional **project** (narrowed by customer when set), **date range**. Manager packs show metrics vs the **previous period of equal length**. Org context sticks across Organization / Portfolio / Delivery / Capacity / Data Quality. Customer filter applies to Organization, Portfolio, Delivery, Data Quality, Expenses, and Extract (client-side on datasets with `CustomerId`).
 
 ### Packs
 
@@ -1216,7 +1216,7 @@ Then: target `projectId` ∈ effective scope; create assigns to self; update onl
 | `list_sprints` / `get_sprint` | Sprints for effective projects (optional `status` / `projectId`); each sprint embeds `tasks[]` (with Description). Empty list if none exist |
 | `sprint_update` | Dual-gated write: name/goal/dates/status/velocity (same active-sprint rule as the UI API) |
 | `list_my_tasks` / `get_task` | Assignee-scoped reads with Description + nested `sprint` (`null` if none); optional `sprintId` filter |
-| `create_task` / `update_task` | Dual-gated writes (optional `sprintId`; `null` clears on update) |
+| `create_task` / `update_task` | Dual-gated writes (optional `sprintId`; `null` clears on update; optional `unscheduledWork`) |
 
 Docs: [connect + agent rule](mcp/CURSOR_RULE_MYELIN_MCP.md) · [Cursor mcp.json example](mcp/cursor.mcp.json.example) · [myelin.mcp.json example](mcp/myelin.mcp.json.example).
 

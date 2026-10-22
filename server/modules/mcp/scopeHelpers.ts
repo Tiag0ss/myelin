@@ -45,6 +45,28 @@ export function coerceAllowWrite(raw: unknown): boolean {
   return false;
 }
 
+/** Coerce UI/MCP boolean-ish values to 0/1 DB flags (UnscheduledWork, etc.). */
+export function coerceBooleanFlag(raw: unknown): 0 | 1 {
+  if (raw === true || raw === 1 || raw === '1') return 1;
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === 'true' || normalized === 'yes' || normalized === 'on') return 1;
+  }
+  return 0;
+}
+
+/**
+ * Optional boolean flag for MCP updates.
+ * - `undefined` → omit (no change)
+ * - otherwise → 0 or 1
+ */
+export function coerceOptionalBooleanFlag(
+  raw: unknown
+): { ok: true; value: 0 | 1 | undefined } {
+  if (raw === undefined) return { ok: true, value: undefined };
+  return { ok: true, value: coerceBooleanFlag(raw) };
+}
+
 /**
  * Optional nullable id for MCP args (e.g. sprintId).
  * - `undefined` / missing → omit (no change)

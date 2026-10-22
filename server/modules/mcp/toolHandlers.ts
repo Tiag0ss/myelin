@@ -7,6 +7,8 @@ import {
   attachTasksToSprints,
   canWriteViaMcp,
   coerceAllowWrite,
+  coerceBooleanFlag,
+  coerceOptionalBooleanFlag,
   coerceOptionalNullableId,
   coerceProjectIds,
   coerceSprintStatus,
@@ -222,7 +224,8 @@ export async function toolListMyTasks(ctx: McpToolContext, args: Record<string, 
 
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT t.Id, t.TaskName, t.Description, t.ProjectId, t.ApplicationId, t.Status, t.Priority, t.TaskType,
-            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId, p.ProjectName, p.OrganizationId,
+            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId, t.UnscheduledWork,
+            p.ProjectName, p.OrganizationId,
             tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName,
             sp.Name AS SprintName, sp.Status AS SprintStatus
      FROM Tasks t
@@ -311,7 +314,7 @@ async function loadTasksGroupedBySprintId(sprintIds: number[]): Promise<Map<numb
 
   const [taskRows] = await pool.execute<RowDataPacket[]>(
     `SELECT t.Id, t.TaskName, t.Description, t.ProjectId, t.ApplicationId, t.Status, t.Priority, t.TaskType,
-            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId,
+            t.AssignedTo, t.DueDate, t.EstimatedHours, t.SprintId, t.UnscheduledWork,
             tsv.StatusName, tpv.PriorityName, ttv.TypeName AS TaskTypeName
      FROM Tasks t
      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
@@ -705,10 +708,12 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
     return textResult({ success: false, message: sprintResolved.message }, true);
   }
   const sprintId = sprintResolved.sprintId === undefined ? null : sprintResolved.sprintId;
+  const unscheduledWork =
+    args.unscheduledWork !== undefined ? coerceBooleanFlag(args.unscheduledWork) : 0;
 
   const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO Tasks (ProjectId, TaskName, Description, Status, Priority, TaskType, AssignedTo, ApplicationId, CreatedBy, SprintId)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO Tasks (ProjectId, TaskName, Description, Status, Priority, TaskType, AssignedTo, ApplicationId, CreatedBy, SprintId, UnscheduledWork)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       projectId,
       taskName,
@@ -720,6 +725,7 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
       appId,
       ctx.userId,
       sprintId,
+      unscheduledWork,
     ]
   );
 
@@ -758,6 +764,7 @@ export async function toolCreateTask(ctx: McpToolContext, args: Record<string, u
       taskType: taskTypeId,
       assignedTo: ctx.userId,
       sprintId,
+      unscheduledWork,
     },
   });
 }
@@ -886,6 +893,26 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
           oldVal: prevNorm == null ? null : String(prevNorm),
           newVal: next == null ? null : String(next),
         });
+      }
+    }
+  }
+  if (args.unscheduledWork !== undefined) {
+    const next = coerceOptionalBooleanFlag(args.unscheduledWork).value!;
+    const prev = coerceBooleanFlag(oldTask.UnscheduledWork);
+    if (next !== prev) {
+      updates.push('UnscheduledWork = ?');
+      params.push(next);
+      changes.push({
+        field: 'UnscheduledWork',
+        oldVal: prev === 1 ? 'Yes' : 'No',
+        newVal: next === 1 ? 'Yes' : 'No',
+      });
+      // Match UI API: unscheduled tasks cannot keep planned dates.
+      if (next === 1) {
+        updates.push('PlannedStartDate = ?');
+        params.push(null);
+        updates.push('PlannedEndDate = ?');
+        params.push(null);
       }
     }
   }

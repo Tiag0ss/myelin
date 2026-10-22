@@ -23,6 +23,7 @@ export type ExpenseReportFilters = {
   from?: string | null;
   to?: string | null;
   projectId?: number | null;
+  customerId?: number | null;
   groupId?: number | null;
   categoryId?: number | null;
   userId?: number | null;
@@ -69,6 +70,10 @@ function buildExpenseReportWhere(filters: ExpenseReportFilters): { where: string
   if (filters.projectId) {
     conditions.push('e.ProjectId = ?');
     params.push(filters.projectId);
+  }
+  if (filters.customerId) {
+    conditions.push('p.CustomerId = ?');
+    params.push(filters.customerId);
   }
   if (filters.internalOnly) {
     conditions.push('e.ProjectId IS NULL');

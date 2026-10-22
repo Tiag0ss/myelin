@@ -48,26 +48,28 @@ export type ExtractFilterConfig = {
   organizationField?: 'OrganizationId';
   /** Apply toolbar project filter to this column. */
   projectField?: 'ProjectId';
+  /** Apply toolbar customer filter to this column. */
+  customerField?: 'CustomerId' | 'Id';
   /** Date columns to use for toolbar period filter (first non-empty wins). */
   dateFields: readonly string[];
 };
 
 export const EXTRACT_FILTER_CONFIG: Record<string, ExtractFilterConfig> = {
-  projects: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['StartDate', 'EndDate', 'CreatedAt', 'UpdatedAt'] },
-  tasks: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['DueDate', 'PlannedStartDate', 'PlannedEndDate', 'CreatedAt', 'UpdatedAt'] },
-  timeEntries: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['WorkDate', 'CreatedAt'] },
-  callRecords: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['CallDate', 'CreatedAt'] },
-  timeAndCalls: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['RecordDate', 'WorkDate', 'CallDate'] },
-  customers: { organizationField: 'OrganizationId', dateFields: ['CreatedAt', 'UpdatedAt'] },
+  projects: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['StartDate', 'EndDate', 'CreatedAt', 'UpdatedAt'] },
+  tasks: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['DueDate', 'PlannedStartDate', 'PlannedEndDate', 'CreatedAt', 'UpdatedAt'] },
+  timeEntries: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['WorkDate', 'CreatedAt'] },
+  callRecords: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['CallDate', 'CreatedAt'] },
+  timeAndCalls: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['RecordDate', 'WorkDate', 'CallDate'] },
+  customers: { organizationField: 'OrganizationId', customerField: 'Id', dateFields: ['CreatedAt', 'UpdatedAt'] },
   applications: { organizationField: 'OrganizationId', dateFields: ['CreatedAt', 'UpdatedAt'] },
   releases: { organizationField: 'OrganizationId', dateFields: ['ReleaseDate', 'CreatedAt', 'UpdatedAt'] },
-  tickets: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['ScheduledDate', 'CreatedAt'] },
-  allocationDates: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['AllocationDate'] },
+  tickets: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['ScheduledDate', 'CreatedAt'] },
+  allocationDates: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['AllocationDate'] },
   vacations: { dateFields: ['VacationDate', 'CreatedAt', 'ApprovedAt'] },
   outOfOffice: { dateFields: ['OutOfOfficeDate', 'CreatedAt', 'ApprovedAt'] },
   memos: { dateFields: ['CreatedAt', 'UpdatedAt'] },
-  expenses: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['ExpenseDate', 'CreatedAt', 'ApprovedAt', 'ReimbursedAt'] },
-  expenseReimbursements: { organizationField: 'OrganizationId', projectField: 'ProjectId', dateFields: ['CreatedAt', 'ExpenseDate'] },
+  expenses: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['ExpenseDate', 'CreatedAt', 'ApprovedAt', 'ReimbursedAt'] },
+  expenseReimbursements: { organizationField: 'OrganizationId', projectField: 'ProjectId', customerField: 'CustomerId', dateFields: ['CreatedAt', 'ExpenseDate'] },
 };
 
 /** @deprecated Use per-dataset dateFields in EXTRACT_FILTER_CONFIG */

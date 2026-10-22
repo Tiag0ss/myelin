@@ -216,7 +216,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
     'create_task',
     {
       description:
-        'Create a task in an effective project (requires Profile McpWritesEnabled and allowWrite true). Assigns to self.',
+        'Create a task in an effective project (requires Profile McpWritesEnabled and allowWrite true). Assigns to self. Pass unscheduledWork true for backlog/unscheduled work (excluded from planning allocations).',
       inputSchema: {
         ...commonShape,
         projectId: z.union([z.number(), z.string()]),
@@ -226,6 +226,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
         priority: z.union([z.number(), z.string()]).optional(),
         taskType: z.union([z.number(), z.string()]).optional(),
         sprintId: z.union([z.number(), z.string()]).nullable().optional(),
+        unscheduledWork: z.union([z.boolean(), z.number(), z.string()]).optional(),
       },
     },
     async (args) =>
@@ -236,7 +237,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
     'update_task',
     {
       description:
-        'Update one of your tasks in MCP scope (requires Profile McpWritesEnabled and allowWrite true). Pass sprintId to assign, or null to clear.',
+        'Update one of your tasks in MCP scope (requires Profile McpWritesEnabled and allowWrite true). Pass sprintId to assign, or null to clear. Pass unscheduledWork true/false to toggle unscheduled work.',
       inputSchema: {
         ...commonShape,
         taskId: z.union([z.number(), z.string()]),
@@ -246,6 +247,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
         priority: z.union([z.number(), z.string()]).optional(),
         taskType: z.union([z.number(), z.string()]).optional(),
         sprintId: z.union([z.number(), z.string()]).nullable().optional(),
+        unscheduledWork: z.union([z.boolean(), z.number(), z.string()]).optional(),
       },
     },
     async (args) =>

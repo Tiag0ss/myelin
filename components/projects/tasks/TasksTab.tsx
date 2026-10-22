@@ -195,6 +195,15 @@ export function TasksTab({
   const [taskColumnSizeMode, setTaskColumnSizeMode] = useState<Record<string, 'fixed' | 'grow'>>({});
   const [taskRowDensity, setTaskRowDensity] = useState<'compact' | 'comfortable'>('comfortable');
   const [taskColumnsReady, setTaskColumnsReady] = useState(false);
+  /** Full server/session preference payload — keeps unknown extra-* keys until columns appear. */
+  const taskPrefsSnapshotRef = useRef<{
+    columnOrder: string[];
+    hiddenColumns: string[];
+    columnSizing: Record<string, number>;
+    columnSizeMode: Record<string, 'fixed' | 'grow'>;
+    rowDensity: 'compact' | 'comfortable';
+    selectableSignature: string;
+  } | null>(null);
   const [taskDragColumnId, setTaskDragColumnId] = useState<string | null>(null);
   const [taskDragOverInfo, setTaskDragOverInfo] = useState<{ columnKey: string; side: 'left' | 'right' } | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(new Set());
@@ -375,70 +384,128 @@ export function TasksTab({
     return Math.max(100, Math.min(1400, width));
   };
 
+  const selectableSignature = taskSelectableColumnIds.join('|');
+
+  useEffect(() => {
+    taskPrefsSnapshotRef.current = null;
+    setTaskColumnsReady(false);
+    setHiddenTaskColumns([]);
+    setTaskColumnOrder([]);
+    setTaskColumnSizing({});
+    setTaskColumnSizeMode({});
+    setTaskRowDensity('comfortable');
+  }, [taskGridPreferenceKey, taskGridSessionKey]);
+
+  const applyTaskColumnSnapshot = (
+    snapshot: {
+      columnOrder?: string[];
+      hiddenColumns?: string[];
+      columnSizing?: Record<string, number>;
+      columnSizeMode?: Record<string, 'fixed' | 'grow'>;
+      rowDensity?: 'compact' | 'comfortable';
+    },
+    options?: { treatMissingHiddenAsDefault?: boolean }
+  ) => {
+    const valid = new Set(taskSelectableColumnIds);
+    const rawOrder = Array.isArray(snapshot.columnOrder) ? snapshot.columnOrder.filter((id) => typeof id === 'string') : [];
+    const rawHidden = Array.isArray(snapshot.hiddenColumns)
+      ? snapshot.hiddenColumns.filter((id) => typeof id === 'string')
+      : null;
+
+    const savedOrder = rawOrder.filter((columnId) => valid.has(columnId));
+    const missingOrder = taskSelectableColumnIds.filter((columnId) => !savedOrder.includes(columnId));
+    const normalizedOrder = savedOrder.length > 0 ? [...savedOrder, ...missingOrder] : [...taskSelectableColumnIds];
+
+    // Known columns from the FULL saved payload (including extras not yet discovered).
+    const knownColumns = new Set<string>([...rawOrder, ...(rawHidden || [])]);
+    const savedHidden = (rawHidden || []).filter((columnId) => valid.has(columnId));
+    const newDefaults = taskDefaultHiddenColumns.filter((columnId) => !knownColumns.has(columnId));
+    const normalizedHidden =
+      rawHidden == null && options?.treatMissingHiddenAsDefault !== false
+        ? [...taskDefaultHiddenColumns]
+        : Array.from(new Set([...savedHidden, ...newDefaults]));
+
+    const normalizedSizing =
+      snapshot.columnSizing && typeof snapshot.columnSizing === 'object'
+        ? Object.entries(snapshot.columnSizing).reduce<Record<string, number>>((accumulator, [columnId, width]) => {
+            if (!valid.has(columnId)) return accumulator;
+            const numericWidth = Number(width);
+            if (!Number.isFinite(numericWidth)) return accumulator;
+            accumulator[columnId] = Math.max(60, Math.min(1400, Math.round(numericWidth)));
+            return accumulator;
+          }, {})
+        : {};
+
+    const normalizedSizeMode = taskSelectableColumnIds.reduce<Record<string, 'fixed' | 'grow'>>((accumulator, columnId) => {
+      const mode =
+        snapshot.columnSizeMode && typeof snapshot.columnSizeMode === 'object'
+          ? snapshot.columnSizeMode[columnId]
+          : undefined;
+      accumulator[columnId] = mode === 'fixed' ? 'fixed' : 'grow';
+      return accumulator;
+    }, {});
+
+    const rowDensity = snapshot.rowDensity === 'compact' ? 'compact' : 'comfortable';
+
+    taskPrefsSnapshotRef.current = {
+      columnOrder: rawOrder.length > 0 ? rawOrder : normalizedOrder,
+      hiddenColumns: rawHidden == null ? normalizedHidden : rawHidden,
+      columnSizing: {
+        ...(snapshot.columnSizing && typeof snapshot.columnSizing === 'object' ? snapshot.columnSizing : {}),
+        ...normalizedSizing,
+      },
+      columnSizeMode: {
+        ...(snapshot.columnSizeMode && typeof snapshot.columnSizeMode === 'object' ? snapshot.columnSizeMode : {}),
+        ...normalizedSizeMode,
+      },
+      rowDensity,
+      selectableSignature,
+    };
+
+    setTaskColumnOrder(normalizedOrder);
+    setHiddenTaskColumns(normalizedHidden);
+    setTaskColumnSizing(normalizedSizing);
+    setTaskColumnSizeMode(normalizedSizeMode);
+    setTaskRowDensity(rowDensity);
+  };
+
   useEffect(() => {
     if (!token) return;
 
+    // Extra columns appear as tasks load — re-apply the retained snapshot so newly valid
+    // hidden extras are restored without a destructive save of an incomplete set.
+    const existingSnapshot = taskPrefsSnapshotRef.current;
+    if (existingSnapshot && existingSnapshot.selectableSignature !== selectableSignature) {
+      applyTaskColumnSnapshot(existingSnapshot);
+      setTaskColumnsReady(true);
+      return;
+    }
+
     let cancelled = false;
-    let hasSessionCache = false;
 
     const loadTaskColumnsPreference = async () => {
+      let appliedFromSession = false;
+
       try {
         const cached = typeof window !== 'undefined' ? window.sessionStorage.getItem(taskGridSessionKey) : null;
         if (cached) {
-          hasSessionCache = true;
           const parsed = JSON.parse(cached) as {
             columnOrder?: string[];
             hiddenColumns?: string[];
             columnSizing?: Record<string, number>;
             columnSizeMode?: Record<string, 'fixed' | 'grow'>;
             rowDensity?: 'compact' | 'comfortable';
+            selectableSignature?: string;
           };
-          const valid = new Set(taskSelectableColumnIds);
-
-          const cachedOrder = Array.isArray(parsed.columnOrder)
-            ? parsed.columnOrder.filter((columnId) => valid.has(columnId))
-            : [];
-          const missingCachedOrder = taskSelectableColumnIds.filter((columnId) => !cachedOrder.includes(columnId));
-          const normalizedCachedOrder = cachedOrder.length > 0
-            ? [...cachedOrder, ...missingCachedOrder]
-            : taskSelectableColumnIds;
-          if (!cancelled) {
-            setTaskColumnOrder(normalizedCachedOrder);
-          }
-
-          const cachedHidden = Array.isArray(parsed.hiddenColumns)
-            ? parsed.hiddenColumns.filter((columnId) => valid.has(columnId))
-            : [];
-          const cachedKnownColumns = new Set<string>([
-            ...cachedOrder,
-            ...cachedHidden,
-          ]);
-          const cachedDefaultHiddenColumns = taskDefaultHiddenColumns.filter((columnId) => !cachedKnownColumns.has(columnId));
-          const normalizedCachedHidden = Array.isArray(parsed.hiddenColumns)
-            ? Array.from(new Set([...cachedHidden, ...cachedDefaultHiddenColumns]))
-            : taskDefaultHiddenColumns;
-          const cachedSizing = parsed.columnSizing && typeof parsed.columnSizing === 'object'
-            ? Object.entries(parsed.columnSizing).reduce<Record<string, number>>((accumulator, [columnId, width]) => {
-                if (!valid.has(columnId)) return accumulator;
-                const numericWidth = Number(width);
-                if (!Number.isFinite(numericWidth)) return accumulator;
-                accumulator[columnId] = Math.max(60, Math.min(1400, Math.round(numericWidth)));
-                return accumulator;
-              }, {})
-            : {};
-          const cachedSizeMode = taskSelectableColumnIds.reduce<Record<string, 'fixed' | 'grow'>>((accumulator, columnId) => {
-            const mode = parsed.columnSizeMode && typeof parsed.columnSizeMode === 'object'
-              ? parsed.columnSizeMode[columnId]
-              : undefined;
-            accumulator[columnId] = mode === 'fixed' ? 'fixed' : 'grow';
-            return accumulator;
-          }, {});
-          if (!cancelled) {
-            setHiddenTaskColumns(normalizedCachedHidden);
-            setTaskColumnSizing(cachedSizing);
-            setTaskColumnSizeMode(cachedSizeMode);
-            setTaskRowDensity(parsed.rowDensity === 'compact' ? 'compact' : 'comfortable');
-            setTaskColumnsReady(true);
+          // Ignore session cache built before extra columns were discovered — it may have
+          // wiped hidden extras and would otherwise block a correct API reload.
+          const sessionMatchesSelectable =
+            typeof parsed.selectableSignature === 'string' &&
+            parsed.selectableSignature === selectableSignature;
+          if (sessionMatchesSelectable) {
+            applyTaskColumnSnapshot(parsed);
+            appliedFromSession = true;
+            if (!cancelled) setTaskColumnsReady(true);
           }
         }
       } catch {
@@ -448,78 +515,72 @@ export function TasksTab({
       try {
         const preferences = await getAllGridPreferences(token);
         if (cancelled) return;
-        if (hasSessionCache) return;
+        if (appliedFromSession) return;
 
         const current = preferences.find((entry) => entry.gridKey === taskGridPreferenceKey);
         if (!current || !Array.isArray(current.hiddenColumns)) {
-          setTaskColumnOrder(taskSelectableColumnIds);
-          setHiddenTaskColumns(taskDefaultHiddenColumns);
-          setTaskColumnSizing({});
-          setTaskColumnSizeMode(Object.fromEntries(taskSelectableColumnIds.map((columnId) => [columnId, 'grow' as const])));
-          setTaskRowDensity('comfortable');
+          applyTaskColumnSnapshot(
+            {
+              columnOrder: taskSelectableColumnIds,
+              hiddenColumns: taskDefaultHiddenColumns,
+              columnSizing: {},
+              columnSizeMode: Object.fromEntries(taskSelectableColumnIds.map((columnId) => [columnId, 'grow' as const])),
+              rowDensity: 'comfortable',
+            },
+            { treatMissingHiddenAsDefault: true }
+          );
           setTaskColumnsReady(true);
           return;
         }
 
-        const valid = new Set(taskSelectableColumnIds);
-        const savedOrder = Array.isArray(current.columnOrder)
-          ? current.columnOrder.filter((columnId) => valid.has(columnId))
-          : [];
-        const missingOrder = taskSelectableColumnIds.filter((columnId) => !savedOrder.includes(columnId));
-        const normalizedOrder = [...savedOrder, ...missingOrder];
-        const savedHidden = current.hiddenColumns.filter((columnId) => valid.has(columnId));
-        const savedSizing = current.columnSizing && typeof current.columnSizing === 'object'
-          ? Object.entries(current.columnSizing).reduce<Record<string, number>>((accumulator, [columnId, width]) => {
-              if (!valid.has(columnId)) return accumulator;
-              const numericWidth = Number(width);
-              if (!Number.isFinite(numericWidth)) return accumulator;
-              accumulator[columnId] = Math.max(60, Math.min(1400, Math.round(numericWidth)));
-              return accumulator;
-            }, {})
-          : {};
-        const savedSizeMode = taskSelectableColumnIds.reduce<Record<string, 'fixed' | 'grow'>>((accumulator, columnId) => {
-          const mode = current.columnSizeMode && typeof current.columnSizeMode === 'object'
-            ? current.columnSizeMode[columnId]
-            : undefined;
-          accumulator[columnId] = mode === 'fixed' ? 'fixed' : 'grow';
-          return accumulator;
-        }, {});
-        const savedSet = new Set(savedHidden);
-        const newDefaults = taskDefaultHiddenColumns.filter((columnId) => !savedSet.has(columnId));
-        setTaskColumnOrder(normalizedOrder);
-        setHiddenTaskColumns(Array.from(new Set([...savedHidden, ...newDefaults])));
-        setTaskColumnSizing(savedSizing);
-        setTaskColumnSizeMode(savedSizeMode);
-        setTaskRowDensity(current.rowDensity === 'compact' ? 'compact' : 'comfortable');
+        applyTaskColumnSnapshot({
+          columnOrder: Array.isArray(current.columnOrder) ? current.columnOrder : [],
+          hiddenColumns: current.hiddenColumns,
+          columnSizing: current.columnSizing,
+          columnSizeMode: current.columnSizeMode,
+          rowDensity: current.rowDensity === 'compact' ? 'compact' : 'comfortable',
+        });
+        setTaskColumnsReady(true);
       } catch {
-        if (!cancelled) {
-          setTaskColumnOrder(taskSelectableColumnIds);
-          setHiddenTaskColumns(taskDefaultHiddenColumns);
-          setTaskColumnSizing({});
-          setTaskColumnSizeMode(Object.fromEntries(taskSelectableColumnIds.map((columnId) => [columnId, 'grow' as const])));
-          setTaskRowDensity('comfortable');
-          setTaskColumnsReady(true);
-        }
-      } finally {
-        if (!cancelled && !hasSessionCache) {
+        if (!cancelled && !appliedFromSession) {
+          applyTaskColumnSnapshot(
+            {
+              columnOrder: taskSelectableColumnIds,
+              hiddenColumns: taskDefaultHiddenColumns,
+              columnSizing: {},
+              columnSizeMode: Object.fromEntries(taskSelectableColumnIds.map((columnId) => [columnId, 'grow' as const])),
+              rowDensity: 'comfortable',
+            },
+            { treatMissingHiddenAsDefault: true }
+          );
           setTaskColumnsReady(true);
         }
       }
     };
 
-    loadTaskColumnsPreference();
+    void loadTaskColumnsPreference();
 
     return () => {
       cancelled = true;
     };
-  }, [token, taskGridPreferenceKey, taskGridSessionKey, taskSelectableColumnIds.join('|')]);
+  }, [token, taskGridPreferenceKey, taskGridSessionKey, selectableSignature, taskSelectableColumnIds, taskDefaultHiddenColumns]);
 
   useEffect(() => {
     if (!taskColumnsReady || !token) return;
 
     const valid = new Set(taskSelectableColumnIds);
-    const sanitizedOrder = (taskColumnOrder.length > 0 ? taskColumnOrder : taskSelectableColumnIds).filter((columnId) => valid.has(columnId));
+    const previous = taskPrefsSnapshotRef.current;
+    const sanitizedOrder = (taskColumnOrder.length > 0 ? taskColumnOrder : taskSelectableColumnIds).filter((columnId) =>
+      valid.has(columnId)
+    );
     const sanitizedHidden = hiddenTaskColumns.filter((columnId) => valid.has(columnId));
+
+    // Preserve preference keys for columns not yet present (e.g. extra-* before tasks load).
+    const retainedOrder = (previous?.columnOrder || []).filter((columnId) => !valid.has(columnId));
+    const retainedHidden = (previous?.hiddenColumns || []).filter((columnId) => !valid.has(columnId));
+    const persistOrder = [...sanitizedOrder, ...retainedOrder];
+    const persistHidden = Array.from(new Set([...sanitizedHidden, ...retainedHidden]));
+
     const sanitizedSizing = Object.entries(taskColumnSizing).reduce<Record<string, number>>((accumulator, [columnId, width]) => {
       if (!valid.has(columnId)) return accumulator;
       const numericWidth = Number(width);
@@ -527,21 +588,55 @@ export function TasksTab({
       accumulator[columnId] = Math.max(60, Math.min(1400, Math.round(numericWidth)));
       return accumulator;
     }, {});
+    const retainedSizing = Object.entries(previous?.columnSizing || {}).reduce<Record<string, number>>((accumulator, [columnId, width]) => {
+      if (valid.has(columnId)) return accumulator;
+      const numericWidth = Number(width);
+      if (!Number.isFinite(numericWidth)) return accumulator;
+      accumulator[columnId] = Math.max(60, Math.min(1400, Math.round(numericWidth)));
+      return accumulator;
+    }, {});
+    const persistSizing = { ...retainedSizing, ...sanitizedSizing };
+
     const sanitizedSizeMode = taskSelectableColumnIds.reduce<Record<string, 'fixed' | 'grow'>>((accumulator, columnId) => {
       accumulator[columnId] = taskColumnSizeMode[columnId] === 'fixed' ? 'fixed' : 'grow';
       return accumulator;
     }, {});
+    const retainedSizeMode = Object.entries(previous?.columnSizeMode || {}).reduce<Record<string, 'fixed' | 'grow'>>(
+      (accumulator, [columnId, mode]) => {
+        if (valid.has(columnId)) return accumulator;
+        if (mode === 'fixed' || mode === 'grow') accumulator[columnId] = mode;
+        return accumulator;
+      },
+      {}
+    );
+    const persistSizeMode = { ...retainedSizeMode, ...sanitizedSizeMode };
+
+    taskPrefsSnapshotRef.current = {
+      columnOrder: persistOrder,
+      hiddenColumns: persistHidden,
+      columnSizing: persistSizing,
+      columnSizeMode: persistSizeMode,
+      rowDensity: taskRowDensity,
+      selectableSignature,
+    };
+
+    const payload = {
+      columnOrder: persistOrder,
+      hiddenColumns: persistHidden,
+      columnSizing: persistSizing,
+      columnSizeMode: persistSizeMode,
+      sortField: null as null,
+      sortDirection: null as null,
+      rowDensity: taskRowDensity,
+    };
 
     try {
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem(
           taskGridSessionKey,
           JSON.stringify({
-            columnOrder: sanitizedOrder,
-            hiddenColumns: sanitizedHidden,
-            columnSizing: sanitizedSizing,
-            columnSizeMode: sanitizedSizeMode,
-              rowDensity: taskRowDensity,
+            ...payload,
+            selectableSignature,
           })
         );
       }
@@ -550,30 +645,26 @@ export function TasksTab({
     }
 
     const timer = setTimeout(() => {
-      void saveGridPreference(token, taskGridPreferenceKey, {
-        columnOrder: sanitizedOrder,
-        hiddenColumns: sanitizedHidden,
-        columnSizing: sanitizedSizing,
-        columnSizeMode: sanitizedSizeMode,
-        sortField: null,
-        sortDirection: null,
-        rowDensity: taskRowDensity,
-      }).catch(() => undefined);
+      void saveGridPreference(token, taskGridPreferenceKey, payload).catch(() => undefined);
     }, 250);
 
     return () => {
       clearTimeout(timer);
-      void saveGridPreference(token, taskGridPreferenceKey, {
-        columnOrder: sanitizedOrder,
-        hiddenColumns: sanitizedHidden,
-        columnSizing: sanitizedSizing,
-        columnSizeMode: sanitizedSizeMode,
-        sortField: null,
-        sortDirection: null,
-        rowDensity: taskRowDensity,
-      }).catch(() => undefined);
+      void saveGridPreference(token, taskGridPreferenceKey, payload).catch(() => undefined);
     };
-  }, [taskColumnsReady, token, taskGridPreferenceKey, taskGridSessionKey, hiddenTaskColumns, taskColumnOrder, taskColumnSizing, taskColumnSizeMode, taskRowDensity, taskSelectableColumnIds.join('|')]);
+  }, [
+    taskColumnsReady,
+    token,
+    taskGridPreferenceKey,
+    taskGridSessionKey,
+    hiddenTaskColumns,
+    taskColumnOrder,
+    taskColumnSizing,
+    taskColumnSizeMode,
+    taskRowDensity,
+    selectableSignature,
+    taskSelectableColumnIds,
+  ]);
 
   const taskColumnDragProps = (columnKey: string) => {
     const indicator = taskDragOverInfo?.columnKey === columnKey ? taskDragOverInfo.side : null;

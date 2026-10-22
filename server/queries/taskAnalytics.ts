@@ -27,6 +27,8 @@ export type TaskAnalyticsScope = {
   organizationId?: number | null;
   /** When set, restrict to a single project. */
   projectId?: number | null;
+  /** When set, restrict to effective customer (task or project). */
+  customerId?: number | null;
 };
 
 const DEFAULT_COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#4b5563'];
@@ -49,6 +51,11 @@ function buildScopeClause(scope: TaskAnalyticsScope): { sql: string; params: unk
     params.push(scope.organizationId);
   }
 
+  if (scope.customerId) {
+    conditions.push('COALESCE(t.CustomerId, p.CustomerId) = ?');
+    params.push(scope.customerId);
+  }
+
   return { sql: conditions.join(' AND '), params };
 }
 
@@ -69,7 +76,7 @@ function topNWithOther(rows: TaskAnalyticsSlice[], limit: number): TaskAnalytics
  */
 export async function queryTaskAnalytics(scope: TaskAnalyticsScope = {}): Promise<TaskAnalyticsResult> {
   const { sql: whereSql, params } = buildScopeClause(scope);
-  const needsProjectJoin = !!scope.organizationId && !scope.projectId;
+  const needsProjectJoin = (!!scope.organizationId && !scope.projectId) || !!scope.customerId;
   const fromSql = needsProjectJoin
     ? `FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id

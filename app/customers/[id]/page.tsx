@@ -5,7 +5,9 @@ import { useI18n } from '@/lib/i18n/provider';
 import PageLoadingSkeleton from '@/components/PageLoadingSkeleton';
 import { getApiUrl } from '@/lib/api/config';
 
-import { useState, useEffect, use, useRef, Suspense } from 'react';
+import { useState, useEffect, use, useRef, useMemo, Suspense } from 'react';
+import CollapsibleFilterPanel from '@/components/CollapsibleFilterPanel';
+import { SearchableSelect } from '@/components/projects/ProjectInlineFields';
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,10 +26,11 @@ import { useFormatHours } from '@/lib/useFormatHours';
 import { useColorVision } from '@/hooks/useColorVision';
 import { useUrlTab } from '@/hooks/useUrlTab';
 import { recordRecentNavAccess } from '@/lib/recentNavAccess';
+import { downloadCsv, toCsv } from '@/lib/csv';
 
 
-type TabType = 'overview' | 'users' | 'settings' | 'attachments' | 'history';
-const CUSTOMER_DETAIL_TABS = ['overview', 'users', 'settings', 'attachments', 'history'] as const;
+type TabType = 'overview' | 'tasks' | 'users' | 'settings' | 'attachments' | 'history';
+const CUSTOMER_DETAIL_TABS = ['overview', 'tasks', 'users', 'settings', 'attachments', 'history'] as const;
 
 interface Project {
   Id: number;
@@ -87,6 +90,41 @@ interface TaskByPriority {
   PriorityName: string;
   PriorityColor: string;
   TaskCount: number;
+}
+
+interface TaskCompletedByUser {
+  UserId: number | null;
+  FirstName: string | null;
+  LastName: string | null;
+  Username: string | null;
+  TaskCount: number;
+}
+
+interface CustomerTaskRow {
+  Id: number;
+  TaskName: string;
+  Status: number | null;
+  Priority: number | null;
+  TaskType: number | null;
+  AssignedTo: number | null;
+  DueDate: string | null;
+  PlannedStartDate: string | null;
+  PlannedEndDate: string | null;
+  EstimatedHours: number | null;
+  UnscheduledWork: number | null;
+  CreatedAt: string | null;
+  UpdatedAt: string | null;
+  ProjectId: number;
+  ProjectName: string;
+  StatusName: string | null;
+  StatusColor: string | null;
+  IsClosed: number;
+  PriorityName: string | null;
+  PriorityColor: string | null;
+  TaskTypeName: string | null;
+  AssignedFirstName: string | null;
+  AssignedLastName: string | null;
+  AssignedUsername: string | null;
 }
 
 interface RecentTimeEntry {
@@ -155,6 +193,7 @@ interface UpcomingTask {
 interface CustomerOverviewData {
   tasksByStatus: TaskByStatus[];
   tasksByPriority: TaskByPriority[];
+  tasksCompletedByUser: TaskCompletedByUser[];
   recentTimeEntries: RecentTimeEntry[];
   teamMembers: TeamMember[];
   pendingTasks: PendingTask[];
@@ -193,6 +232,17 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
   const [tickets, setTickets] = useState<any[]>([]);
   const [overviewData, setOverviewData] = useState<CustomerOverviewData | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [customerTasks, setCustomerTasks] = useState<CustomerTaskRow[]>([]);
+  const [customerTasksLoading, setCustomerTasksLoading] = useState(false);
+  const [customerTasksLoaded, setCustomerTasksLoaded] = useState(false);
+  const [taskFilterText, setTaskFilterText] = useState('');
+  const [taskFilterProjectId, setTaskFilterProjectId] = useState<number | undefined>(undefined);
+  const [taskFilterStatus, setTaskFilterStatus] = useState<number | undefined>(undefined);
+  const [taskFilterPriority, setTaskFilterPriority] = useState<number | undefined>(undefined);
+  const [taskFilterAssignee, setTaskFilterAssignee] = useState<number | undefined>(undefined);
+  const [taskFilterType, setTaskFilterType] = useState<number | undefined>(undefined);
+  const [taskHideClosed, setTaskHideClosed] = useState(true);
+  const [taskUnplannedOnly, setTaskUnplannedOnly] = useState(false);
   const [taskModalState, setTaskModalState] = useState<{
     show: boolean;
     isLoading: boolean;
@@ -290,6 +340,12 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
       loadData();
     }
   }, [token, customerId, featureFlagsLoaded]);
+
+  useEffect(() => {
+    if (token && customerId && activeTab === 'tasks' && !customerTasksLoaded && !customerTasksLoading) {
+      void loadCustomerTasks();
+    }
+  }, [token, customerId, activeTab, customerTasksLoaded, customerTasksLoading]);
 
   useEffect(() => {
     if (!customer?.Id || !customer.Name) return;
@@ -450,6 +506,154 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
     } finally {
       setOverviewLoading(false);
     }
+  };
+
+  const loadCustomerTasks = async () => {
+    if (!token) return;
+    setCustomerTasksLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/customers/${customerId}/tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(t('lit.failedToLoadTasks'));
+      const data = await res.json();
+      setCustomerTasks(Array.isArray(data.data) ? data.data : []);
+      setCustomerTasksLoaded(true);
+    } catch (err) {
+      console.error('Failed to load customer tasks:', err);
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadTasks'));
+    } finally {
+      setCustomerTasksLoading(false);
+    }
+  };
+
+  const taskFilterOptions = useMemo(() => {
+    const projectsMap = new Map<number, string>();
+    const statusesMap = new Map<number, string>();
+    const prioritiesMap = new Map<number, string>();
+    const assigneesMap = new Map<number, string>();
+    const typesMap = new Map<number, string>();
+    for (const task of customerTasks) {
+      if (task.ProjectId) projectsMap.set(task.ProjectId, task.ProjectName || `Project #${task.ProjectId}`);
+      if (task.Status != null) statusesMap.set(task.Status, task.StatusName || `Status #${task.Status}`);
+      if (task.Priority != null) prioritiesMap.set(task.Priority, task.PriorityName || `Priority #${task.Priority}`);
+      if (task.AssignedTo != null) {
+        const name =
+          [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
+          task.AssignedUsername ||
+          `User #${task.AssignedTo}`;
+        assigneesMap.set(task.AssignedTo, name);
+      }
+      if (task.TaskType != null) typesMap.set(task.TaskType, task.TaskTypeName || `Type #${task.TaskType}`);
+    }
+    const toOptions = (map: Map<number, string>) =>
+      Array.from(map.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      projects: toOptions(projectsMap),
+      statuses: toOptions(statusesMap),
+      priorities: toOptions(prioritiesMap),
+      assignees: toOptions(assigneesMap),
+      types: toOptions(typesMap),
+    };
+  }, [customerTasks]);
+
+  const filteredCustomerTasks = useMemo(() => {
+    const q = taskFilterText.trim().toLowerCase();
+    return customerTasks.filter((task) => {
+      if (taskFilterProjectId != null && Number(task.ProjectId) !== taskFilterProjectId) return false;
+      if (taskFilterStatus != null && Number(task.Status) !== taskFilterStatus) return false;
+      if (taskFilterPriority != null && Number(task.Priority) !== taskFilterPriority) return false;
+      if (taskFilterAssignee != null && Number(task.AssignedTo) !== taskFilterAssignee) return false;
+      if (taskFilterType != null && Number(task.TaskType) !== taskFilterType) return false;
+      if (taskHideClosed && Number(task.IsClosed || 0) === 1) return false;
+      if (taskUnplannedOnly && Number(task.UnscheduledWork || 0) !== 1) return false;
+      if (q) {
+        const assignee =
+          [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
+          task.AssignedUsername ||
+          '';
+        const haystack = `${task.TaskName || ''} ${task.ProjectName || ''} ${assignee} ${task.StatusName || ''} ${task.PriorityName || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [
+    customerTasks,
+    taskFilterText,
+    taskFilterProjectId,
+    taskFilterStatus,
+    taskFilterPriority,
+    taskFilterAssignee,
+    taskFilterType,
+    taskHideClosed,
+    taskUnplannedOnly,
+  ]);
+
+  const taskFiltersActiveCount = [
+    taskFilterText.trim() ? 1 : 0,
+    taskFilterProjectId != null ? 1 : 0,
+    taskFilterStatus != null ? 1 : 0,
+    taskFilterPriority != null ? 1 : 0,
+    taskFilterAssignee != null ? 1 : 0,
+    taskFilterType != null ? 1 : 0,
+    taskHideClosed ? 1 : 0,
+    taskUnplannedOnly ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
+  const resetCustomerTaskFilters = () => {
+    setTaskFilterText('');
+    setTaskFilterProjectId(undefined);
+    setTaskFilterStatus(undefined);
+    setTaskFilterPriority(undefined);
+    setTaskFilterAssignee(undefined);
+    setTaskFilterType(undefined);
+    setTaskHideClosed(true);
+    setTaskUnplannedOnly(false);
+  };
+
+  const exportCustomerTasksCsv = () => {
+    const headers = [
+      'Id',
+      'TaskName',
+      'ProjectName',
+      'StatusName',
+      'PriorityName',
+      'TaskTypeName',
+      'Assignee',
+      'DueDate',
+      'PlannedStartDate',
+      'PlannedEndDate',
+      'EstimatedHours',
+      'UnscheduledWork',
+      'UpdatedAt',
+    ];
+    const rows = filteredCustomerTasks.map((task) => {
+      const assignee =
+        [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
+        task.AssignedUsername ||
+        '';
+      return {
+        Id: task.Id,
+        TaskName: task.TaskName,
+        ProjectName: task.ProjectName,
+        StatusName: task.StatusName || '',
+        PriorityName: task.PriorityName || '',
+        TaskTypeName: task.TaskTypeName || '',
+        Assignee: assignee,
+        DueDate: task.DueDate || '',
+        PlannedStartDate: task.PlannedStartDate || '',
+        PlannedEndDate: task.PlannedEndDate || '',
+        EstimatedHours: task.EstimatedHours ?? '',
+        UnscheduledWork: Number(task.UnscheduledWork || 0) === 1 ? 'Yes' : 'No',
+        UpdatedAt: task.UpdatedAt || '',
+      };
+    });
+    downloadCsv(
+      `customer-${customerId}-tasks.csv`,
+      toCsv(rows, headers)
+    );
   };
 
   const openTaskDetails = async (projectId: number, taskId: number) => {
@@ -892,6 +1096,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
 
   const customerTabs = [
     { id: 'overview' as const, label: t('lit.overview') },
+    { id: 'tasks' as const, label: t('lit.tasks') },
     { id: 'users' as const, label: t('nav.users') },
     { id: 'settings' as const, label: t('pages.organizations.settings') },
     { id: 'attachments' as const, label: t('lit.attachments') },
@@ -925,6 +1130,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
           onChange={(id) => {
             setActiveTab(id as TabType);
             if (id === 'attachments') loadAttachments();
+            if (id === 'tasks' && !customerTasksLoaded) void loadCustomerTasks();
           }}
         />
       </PageStickyChrome>
@@ -1041,8 +1247,8 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
               </div>
             </div>
 
-            {/* Tasks by Status & Priority */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tasks by Status, Priority & Completed by User */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Tasks by Status */}
               <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wider">{t('lit.tasksByStatus')}</h3>
@@ -1104,6 +1310,47 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                               <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: mapColor(row.PriorityColor || '#6B7280') }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              {/* Completed tasks by user */}
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wider">{t('lit.tasksCompletedByUser')}</h3>
+                {overviewLoading ? (
+                  <div className="space-y-2">
+                    {[1,2,3].map(i => <div key={i} className="h-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />)}
+                  </div>
+                ) : !overviewData || !overviewData.tasksCompletedByUser?.length ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noCompletedTaskData')}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(() => {
+                      const rows = overviewData.tasksCompletedByUser;
+                      const total = rows.reduce((s, r) => s + Number(r.TaskCount), 0);
+                      return rows.map((row, index) => {
+                        const pct = total > 0 ? Math.round((Number(row.TaskCount) / total) * 100) : 0;
+                        const label =
+                          [row.FirstName, row.LastName].filter(Boolean).join(' ').trim() ||
+                          row.Username ||
+                          t('lit.unassigned');
+                        const key = row.UserId != null ? String(row.UserId) : `unassigned-${index}`;
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between items-center text-sm mb-1">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-emerald-500" />
+                                <span className="text-gray-700 dark:text-gray-300 truncate" title={label}>{label}</span>
+                              </div>
+                              <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{Number(row.TaskCount)} <span className="text-gray-400 font-normal">({pct}%)</span></span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                              <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         );
@@ -1376,6 +1623,200 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
               )}
             </div>
 
+          </div>
+        )}
+
+        {activeTab === 'tasks' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('lit.tasks')}
+                {!customerTasksLoading && (
+                  <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                    ({filteredCustomerTasks.length}
+                    {filteredCustomerTasks.length !== customerTasks.length
+                      ? ` / ${customerTasks.length}`
+                      : ''}
+                    )
+                  </span>
+                )}
+              </h3>
+              <button
+                type="button"
+                onClick={exportCustomerTasksCsv}
+                disabled={customerTasksLoading || filteredCustomerTasks.length === 0}
+                className={`${pageActionButtonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {t('lit.exportCsv')}
+              </button>
+            </div>
+
+            <CollapsibleFilterPanel
+              title={t('lit.taskFilters')}
+              activeCount={taskFiltersActiveCount}
+              onClear={resetCustomerTaskFilters}
+              defaultOpen={taskFiltersActiveCount > 1}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
+                <div className="xl:col-span-2">
+                  <input
+                    type="text"
+                    value={taskFilterText}
+                    onChange={(e) => setTaskFilterText(e.target.value)}
+                    placeholder={t('lit.searchTasks')}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <SearchableSelect
+                  value={taskFilterProjectId}
+                  onChange={setTaskFilterProjectId}
+                  options={taskFilterOptions.projects.map((p) => ({ id: p.id, label: p.name }))}
+                  placeholder={t('lit.allProjects')}
+                  className="w-full"
+                />
+                <SearchableSelect
+                  value={taskFilterStatus}
+                  onChange={setTaskFilterStatus}
+                  options={taskFilterOptions.statuses.map((s) => ({ id: s.id, label: s.name }))}
+                  placeholder={t('lit.allStatuses')}
+                  className="w-full"
+                />
+                <SearchableSelect
+                  value={taskFilterPriority}
+                  onChange={setTaskFilterPriority}
+                  options={taskFilterOptions.priorities.map((p) => ({ id: p.id, label: p.name }))}
+                  placeholder={t('lit.allPriorities')}
+                  className="w-full"
+                />
+                <SearchableSelect
+                  value={taskFilterAssignee}
+                  onChange={setTaskFilterAssignee}
+                  options={taskFilterOptions.assignees.map((a) => ({ id: a.id, label: a.name }))}
+                  placeholder={t('lit.allAssignees')}
+                  className="w-full"
+                />
+                <SearchableSelect
+                  value={taskFilterType}
+                  onChange={setTaskFilterType}
+                  options={taskFilterOptions.types.map((tp) => ({ id: tp.id, label: tp.name }))}
+                  placeholder={t('lit.allTaskTypes')}
+                  className="w-full"
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={taskHideClosed}
+                    onChange={(e) => setTaskHideClosed(e.target.checked)}
+                    className="rounded"
+                  />
+                  {t('lit.hideClosedTasks')}
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={taskUnplannedOnly}
+                    onChange={(e) => setTaskUnplannedOnly(e.target.checked)}
+                    className="rounded"
+                  />
+                  {t('lit.unplannedOnly')}
+                </label>
+              </div>
+            </CollapsibleFilterPanel>
+
+            {customerTasksLoading ? (
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : customerTasks.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow text-center text-sm text-gray-500 dark:text-gray-400">
+                {t('lit.noTasksFound')}
+              </div>
+            ) : filteredCustomerTasks.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow text-center text-sm text-gray-500 dark:text-gray-400">
+                {t('lit.noTasksFound')}
+                <button
+                  type="button"
+                  onClick={resetCustomerTaskFilters}
+                  className="mt-2 block mx-auto text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {t('lit.clearFilters')}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-900/40 text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">{t('lit.task')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('common.projects')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('lit.status')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('lit.priority')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('lit.assignee')}</th>
+                        <th className="px-4 py-3 font-semibold">{t('lit.dueDate')}</th>
+                        <th className="px-4 py-3 font-semibold text-right">{t('lit.estimated')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredCustomerTasks.map((task) => {
+                        const assignee =
+                          [task.AssignedFirstName, task.AssignedLastName].filter(Boolean).join(' ').trim() ||
+                          task.AssignedUsername ||
+                          t('lit.unassigned');
+                        return (
+                          <tr
+                            key={task.Id}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700/40 cursor-pointer"
+                            onClick={() => void openTaskDetails(task.ProjectId, task.Id)}
+                          >
+                            <td className="px-4 py-3 text-gray-900 dark:text-white font-medium max-w-[240px]">
+                              <div className="truncate" title={task.TaskName}>{task.TaskName}</div>
+                              {Number(task.UnscheduledWork || 0) === 1 && (
+                                <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                  {t('lit.unscheduled')}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-[160px] truncate" title={task.ProjectName}>
+                              {task.ProjectName}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                                style={pillStyle(task.StatusColor || '#6B7280', { alpha: '20' })}
+                              >
+                                {task.StatusName || '—'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                                style={pillStyle(task.PriorityColor || '#6B7280', { alpha: '20' })}
+                              >
+                                {task.PriorityName || '—'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-[140px] truncate" title={assignee}>
+                              {assignee}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                              {task.DueDate ? String(task.DueDate).slice(0, 10) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-900 dark:text-white whitespace-nowrap">
+                              {task.EstimatedHours != null ? decimalHoursToHMS(Number(task.EstimatedHours)) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

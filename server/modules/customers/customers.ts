@@ -1274,6 +1274,7 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
     const [
       [tasksByStatus],
       [tasksByPriority],
+      [tasksCompletedByUser],
       [recentTimeEntries],
       [teamMembers],
       [pendingTasks],
@@ -1304,6 +1305,21 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
          WHERE ${scopeSql}
            AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
          GROUP BY tpv.Id, tpv.PriorityName, tpv.ColorCode
+         ORDER BY TaskCount DESC`,
+        [customerId, customerId]
+      ),
+      // Closed/completed tasks by assignee
+      pool.execute<RowDataPacket[]>(
+        `SELECT u.Id as UserId, u.FirstName, u.LastName, u.Username,
+                COUNT(t.Id) as TaskCount
+         FROM Tasks t
+         INNER JOIN Projects p ON t.ProjectId = p.Id
+         INNER JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+         LEFT JOIN Users u ON t.AssignedTo = u.Id
+         WHERE ${scopeSql}
+           AND COALESCE(tsv.IsClosed, 0) = 1
+           AND COALESCE(tsv.HideFromPlanningAndStatistics, 0) = 0
+         GROUP BY u.Id, u.FirstName, u.LastName, u.Username
          ORDER BY TaskCount DESC`,
         [customerId, customerId]
       ),
@@ -1398,6 +1414,7 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
     return {
         tasksByStatus,
         tasksByPriority,
+        tasksCompletedByUser,
         recentTimeEntries,
         teamMembers,
         pendingTasks,
@@ -1413,6 +1430,58 @@ router.get('/:id/overview', authenticateToken, async (req: AuthRequest, res: Res
   } catch (error) {
     logger.error('Get customer overview error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch customer overview' });
+  }
+});
+
+// List all tasks scoped to a customer (direct project ownership or global project + task CustomerId)
+router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const customerId = parseInt(req.params.id as string);
+
+    const [access] = await pool.execute<RowDataPacket[]>(
+      `SELECT 1 FROM Customers c
+       INNER JOIN CustomerOrganizations co ON c.Id = co.CustomerId
+       INNER JOIN OrganizationMembers om ON co.OrganizationId = om.OrganizationId
+       WHERE om.UserId = ? AND c.Id = ?`,
+      [userId, customerId]
+    );
+
+    if (access.length === 0) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const scopeSql = `(
+      (p.CustomerId = ? AND COALESCE(p.IsGlobal, 0) = 0)
+      OR (COALESCE(p.IsGlobal, 0) = 1 AND t.CustomerId = ?)
+    )`;
+
+    const [tasks] = await pool.execute<RowDataPacket[]>(
+      `SELECT t.Id, t.TaskName, t.Status, t.Priority, t.TaskType, t.AssignedTo,
+              t.DueDate, t.PlannedStartDate, t.PlannedEndDate, t.EstimatedHours,
+              t.UnscheduledWork, t.CreatedAt, t.UpdatedAt,
+              p.Id as ProjectId, p.ProjectName,
+              tsv.StatusName, tsv.ColorCode as StatusColor,
+              COALESCE(tsv.IsClosed, 0) as IsClosed,
+              tpv.PriorityName, tpv.ColorCode as PriorityColor,
+              ttv.TypeName as TaskTypeName,
+              u.FirstName as AssignedFirstName, u.LastName as AssignedLastName,
+              u.Username as AssignedUsername
+       FROM Tasks t
+       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+       LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
+       LEFT JOIN Users u ON t.AssignedTo = u.Id
+       WHERE ${scopeSql}
+       ORDER BY t.UpdatedAt DESC, t.Id DESC`,
+      [customerId, customerId]
+    );
+
+    res.json({ success: true, data: tasks });
+  } catch (error) {
+    logger.error('Get customer tasks error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch customer tasks' });
   }
 });
 

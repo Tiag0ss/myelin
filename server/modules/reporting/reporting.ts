@@ -22,6 +22,12 @@ import {
   enumerateDays,
   enumerateWeeks,
 } from '../../utils/organizationEvolutionCharts';
+import {
+  customerProjectScopeSql,
+  customerTaskScopeSql,
+  parseOptionalId,
+  projectIdScopeSql,
+} from '../../utils/reportingScope';
 
 const router = Router();
 
@@ -203,11 +209,14 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
     const from = parseDateOnly(req.query.from) || defaults.from;
     const to = parseDateOnly(req.query.to) || defaults.to;
     const prev = previousPeriod(from, to);
-    const projectId = Number(req.query.projectId || 0) || null;
+    const projectId = parseOptionalId(req.query.projectId);
+    const customerId = parseOptionalId(req.query.customerId);
+    const custProject = customerProjectScopeSql(customerId);
+    const custTask = customerTaskScopeSql(customerId);
+    const projectOnly = projectIdScopeSql(projectId, { alias: 'p', column: 'Id' });
 
-    const projectFilter = projectId ? ' AND p.Id = ?' : '';
-    const baseParams: Array<number | string> = [organizationId];
-    if (projectId) baseParams.push(projectId);
+    const projectFilter = `${projectOnly.sql}${custProject.sql}`;
+    const baseParams: Array<number | string> = [organizationId, ...projectOnly.params, ...custProject.params];
 
     const [projects] = await pool.execute<RowDataPacket[]>(
       `SELECT p.Id, p.ProjectName, p.Budget, p.EndDate,
@@ -288,12 +297,9 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       healthCounts[p.healthStatus] += 1;
     });
 
-    const taskParams: Array<number | string> = [organizationId];
-    let taskProjectSql = '';
-    if (projectId) {
-      taskProjectSql = ' AND t.ProjectId = ?';
-      taskParams.push(projectId);
-    }
+    const taskProjectOnly = projectIdScopeSql(projectId, { alias: 't', column: 'ProjectId' });
+    const taskProjectSql = `${taskProjectOnly.sql}${custTask.sql}`;
+    const taskParams: Array<number | string> = [organizationId, ...taskProjectOnly.params, ...custTask.params];
 
     const [openClosed] = await pool.execute<RowDataPacket[]>(
       `SELECT
@@ -314,14 +320,9 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       taskParams
     );
 
-    const hoursParamsCurrent: Array<number | string> = [organizationId, from, to];
-    const hoursParamsPrev: Array<number | string> = [organizationId, prev.from, prev.to];
-    let hoursProjectSql = '';
-    if (projectId) {
-      hoursProjectSql = ' AND t.ProjectId = ?';
-      hoursParamsCurrent.push(projectId);
-      hoursParamsPrev.push(projectId);
-    }
+    const hoursProjectSql = taskProjectSql;
+    const hoursParamsCurrent: Array<number | string> = [organizationId, from, to, ...taskProjectOnly.params, ...custTask.params];
+    const hoursParamsPrev: Array<number | string> = [organizationId, prev.from, prev.to, ...taskProjectOnly.params, ...custTask.params];
 
     const [loggedCurrent] = await pool.execute<RowDataPacket[]>(
       `SELECT COALESCE(SUM(te.Hours), 0) AS Hours
@@ -351,8 +352,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       taskParams
     );
 
-    const topProjectParams: Array<number | string> = [organizationId, from, to];
-    if (projectId) topProjectParams.push(projectId);
+    const topProjectParams: Array<number | string> = [organizationId, from, to, ...taskProjectOnly.params, ...custTask.params];
     const [topProjects] = await pool.execute<RowDataPacket[]>(
       `SELECT p.Id, p.ProjectName, COALESCE(SUM(te.Hours), 0) AS Hours
        FROM TimeEntries te
@@ -368,8 +368,8 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       `SELECT COUNT(*) AS Cnt
        FROM Sprints s
        INNER JOIN Projects p ON s.ProjectId = p.Id
-       WHERE p.OrganizationId = ? AND s.Status = 'active'${projectId ? ' AND p.Id = ?' : ''}`,
-      projectId ? [organizationId, projectId] : [organizationId]
+       WHERE p.OrganizationId = ? AND s.Status = 'active'${projectFilter}`,
+      baseParams
     );
 
     const [completedInPeriod] = await pool.execute<RowDataPacket[]>(
@@ -394,12 +394,8 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       [...taskParams, `${prev.from} 00:00:00`, `${prev.to} 23:59:59.999`]
     );
 
-    const plannedParamsCurrent: Array<number | string> = [organizationId, from, to];
-    const plannedParamsPrev: Array<number | string> = [organizationId, prev.from, prev.to];
-    if (projectId) {
-      plannedParamsCurrent.push(projectId);
-      plannedParamsPrev.push(projectId);
-    }
+    const plannedParamsCurrent: Array<number | string> = [organizationId, from, to, ...taskProjectOnly.params, ...custTask.params];
+    const plannedParamsPrev: Array<number | string> = [organizationId, prev.from, prev.to, ...taskProjectOnly.params, ...custTask.params];
     const [plannedCurrent] = await pool.execute<RowDataPacket[]>(
       `SELECT COALESCE(SUM(ta.AllocatedHours), 0) AS Hours
        FROM TaskAllocations ta
@@ -448,16 +444,36 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       Number(completedPrev[0]?.Cnt || 0)
     );
 
+    const snapshotProjectFilter = projectId
+      ? 'AND ProjectId = ?'
+      : customerId
+        ? `AND ProjectId IN (
+            SELECT p.Id FROM Projects p
+            WHERE p.OrganizationId = ?
+              AND (
+                p.CustomerId = ?
+                OR (
+                  COALESCE(p.IsGlobal, 0) = 1
+                  AND EXISTS (SELECT 1 FROM Tasks _ct WHERE _ct.ProjectId = p.Id AND _ct.CustomerId = ?)
+                )
+              )
+          )`
+        : '';
+    const snapshotParams: Array<number | string> = projectId
+      ? [organizationId, from, to, projectId]
+      : customerId
+        ? [organizationId, from, to, organizationId, customerId, customerId]
+        : [organizationId, from, to];
     const [snapshots] = await pool.execute<RowDataPacket[]>(
       `SELECT SnapshotDate, HealthStatus, COUNT(*) AS Cnt
        FROM ProjectHealthSnapshots
        WHERE OrganizationId = ?
          AND SnapshotDate >= ?
          AND SnapshotDate <= ?
-         ${projectId ? 'AND ProjectId = ?' : ''}
+         ${snapshotProjectFilter}
        GROUP BY SnapshotDate, HealthStatus
        ORDER BY SnapshotDate`,
-      projectId ? [organizationId, from, to, projectId] : [organizationId, from, to]
+      snapshotParams
     ).catch(() => [[] as RowDataPacket[]]);
 
     const trendByDate = new Map<string, { date: string; green: number; amber: number; red: number }>();
@@ -542,8 +558,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       taskParams
     );
 
-    const hoursDetailParams: Array<number | string> = [organizationId];
-    if (projectId) hoursDetailParams.push(projectId);
+    const hoursDetailParams: Array<number | string> = [organizationId, ...taskProjectOnly.params, ...custTask.params];
     const [hoursEstimated] = await pool.execute<RowDataPacket[]>(
       `SELECT
          COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN t.EstimatedHours ELSE 0 END), 0) AS totalEstimatedHours,
@@ -570,8 +585,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       hoursDetailParams
     );
 
-    const weekParams: Array<number | string> = [organizationId, weekFrom, weekTo];
-    if (projectId) weekParams.push(projectId);
+    const weekParams: Array<number | string> = [organizationId, weekFrom, weekTo, ...taskProjectOnly.params, ...custTask.params];
     const [hoursWeek] = await pool.execute<RowDataPacket[]>(
       `SELECT
          COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN te.Hours ELSE 0 END), 0) AS normalHours,
@@ -585,8 +599,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       weekParams
     );
 
-    const periodHoursParams: Array<number | string> = [organizationId, from, to];
-    if (projectId) periodHoursParams.push(projectId);
+    const periodHoursParams: Array<number | string> = [organizationId, from, to, ...taskProjectOnly.params, ...custTask.params];
     const [hoursPeriod] = await pool.execute<RowDataPacket[]>(
       `SELECT
          COALESCE(SUM(CASE WHEN p.IsHobby = 0 THEN te.Hours ELSE 0 END), 0) AS normalHours,
@@ -600,8 +613,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       periodHoursParams
     );
 
-    const topUserParams: Array<number | string> = [organizationId, from, to];
-    if (projectId) topUserParams.push(projectId);
+    const topUserParams: Array<number | string> = [organizationId, from, to, ...taskProjectOnly.params, ...custTask.params];
     const [topUsers] = await pool.execute<RowDataPacket[]>(
       `SELECT u.Id, u.FirstName, u.LastName, u.Username, COALESCE(SUM(te.Hours), 0) AS Hours
        FROM TimeEntries te
@@ -622,6 +634,10 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
     if (projectId) {
       ticketProjectSql = ' AND t.ProjectId = ?';
       ticketParams.push(projectId);
+    }
+    if (customerId) {
+      ticketProjectSql += ' AND t.CustomerId = ?';
+      ticketParams.push(customerId);
     }
     const [ticketStats] = await pool.execute<RowDataPacket[]>(
       `SELECT
@@ -712,25 +728,20 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
       [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
 
-    const projectFilterSql = projectId ? ' AND p.Id = ?' : '';
     const [projectBaselineRows] = await pool.execute<RowDataPacket[]>(
       `SELECT COUNT(*) AS Cnt
        FROM Projects p
-       WHERE p.OrganizationId = ?${projectFilterSql}
+       WHERE p.OrganizationId = ?${projectFilter}
          AND p.CreatedAt < ?`,
-      projectId
-        ? [organizationId, projectId, `${from} 00:00:00`]
-        : [organizationId, `${from} 00:00:00`]
+      [...baseParams, `${from} 00:00:00`]
     );
     const [projectDailyRows] = await pool.execute<RowDataPacket[]>(
       `SELECT DATE(p.CreatedAt) AS Day, COUNT(*) AS Cnt
        FROM Projects p
-       WHERE p.OrganizationId = ?${projectFilterSql}
+       WHERE p.OrganizationId = ?${projectFilter}
          AND p.CreatedAt >= ? AND p.CreatedAt < ?
        GROUP BY DATE(p.CreatedAt)`,
-      projectId
-        ? [organizationId, projectId, `${from} 00:00:00`, `${to} 23:59:59.999`]
-        : [organizationId, `${from} 00:00:00`, `${to} 23:59:59.999`]
+      [...baseParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
 
     const taskDailyMap = new Map<string, number>();
@@ -980,6 +991,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
         period: { from, to, previous: prev },
         organizationId,
         projectId,
+        customerId,
         health: {
           counts: healthCounts,
           projectCount: withHealth.length,
@@ -1065,6 +1077,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
         taskAnalytics: await queryTaskAnalytics({
           organizationId,
           projectId: projectId || null,
+          customerId: customerId || null,
         }),
         healthTrend: snapshots,
         expenses: await (async () => {
@@ -1075,6 +1088,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
             const report = await queryExpenseReporting({
               organizationId,
               projectId,
+              customerId,
               approvalStatus: 'approved',
             });
             return { totals: report.totals };
@@ -1113,7 +1127,8 @@ router.get('/expenses', authenticateToken, async (req: AuthRequest, res: Respons
     const parsedFrom = parseDateOnly(req.query.from);
     const parsedTo = parseDateOnly(req.query.to);
     const period = normalizeExpenseReportPeriod(parsedFrom, parsedTo);
-    const projectId = Number(req.query.projectId || 0) || null;
+    const projectId = parseOptionalId(req.query.projectId);
+    const customerId = parseOptionalId(req.query.customerId);
     const groupId = Number(req.query.groupId || 0) || null;
     const categoryId = Number(req.query.categoryId || 0) || null;
     const userId = Number(req.query.userId || 0) || null;
@@ -1128,6 +1143,7 @@ router.get('/expenses', authenticateToken, async (req: AuthRequest, res: Respons
       from: period.from,
       to: period.to,
       projectId,
+      customerId,
       groupId,
       categoryId,
       userId,
@@ -1157,10 +1173,12 @@ router.get('/data-quality', authenticateToken, async (req: AuthRequest, res: Res
     }
 
     const staleDays = Math.min(90, Math.max(1, Number(req.query.staleDays || 7)));
-    const projectId = Number(req.query.projectId || 0) || null;
-    const projectSql = projectId ? ' AND t.ProjectId = ?' : '';
-    const params: Array<number | string> = [organizationId];
-    if (projectId) params.push(projectId);
+    const projectId = parseOptionalId(req.query.projectId);
+    const customerId = parseOptionalId(req.query.customerId);
+    const projectOnly = projectIdScopeSql(projectId, { alias: 't', column: 'ProjectId' });
+    const custTask = customerTaskScopeSql(customerId);
+    const projectSql = `${projectOnly.sql}${custTask.sql}`;
+    const params: Array<number | string> = [organizationId, ...projectOnly.params, ...custTask.params];
 
     const [unestimated] = await pool.execute<RowDataPacket[]>(
       `SELECT t.Id, t.TaskName, t.ProjectId, p.ProjectName, t.EstimatedHours
@@ -1219,13 +1237,15 @@ router.get('/data-quality', authenticateToken, async (req: AuthRequest, res: Res
            WHERE te.TaskId = t.Id AND te.WorkDate >= ?
          )
        ORDER BY t.DueDate`,
-      projectId
-        ? [organizationId, projectId, `${staleCutoffStr} 00:00:00`, staleCutoffStr]
-        : [organizationId, `${staleCutoffStr} 00:00:00`, staleCutoffStr]
+      [...params, `${staleCutoffStr} 00:00:00`, staleCutoffStr]
     );
 
-    const approvalParams: Array<number | string> = [organizationId];
-    if (projectId) approvalParams.push(projectId);
+    const approvalProject = projectIdScopeSql(projectId, { alias: 'p', column: 'Id' });
+    const approvalParams: Array<number | string> = [
+      organizationId,
+      ...approvalProject.params,
+      ...custTask.params,
+    ];
     const [pendingApprovals] = await pool.execute<RowDataPacket[]>(
       `SELECT te.Id, te.Hours, te.WorkDate, te.UserId, u.Username,
               t.Id AS TaskId, t.TaskName, p.Id AS ProjectId, p.ProjectName
@@ -1233,7 +1253,7 @@ router.get('/data-quality', authenticateToken, async (req: AuthRequest, res: Res
        INNER JOIN Tasks t ON te.TaskId = t.Id
        INNER JOIN Projects p ON t.ProjectId = p.Id
        INNER JOIN Users u ON te.UserId = u.Id
-       WHERE p.OrganizationId = ?${projectId ? ' AND p.Id = ?' : ''}
+       WHERE p.OrganizationId = ?${approvalProject.sql}${custTask.sql}
          AND te.ApprovalStatus = 'pending'
        ORDER BY te.WorkDate DESC`,
       approvalParams
@@ -1244,6 +1264,7 @@ router.get('/data-quality', authenticateToken, async (req: AuthRequest, res: Res
       data: {
         organizationId,
         projectId,
+        customerId,
         staleDays,
         unestimated,
         unassigned,
@@ -1270,9 +1291,13 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
       return res.status(403).json({ success: false, message: 'Not a member of this organization' });
     }
 
+    const customerId = parseOptionalId(req.query.customerId);
+    const custProject = customerProjectScopeSql(customerId);
+    const custTask = customerTaskScopeSql(customerId);
+
     // keep a thin dedicated payload for the Portfolio tab.
     const [projects] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.Id, p.ProjectName, p.Budget, p.BudgetType, p.EndDate, p.StartDate,
+      `SELECT p.Id, p.ProjectName, p.CustomerId, p.Budget, p.BudgetType, p.EndDate, p.StartDate,
               COALESCE(ps.IsClosed, 0) AS StatusIsClosed,
               COALESCE(ps.IsCancelled, 0) AS StatusIsCancelled,
               ps.StatusName,
@@ -1310,9 +1335,9 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
                 WHERE t.ProjectId = p.Id AND (COALESCE(tsv.IsClosed,0)=1 OR COALESCE(tsv.IsCancelled,0)=1)) AS CompletedTasks
        FROM Projects p
        LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
-       WHERE p.OrganizationId = ?
+       WHERE p.OrganizationId = ?${custProject.sql}
        ORDER BY p.ProjectName`,
-      [organizationId]
+      [organizationId, ...custProject.params]
     );
 
     const [leafTasks] = await pool.execute<RowDataPacket[]>(
@@ -1348,10 +1373,10 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
        INNER JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
        LEFT JOIN Users u ON t.AssignedTo = u.Id
-       WHERE p.OrganizationId = ?
+       WHERE p.OrganizationId = ?${custTask.sql}
          AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)
        ORDER BY IsOverdue DESC, t.TaskName`,
-      [organizationId]
+      [organizationId, ...custTask.params]
     );
 
     const tasksByProject = new Map<number, Array<{
@@ -1474,39 +1499,44 @@ router.get('/delivery', authenticateToken, async (req: AuthRequest, res: Respons
     const from = parseDateOnly(req.query.from) || defaults.from;
     const to = parseDateOnly(req.query.to) || defaults.to;
     const prev = previousPeriod(from, to);
-    const projectId = Number(req.query.projectId || 0) || null;
-    const projectSql = projectId ? ' AND p.Id = ?' : '';
-    const params: Array<number | string> = [organizationId];
-    if (projectId) params.push(projectId);
+    const projectId = parseOptionalId(req.query.projectId);
+    const customerId = parseOptionalId(req.query.customerId);
+    const projectOnly = projectIdScopeSql(projectId, { alias: 'p', column: 'Id' });
+    const custTask = customerTaskScopeSql(customerId);
+    const custProject = customerProjectScopeSql(customerId);
+    const taskSql = `${projectOnly.sql}${custTask.sql}`;
+    const projectSql = `${projectOnly.sql}${custProject.sql}`;
+    const taskParams: Array<number | string> = [organizationId, ...projectOnly.params, ...custTask.params];
+    const projectParams: Array<number | string> = [organizationId, ...projectOnly.params, ...custProject.params];
 
     const [closedCurrent] = await pool.execute<RowDataPacket[]>(
       `SELECT COUNT(*) AS Cnt
        FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
-       WHERE p.OrganizationId = ?${projectSql}
+       WHERE p.OrganizationId = ?${taskSql}
          AND COALESCE(tsv.IsClosed, 0) = 1
          AND t.UpdatedAt >= ? AND t.UpdatedAt <= ?`,
-      [...params, `${from} 00:00:00`, `${to} 23:59:59.999`]
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
     const [closedPrev] = await pool.execute<RowDataPacket[]>(
       `SELECT COUNT(*) AS Cnt
        FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
-       WHERE p.OrganizationId = ?${projectSql}
+       WHERE p.OrganizationId = ?${taskSql}
          AND COALESCE(tsv.IsClosed, 0) = 1
          AND t.UpdatedAt >= ? AND t.UpdatedAt <= ?`,
-      [...params, `${prev.from} 00:00:00`, `${prev.to} 23:59:59.999`]
+      [...taskParams, `${prev.from} 00:00:00`, `${prev.to} 23:59:59.999`]
     );
 
     const [createdCurrent] = await pool.execute<RowDataPacket[]>(
       `SELECT COUNT(*) AS Cnt
        FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id
-       WHERE p.OrganizationId = ?${projectSql}
+       WHERE p.OrganizationId = ?${taskSql}
          AND t.CreatedAt >= ? AND t.CreatedAt <= ?`,
-      [...params, `${from} 00:00:00`, `${to} 23:59:59.999`]
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
 
     const [activeSprints] = await pool.execute<RowDataPacket[]>(
@@ -1519,7 +1549,7 @@ router.get('/delivery', authenticateToken, async (req: AuthRequest, res: Respons
        INNER JOIN Projects p ON s.ProjectId = p.Id
        WHERE p.OrganizationId = ?${projectSql} AND s.Status = 'active'
        ORDER BY s.EndDate ASC`,
-      params
+      projectParams
     );
 
     const [recentlyClosed] = await pool.execute<RowDataPacket[]>(
@@ -1527,12 +1557,12 @@ router.get('/delivery', authenticateToken, async (req: AuthRequest, res: Respons
        FROM Tasks t
        INNER JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
-       WHERE p.OrganizationId = ?${projectSql}
+       WHERE p.OrganizationId = ?${taskSql}
          AND COALESCE(tsv.IsClosed, 0) = 1
          AND t.UpdatedAt >= ? AND t.UpdatedAt <= ?
        ORDER BY t.UpdatedAt DESC
        LIMIT 25`,
-      [...params, `${from} 00:00:00`, `${to} 23:59:59.999`]
+      [...taskParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
 
     const throughput = deltaMetric(Number(closedCurrent[0]?.Cnt || 0), Number(closedPrev[0]?.Cnt || 0));
@@ -1542,6 +1572,7 @@ router.get('/delivery', authenticateToken, async (req: AuthRequest, res: Respons
       data: {
         organizationId,
         projectId,
+        customerId,
         period: { from, to, previous: prev },
         throughput,
         tasksCreated: Number(createdCurrent[0]?.Cnt || 0),

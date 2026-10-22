@@ -4,6 +4,8 @@ import {
   buildEffectiveProjectIds,
   canWriteViaMcp,
   coerceAllowWrite,
+  coerceBooleanFlag,
+  coerceOptionalBooleanFlag,
   coerceOptionalNullableId,
   coerceProjectIds,
   coerceSprintStatus,
@@ -295,5 +297,13 @@ describe('coerceOptionalNullableId / sprintAllowedForProject', () => {
     expect(coerceSprintStatus('completed')).toEqual({ ok: true, value: 'completed' });
     expect(coerceSprintStatus('PLANNED')).toEqual({ ok: true, value: 'planned' });
     expect(coerceSprintStatus('nope').ok).toBe(false);
+  });
+
+  it('coerces unscheduledWork-style boolean flags', () => {
+    expect(coerceBooleanFlag(true)).toBe(1);
+    expect(coerceBooleanFlag('yes')).toBe(1);
+    expect(coerceBooleanFlag(false)).toBe(0);
+    expect(coerceOptionalBooleanFlag(undefined)).toEqual({ ok: true, value: undefined });
+    expect(coerceOptionalBooleanFlag('1')).toEqual({ ok: true, value: 1 });
   });
 });

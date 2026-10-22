@@ -44,7 +44,13 @@ export const reportingApi = {
   },
   getOrganizationOverview(
     token: string,
-    params: { organizationId: number; from: string; to: string; projectId?: number | null }
+    params: {
+      organizationId: number;
+      from: string;
+      to: string;
+      projectId?: number | null;
+      customerId?: number | null;
+    }
   ) {
     const qs = new URLSearchParams({
       organizationId: String(params.organizationId),
@@ -52,6 +58,7 @@ export const reportingApi = {
       to: params.to,
     });
     if (params.projectId) qs.set('projectId', String(params.projectId));
+    if (params.customerId) qs.set('customerId', String(params.customerId));
     return reportingFetch<{ success: boolean; data: any }>(`/api/reporting/organization-overview?${qs}`, token);
   },
   getExpensesReport(
@@ -61,6 +68,7 @@ export const reportingApi = {
       from?: string | null;
       to?: string | null;
       projectId?: number | null;
+      customerId?: number | null;
       groupId?: number | null;
       categoryId?: number | null;
       userId?: number | null;
@@ -74,6 +82,7 @@ export const reportingApi = {
     if (params.from) qs.set('from', params.from);
     if (params.to) qs.set('to', params.to);
     if (params.projectId) qs.set('projectId', String(params.projectId));
+    if (params.customerId) qs.set('customerId', String(params.customerId));
     if (params.groupId) qs.set('groupId', String(params.groupId));
     if (params.categoryId) qs.set('categoryId', String(params.categoryId));
     if (params.userId) qs.set('userId', String(params.userId));
@@ -81,9 +90,11 @@ export const reportingApi = {
     if (params.internalOnly) qs.set('internalOnly', 'true');
     return reportingFetch<{ success: boolean; data: any }>(`/api/reporting/expenses?${qs}`, token);
   },
-  getPortfolio(token: string, organizationId: number) {
+  getPortfolio(token: string, organizationId: number, customerId?: number | null) {
+    const qs = new URLSearchParams({ organizationId: String(organizationId) });
+    if (customerId) qs.set('customerId', String(customerId));
     return reportingFetch<{ success: boolean; data: any }>(
-      `/api/reporting/portfolio?organizationId=${organizationId}`,
+      `/api/reporting/portfolio?${qs}`,
       token
     );
   },
@@ -97,7 +108,13 @@ export const reportingApi = {
   },
   getDelivery(
     token: string,
-    params: { organizationId: number; from: string; to: string; projectId?: number | null }
+    params: {
+      organizationId: number;
+      from: string;
+      to: string;
+      projectId?: number | null;
+      customerId?: number | null;
+    }
   ) {
     const qs = new URLSearchParams({
       organizationId: String(params.organizationId),
@@ -105,11 +122,18 @@ export const reportingApi = {
       to: params.to,
     });
     if (params.projectId) qs.set('projectId', String(params.projectId));
+    if (params.customerId) qs.set('customerId', String(params.customerId));
     return reportingFetch<{ success: boolean; data: any }>(`/api/reporting/delivery?${qs}`, token);
   },
-  getDataQuality(token: string, organizationId: number, projectId?: number | null) {
+  getDataQuality(
+    token: string,
+    organizationId: number,
+    projectId?: number | null,
+    customerId?: number | null
+  ) {
     const qs = new URLSearchParams({ organizationId: String(organizationId) });
     if (projectId) qs.set('projectId', String(projectId));
+    if (customerId) qs.set('customerId', String(customerId));
     return reportingFetch<{ success: boolean; data: any }>(`/api/reporting/data-quality?${qs}`, token);
   },
   getDigests(token: string, organizationId: number) {

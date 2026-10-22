@@ -25,6 +25,18 @@ const normalizeHeaderKey = (value: string) =>
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 
+/** Header text for column ids — ignore sort markers / resize chrome so ids stay stable. */
+const headerLabelForKey = (headerCell: HTMLTableCellElement): string => {
+  const explicitKey = headerCell.dataset.columnKey?.trim();
+  if (explicitKey) return explicitKey;
+
+  const clone = headerCell.cloneNode(true) as HTMLTableCellElement;
+  clone
+    .querySelectorAll('.grid-sort-indicator, .grid-column-resize-handle')
+    .forEach((node) => node.remove());
+  return (clone.textContent || '').replace(/[↑↓]/g, '').trim();
+};
+
 const hashString = (value: string): string => {
   let hash = 5381;
   for (let index = 0; index < value.length; index++) {
@@ -32,6 +44,14 @@ const hashString = (value: string): string => {
     hash = hash >>> 0;
   }
   return hash.toString(36);
+};
+
+const clearEnhancedTableMarkers = () => {
+  document.querySelectorAll('table[data-grid-enhanced-key]').forEach((node) => {
+    if (node instanceof HTMLTableElement) {
+      delete node.dataset.gridEnhancedKey;
+    }
+  });
 };
 
 const defaultPreference = (columnIds: string[]): RuntimeGridPreference => ({
@@ -163,8 +183,17 @@ export default function GlobalGridEnhancer() {
             hasSavedHiddenColumns: Array.isArray(pref.hiddenColumns),
           });
         });
-        livePreferencesRef.current = new Map(map);
-        setPreferencesMap(map);
+        // Prefer in-memory edits over a stale server snapshot for keys already touched this session.
+        const merged = new Map(map);
+        livePreferencesRef.current.forEach((livePref, key) => {
+          if (livePref.hasSavedHiddenColumns) {
+            merged.set(key, livePref);
+          }
+        });
+        livePreferencesRef.current = merged;
+        // Force tables to re-init so loaded prefs are applied (early-return otherwise skips them).
+        clearEnhancedTableMarkers();
+        setPreferencesMap(merged);
       } catch {
         if (!isCancelled) {
           setPreferencesMap(new Map());
@@ -214,8 +243,7 @@ export default function GlobalGridEnhancer() {
 
         const usedKeys = new Map<string, number>();
         const columnIds = headerCells.map((headerCell, index) => {
-          const explicitKey = headerCell.dataset.columnKey?.trim();
-          const rawLabel = explicitKey || headerCell.textContent?.trim() || `column-${index + 1}`;
+          const rawLabel = headerLabelForKey(headerCell) || `column-${index + 1}`;
           const normalized = normalizeHeaderKey(rawLabel) || `column-${index + 1}`;
           const count = usedKeys.get(normalized) || 0;
           usedKeys.set(normalized, count + 1);
@@ -227,7 +255,7 @@ export default function GlobalGridEnhancer() {
         headerCells.forEach((headerCell, index) => {
           const columnId = columnIds[index];
           if (!columnId) return;
-          const label = (headerCell.textContent || '').trim();
+          const label = headerLabelForKey(headerCell);
           if (!isActionHeader(label, actionsLabel)) return;
           actionColumnIds.add(columnId);
           const measuredWidth = Math.max(80, Math.round(headerCell.getBoundingClientRect().width || 120));
@@ -258,7 +286,15 @@ export default function GlobalGridEnhancer() {
         }
 
         if (table.dataset.gridEnhancedKey === gridKey) {
-          return;
+          // React often remounts rows without recreating the <table>. Re-init when column
+          // markers were lost so saved visibility/order are applied again.
+          const markedHeader = table.querySelector('thead th[data-grid-column-id]');
+          if (markedHeader) {
+            return;
+          }
+          delete table.dataset.gridEnhancedKey;
+          const staleToolbar = table.parentElement?.querySelector(':scope > .global-grid-controls');
+          if (staleToolbar) staleToolbar.remove();
         }
 
         table.dataset.gridEnhancedKey = gridKey;
@@ -319,9 +355,12 @@ export default function GlobalGridEnhancer() {
           };
         }
 
-        // Persist the post-initialization state so re-initialization after a React re-render
-        // picks up the correct snapshot instead of stale server data.
-        livePreferencesRef.current.set(gridKey, { ...runtimePref, hasSavedHiddenColumns: true });
+        // Keep the post-init snapshot for remounts. Only mark as "saved" when we actually
+        // had server/session prefs — otherwise a later prefs load must still win.
+        livePreferencesRef.current.set(gridKey, {
+          ...runtimePref,
+          hasSavedHiddenColumns: Boolean(existingPref?.hasSavedHiddenColumns),
+        });
 
         // commitRuntimePref: update both the local variable and the live ref atomically.
         const commitRuntimePref = (next: RuntimeGridPreference) => {
@@ -831,7 +870,7 @@ export default function GlobalGridEnhancer() {
             if (originalIndex < 0) return;
 
             const headerLabel =
-              (headerCells[originalIndex].textContent || '').trim() ||
+              headerLabelForKey(headerCells[originalIndex]) ||
               t('lit.columnN', { n: index + 1 });
             if (isActionHeader(headerLabel, actionsLabel)) return;
 

@@ -11,6 +11,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useUrlTab } from '@/hooks/useUrlTab';
 import { organizationsApi } from '@/lib/api/organizations';
 import { projectsApi, Project } from '@/lib/api/projects';
+import { getCustomersByOrganization, type Customer } from '@/lib/api/customers';
 import { tasksApi, Task } from '@/lib/api/tasks';
 import TaskDetailModal from '@/components/TaskDetailModal';
 import { getApiUrl } from '@/lib/api/config';
@@ -24,6 +25,7 @@ import { WebReportsExplorer } from '@/app/web-reports/page';
 import { OrganizationCharts } from '@/components/reporting/OrganizationCharts';
 import { OrganizationDetailAnalytics } from '@/components/reporting/OrganizationDetailAnalytics';
 import { TaskAnalyticsCharts } from '@/components/reporting/TaskAnalyticsCharts';
+import SearchableSelect from '@/components/SearchableSelect';
 
 const MANAGER_TABS = [
   'organization',
@@ -188,6 +190,8 @@ function ReportingHubInner() {
     return stored ? Number(stored) : '';
   });
   const [projectId, setProjectId] = useState<number | ''>('');
+  const [customerId, setCustomerId] = useState<number | ''>('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const rangeDefaults = useMemo(() => defaultReportingRange(30), []);
   const [dateFrom, setDateFrom] = useState(() => {
     if (typeof window === 'undefined') return rangeDefaults.from;
@@ -360,9 +364,118 @@ function ReportingHubInner() {
   );
 
   const filteredProjects = useMemo(() => {
-    if (!organizationId) return projects;
-    return projects.filter((p) => Number(p.OrganizationId) === Number(organizationId));
-  }, [projects, organizationId]);
+    let rows = projects;
+    if (organizationId) {
+      rows = rows.filter((p) => Number(p.OrganizationId) === Number(organizationId));
+    }
+    if (customerId) {
+      rows = rows.filter((p) => Number(p.CustomerId || 0) === Number(customerId));
+    }
+    return rows;
+  }, [projects, organizationId, customerId]);
+
+  const organizationFilterOptions = useMemo(
+    () => orgs.map((o) => ({ value: o.Id, label: o.Name })),
+    [orgs]
+  );
+
+  const customerFilterOptions = useMemo(
+    () =>
+      customers.map((c) => ({
+        value: c.Id,
+        label: String(c.ExternalName || c.Name || `Customer #${c.Id}`),
+      })),
+    [customers]
+  );
+
+  const projectFilterOptions = useMemo(
+    () =>
+      filteredProjects.map((p) => ({
+        value: p.Id,
+        label: String(p.ProjectName || `Project #${p.Id}`),
+      })),
+    [filteredProjects]
+  );
+
+  const expenseGroupFilterOptions = useMemo(
+    () =>
+      (expenseReport?.filterOptions?.groups || []).map((g: { id: number; name: string }) => ({
+        value: g.id,
+        label: String(g.name || `Group #${g.id}`),
+      })),
+    [expenseReport]
+  );
+
+  const expenseCategoryFilterOptions = useMemo(
+    () =>
+      (expenseReport?.filterOptions?.categories || [])
+        .filter((c: { groupId?: number }) => !expenseGroupId || c.groupId === expenseGroupId)
+        .map((c: { id: number; name: string; groupName?: string }) => ({
+          value: c.id,
+          label: `${c.groupName || ''} / ${c.name || ''}`.replace(/^\s*\/\s*/, ''),
+        })),
+    [expenseReport, expenseGroupId]
+  );
+
+  const expenseSubmitterFilterOptions = useMemo(
+    () =>
+      (expenseReport?.submitters || []).map(
+        (u: { id: number; firstName?: string; username?: string }) => ({
+          value: u.id,
+          label: String(u.firstName || u.username || `User #${u.id}`),
+        })
+      ),
+    [expenseReport]
+  );
+
+  const extractDatasetFilterOptions = useMemo(
+    () => extractDatasetOptions.map((d) => ({ value: d.id, label: d.label })),
+    [extractDatasetOptions]
+  );
+
+  const portfolioRagFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: t('common.all') },
+      { value: 'red', label: t('lit.red') },
+      { value: 'amber', label: t('lit.amber') },
+      { value: 'green', label: t('lit.green') },
+    ],
+    [t]
+  );
+
+  const expenseReimbFilterOptions = useMemo(
+    () => [
+      { value: 'needs_reimbursement', label: t('lit.needsReimbursement') },
+      { value: 'reimbursed', label: t('lit.fullyReimbursed') },
+      { value: 'partial', label: t('lit.partial') },
+      { value: 'pending', label: t('lit.pending') },
+    ],
+    [t]
+  );
+
+  const expenseBreakdownFilterOptions = useMemo(
+    () => [
+      { value: 'rows', label: t('lit.expenseLines') },
+      { value: 'category', label: t('lit.byCategory') },
+      { value: 'group', label: t('lit.byGroup') },
+    ],
+    [t]
+  );
+
+  const deliverySectionFilterOptions = useMemo(
+    () => [
+      { value: 'sprints', label: t('lit.activeSprints') },
+      { value: 'closed', label: t('lit.recentlyClosed') },
+    ],
+    [t]
+  );
+
+  useEffect(() => {
+    if (!projectId) return;
+    if (!filteredProjects.some((p) => Number(p.Id) === Number(projectId))) {
+      setProjectId('');
+    }
+  }, [filteredProjects, projectId]);
 
   useEffect(() => {
     if (!token || isCustomerUser) return;
@@ -418,6 +531,29 @@ function ReportingHubInner() {
     };
   }, [token, access?.canAccessHub]);
 
+  useEffect(() => {
+    if (!token || !access?.canAccessHub || !organizationId) {
+      setCustomers([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getCustomersByOrganization(token, Number(organizationId));
+        if (cancelled) return;
+        setCustomers(Array.isArray(list) ? list : []);
+        if (customerId && !list.some((c) => Number(c.Id) === Number(customerId))) {
+          setCustomerId('');
+        }
+      } catch {
+        if (!cancelled) setCustomers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, access?.canAccessHub, organizationId]);
+
   const loadTabData = useCallback(async () => {
     if (!token || !access?.canAccessHub) return;
     setError('');
@@ -429,12 +565,17 @@ function ReportingHubInner() {
           from: dateFrom,
           to: dateTo,
           projectId: projectId ? Number(projectId) : null,
+          customerId: customerId ? Number(customerId) : null,
         });
         setOverview(res.data);
         const dig = await reportingApi.getDigests(token, Number(organizationId));
         setDigests(dig.data || []);
       } else if (activeTab === 'portfolio' && organizationId && canManager) {
-        const res = await reportingApi.getPortfolio(token, Number(organizationId));
+        const res = await reportingApi.getPortfolio(
+          token,
+          Number(organizationId),
+          customerId ? Number(customerId) : null
+        );
         setPortfolio(res.data);
         setExpandedPortfolioIds(new Set());
       } else if (activeTab === 'delivery' && organizationId && canManager) {
@@ -443,6 +584,7 @@ function ReportingHubInner() {
           from: dateFrom,
           to: dateTo,
           projectId: projectId ? Number(projectId) : null,
+          customerId: customerId ? Number(customerId) : null,
         });
         setDelivery(res.data);
       } else if (activeTab === 'capacity' && organizationId && canCapacity) {
@@ -452,7 +594,8 @@ function ReportingHubInner() {
         const res = await reportingApi.getDataQuality(
           token,
           Number(organizationId),
-          projectId ? Number(projectId) : null
+          projectId ? Number(projectId) : null,
+          customerId ? Number(customerId) : null
         );
         setDataQuality(res.data);
       } else if (activeTab === 'expenses' && organizationId && canManager && expensesEnabled) {
@@ -461,6 +604,7 @@ function ReportingHubInner() {
           from: expenseDateFrom || null,
           to: expenseDateTo || null,
           projectId: projectId ? Number(projectId) : null,
+          customerId: customerId ? Number(customerId) : null,
           groupId: expenseGroupId ? Number(expenseGroupId) : null,
           categoryId: expenseCategoryId ? Number(expenseCategoryId) : null,
           userId: expenseUserId ? Number(expenseUserId) : null,
@@ -482,6 +626,7 @@ function ReportingHubInner() {
     dateTo,
     organizationId,
     projectId,
+    customerId,
     canManager,
     canCapacity,
     expensesEnabled,
@@ -551,6 +696,10 @@ function ReportingHubInner() {
       if (projectId && filterConfig.projectField) {
         const projectKey = filterConfig.projectField;
         records = records.filter((r: any) => Number(r[projectKey] || 0) === Number(projectId));
+      }
+      if (customerId && filterConfig.customerField) {
+        const customerKey = filterConfig.customerField;
+        records = records.filter((r: any) => Number(r[customerKey] || 0) === Number(customerId));
       }
       const skipDateFilter = extractDataset === 'expenses' || extractDataset === 'expenseReimbursements';
       if (!skipDateFilter && (dateFrom || dateTo)) {
@@ -696,14 +845,15 @@ function ReportingHubInner() {
 
             <div className="mt-4 flex flex-wrap gap-3 items-end">
               {(canManager || canCapacity) && activeTab !== 'explore' && (
-                <div>
+                <div className="min-w-[200px]">
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {t('common.organization')}
                   </label>
-                  <select
+                  <SearchableSelect
                     value={organizationId}
-                    onChange={(e) => {
-                      setOrganizationId(e.target.value ? Number(e.target.value) : '');
+                    onChange={(value) => {
+                      setOrganizationId(value ? Number(value) : '');
+                      setCustomerId('');
                       setProjectId('');
                       setExpenseGroupId('');
                       setExpenseCategoryId('');
@@ -711,14 +861,34 @@ function ReportingHubInner() {
                       setExpenseReimbFilter('');
                       setExpenseInternalOnly(false);
                     }}
-                    className="h-10 min-w-[200px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    {orgs.map((o) => (
-                      <option key={o.Id} value={o.Id}>
-                        {o.Name}
-                      </option>
-                    ))}
-                  </select>
+                    options={organizationFilterOptions}
+                    placeholder={t('common.organization')}
+                    emptyText=""
+                    className="text-sm"
+                  />
+                </div>
+              )}
+              {(activeTab === 'organization' ||
+                activeTab === 'portfolio' ||
+                activeTab === 'delivery' ||
+                activeTab === 'data-quality' ||
+                activeTab === 'expenses' ||
+                activeTab === 'extract') && (
+                <div className="min-w-[200px]">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    {t('lit.customer2')}
+                  </label>
+                  <SearchableSelect
+                    value={customerId}
+                    onChange={(value) => {
+                      setCustomerId(value ? Number(value) : '');
+                      setProjectId('');
+                    }}
+                    options={customerFilterOptions}
+                    placeholder={t('lit.allCustomers')}
+                    emptyText={t('lit.allCustomers')}
+                    className="text-sm"
+                  />
                 </div>
               )}
               {(activeTab === 'organization' ||
@@ -726,22 +896,18 @@ function ReportingHubInner() {
                 activeTab === 'data-quality' ||
                 activeTab === 'expenses' ||
                 activeTab === 'extract') && (
-                <div>
+                <div className="min-w-[200px]">
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {t('common.project')}
                   </label>
-                  <select
+                  <SearchableSelect
                     value={projectId}
-                    onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
-                    className="h-10 min-w-[200px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    <option value="">{t('lit.allProjects')}</option>
-                    {filteredProjects.map((p) => (
-                      <option key={p.Id} value={p.Id}>
-                        {p.ProjectName}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setProjectId(value ? Number(value) : '')}
+                    options={projectFilterOptions}
+                    placeholder={t('lit.allProjects')}
+                    emptyText={t('lit.allProjects')}
+                    className="text-sm"
+                  />
                 </div>
               )}
               {activeTab !== 'explore' && activeTab !== 'data-quality' && activeTab !== 'portfolio' && activeTab !== 'expenses' && (
@@ -767,18 +933,18 @@ function ReportingHubInner() {
                 </>
               )}
               {activeTab === 'portfolio' && (
-                <div>
+                <div className="min-w-[140px]">
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.rag')}</label>
-                  <select
+                  <SearchableSelect
                     value={portfolioRagFilter}
-                    onChange={(e) => setPortfolioRagFilter(e.target.value as typeof portfolioRagFilter)}
-                    className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    <option value="all">{t('common.all')}</option>
-                    <option value="red">{t('lit.red')}</option>
-                    <option value="amber">{t('lit.amber')}</option>
-                    <option value="green">{t('lit.green')}</option>
-                  </select>
+                    onChange={(value) =>
+                      setPortfolioRagFilter((value || 'all') as typeof portfolioRagFilter)
+                    }
+                    options={portfolioRagFilterOptions}
+                    placeholder={t('common.all')}
+                    emptyText=""
+                    className="text-sm"
+                  />
                 </div>
               )}
               {activeTab === 'capacity' && (
@@ -815,65 +981,52 @@ function ReportingHubInner() {
                       className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
                   </div>
-                  <div>
+                  <div className="min-w-[160px]">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.group')}</label>
-                    <select
+                    <SearchableSelect
                       value={expenseGroupId}
-                      onChange={(e) => {
-                        setExpenseGroupId(e.target.value ? Number(e.target.value) : '');
+                      onChange={(value) => {
+                        setExpenseGroupId(value ? Number(value) : '');
                         setExpenseCategoryId('');
                       }}
-                      className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="">{t('lit.allGroups')}</option>
-                      {(expenseReport?.filterOptions?.groups || []).map((g: any) => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
+                      options={expenseGroupFilterOptions}
+                      placeholder={t('lit.allGroups')}
+                      emptyText={t('lit.allGroups')}
+                      className="text-sm"
+                    />
                   </div>
-                  <div>
+                  <div className="min-w-[180px]">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('pages.expenses.category')}</label>
-                    <select
+                    <SearchableSelect
                       value={expenseCategoryId}
-                      onChange={(e) => setExpenseCategoryId(e.target.value ? Number(e.target.value) : '')}
-                      className="h-10 min-w-[180px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="">{t('lit.allCategories')}</option>
-                      {(expenseReport?.filterOptions?.categories || [])
-                        .filter((c: any) => !expenseGroupId || c.groupId === expenseGroupId)
-                        .map((c: any) => (
-                          <option key={c.id} value={c.id}>{c.groupName} / {c.name}</option>
-                        ))}
-                    </select>
+                      onChange={(value) => setExpenseCategoryId(value ? Number(value) : '')}
+                      options={expenseCategoryFilterOptions}
+                      placeholder={t('lit.allCategories')}
+                      emptyText={t('lit.allCategories')}
+                      className="text-sm"
+                    />
                   </div>
-                  <div>
+                  <div className="min-w-[160px]">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.submittedBy')}</label>
-                    <select
+                    <SearchableSelect
                       value={expenseUserId}
-                      onChange={(e) => setExpenseUserId(e.target.value ? Number(e.target.value) : '')}
-                      className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="">{t('lit.allUsers')}</option>
-                      {(expenseReport?.submitters || []).map((u: any) => (
-                        <option key={u.id} value={u.id}>
-                          {u.firstName || u.username || `User #${u.id}`}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setExpenseUserId(value ? Number(value) : '')}
+                      options={expenseSubmitterFilterOptions}
+                      placeholder={t('lit.allUsers')}
+                      emptyText={t('lit.allUsers')}
+                      className="text-sm"
+                    />
                   </div>
-                  <div>
+                  <div className="min-w-[160px]">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('lit.reimbursement')}</label>
-                    <select
+                    <SearchableSelect
                       value={expenseReimbFilter}
-                      onChange={(e) => setExpenseReimbFilter(e.target.value)}
-                      className="h-10 min-w-[160px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="">{t('common.all')}</option>
-                      <option value="needs_reimbursement">{t('lit.needsReimbursement')}</option>
-                      <option value="reimbursed">{t('lit.fullyReimbursed')}</option>
-                      <option value="partial">{t('lit.partial')}</option>
-                      <option value="pending">{t('lit.pending')}</option>
-                    </select>
+                      onChange={setExpenseReimbFilter}
+                      options={expenseReimbFilterOptions}
+                      placeholder={t('common.all')}
+                      emptyText={t('common.all')}
+                      className="text-sm"
+                    />
                   </div>
                   <label className="inline-flex items-center gap-2 h-10 text-sm text-gray-700 dark:text-gray-300">
                     <input
@@ -884,33 +1037,36 @@ function ReportingHubInner() {
                     />
                     {t('lit.internalOnly')}
                   </label>
-                  <div>
+                  <div className="min-w-[140px]">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('common.view')}</label>
-                    <select
+                    <SearchableSelect
                       value={expenseBreakdown}
-                      onChange={(e) => setExpenseBreakdown(e.target.value as typeof expenseBreakdown)}
-                      className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="rows">{t('lit.expenseLines')}</option>
-                      <option value="category">{t('lit.byCategory')}</option>
-                      <option value="group">{t('lit.byGroup')}</option>
-                    </select>
+                      onChange={(value) =>
+                        setExpenseBreakdown((value || 'rows') as typeof expenseBreakdown)
+                      }
+                      options={expenseBreakdownFilterOptions}
+                      placeholder={t('lit.expenseLines')}
+                      emptyText=""
+                      className="text-sm"
+                    />
                   </div>
                 </>
               )}
               {activeTab === 'delivery' && (
-                <div>
+                <div className="min-w-[160px]">
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {t('lit.focus')}
                   </label>
-                  <select
+                  <SearchableSelect
                     value={deliverySection}
-                    onChange={(e) => setDeliverySection(e.target.value as typeof deliverySection)}
-                    className="h-10 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  >
-                    <option value="sprints">{t('lit.activeSprints')}</option>
-                    <option value="closed">{t('lit.recentlyClosed')}</option>
-                  </select>
+                    onChange={(value) =>
+                      setDeliverySection((value || 'sprints') as typeof deliverySection)
+                    }
+                    options={deliverySectionFilterOptions}
+                    placeholder={t('lit.activeSprints')}
+                    emptyText=""
+                    className="text-sm"
+                  />
                 </div>
               )}
               {activeTab !== 'explore' && (
@@ -1862,7 +2018,7 @@ function ReportingHubInner() {
             {activeTab === 'extract' && (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Export raw rows to CSV. Use organization and project filters in the toolbar to narrow results
+                  Export raw rows to CSV. Use organization, customer, and project filters in the toolbar to narrow results
                   client-side. Expense datasets include all dates unless you filter on the Expenses tab. CSV includes
                   every column; the preview shows up to 200 rows.
                 </p>
@@ -1871,17 +2027,16 @@ function ReportingHubInner() {
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       {t('lit.dataset')}
                     </label>
-                    <select
+                    <SearchableSelect
                       value={extractDataset}
-                      onChange={(e) => setExtractDataset(e.target.value)}
-                      className="h-10 w-full px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
-                    >
-                      {extractDatasetOptions.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => {
+                        if (value) setExtractDataset(value);
+                      }}
+                      options={extractDatasetFilterOptions}
+                      placeholder={t('lit.dataset')}
+                      emptyText=""
+                      className="text-sm w-full"
+                    />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -1915,7 +2070,7 @@ function ReportingHubInner() {
                   {extractLoadedCount != null &&
                     extractLoadedCount > 0 &&
                     extractRecords.length === 0 &&
-                    ' Widen or clear organization, project, and date filters above.'}
+                    ' Widen or clear organization, customer, project, and date filters above.'}
                 </p>
                 {extractRecords.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-auto max-h-[60vh]">
