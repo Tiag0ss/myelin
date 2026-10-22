@@ -36,8 +36,9 @@ flowchart TD
 
 | Topic | Detail |
 |-------|--------|
-| Build | Dockerfile `desktop-builder` stage (Debian) produces Linux AppImage; Windows packages may be host-provided under `extras/release` |
+| Build | Dockerfile `companions-builder` stage (`electronuserland/builder` + Wine) produces Linux AppImage **and** Windows NSIS; Woodpecker tag builds bake both into the image |
 | Runtime image | Copies `extras/release` into the production image |
+| Local / CI script | `pnpm run companions:build` (or `bash extras/scripts/build-companions.sh`) also builds VS Code VSIX + Rider ZIP into `extras/release` |
 | Local dev | `pnpm run desktop:dev` from the repo |
 | Auth | Same users as web — no separate desktop account store |
 | SSO | Synapse SSO is separate — [[06-install-and-ops/sso-for-companions]] |

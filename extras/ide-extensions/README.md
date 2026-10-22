@@ -42,6 +42,8 @@ Deploy guide: [`DEPLOYMENT.md` §11](../../DEPLOYMENT.md#11-ide-extensions-pendi
 
 ## Build
 
+CI (`V*` Docker / Woodpecker) builds **VS Code/Cursor** and **Rider** into `extras/release` automatically. Local one-shot from repo root: `pnpm run companions:build`. Visual Studio still needs a Windows MSBuild host.
+
 After editing [`shared-kanban/`](./shared-kanban/), copy `board.css` / `board.js` into each host’s resource folder (VS Code: `pnpm run sync-kanban`).
 
 ### VS Code / Cursor (pnpm)

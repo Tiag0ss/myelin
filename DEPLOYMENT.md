@@ -424,6 +424,15 @@ Contract and checklist: [`extras/ide-extensions/README.md`](extras/ide-extension
 3. In the extension: Base URL = production origin (no trailing slash), e.g. `https://pm.example.com`.
 4. Visual Studio: install [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
+### CI / Docker companions
+
+On `V*` tag builds, the Dockerfile builds and copies into `extras/release`:
+
+- Linux AppImage + Windows NSIS (`desktop-builder`, Wine)
+- VS Code/Cursor `.vsix` + Rider `.zip` (`ide-builder`)
+
+Local one-shot: `pnpm run companions:build`. Visual Studio VSIX is **not** built in Linux CI — build on Windows and place under `extras/release` if needed.
+
 ### Build & deploy — VS Code / Cursor (pnpm)
 
 Produces a `.vsix` installable in both editors:

@@ -27,6 +27,10 @@ flowchart TD
 
 Shared board UI: `extras/ide-extensions/shared-kanban`. Operator docs: `extras/ide-extensions/README.md` + `CONTRACT.md`.
 
+### Operator builds (Woodpecker / Docker)
+
+Tag builds bake **VS Code/Cursor** (`.vsix`) and **Rider** (`.zip`) into `extras/release` via the Dockerfile `ide-builder` stage (also `pnpm run companions:build` locally). **Visual Studio** still requires MSBuild on Windows — place that `.vsix` under `extras/release` in the image build context if you distribute it.
+
 ## 2 — Setup
 
 1. In Myelin: **Profile → API Tokens** → create token → copy `pt_...` **once**.

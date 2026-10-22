@@ -2,15 +2,9 @@
 FROM node:20-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
-# Build Linux desktop AppImage (Electron requires glibc — use Debian, not Alpine)
-FROM node:20-bookworm-slim AS desktop-builder
+# Desktop: Linux AppImage + Windows NSIS (Wine). Image includes Node + Wine/Mono.
+FROM electronuserland/builder:22-wine-mono AS desktop-builder
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    git \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
@@ -20,7 +14,38 @@ COPY extras/scripts/ensure-electron.mjs ./extras/scripts/
 
 RUN pnpm install --frozen-lockfile \
     && node extras/scripts/ensure-electron.mjs \
-    && pnpm run desktop:build:linux
+    && pnpm run desktop:build:linux \
+    && pnpm run desktop:build:win \
+    && mkdir -p extras/release \
+    && rm -rf extras/release/linux-unpacked extras/release/win-unpacked \
+       extras/release/*.blockmap extras/release/builder-debug.yml \
+       extras/release/builder-effective-config.yaml
+
+# IDE: VS Code/Cursor VSIX + Rider ZIP (Linux CI). Visual Studio VSIX needs Windows MSBuild.
+FROM node:20-bookworm-slim AS ide-builder
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    openjdk-17-jdk-headless \
+    unzip \
+    && corepack enable && corepack prepare pnpm@9.15.9 --activate \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY extras/ide-extensions ./extras/ide-extensions
+
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2g"
+
+RUN mkdir -p extras/release \
+    && cd extras/ide-extensions/vscode \
+    && pnpm install --ignore-workspace --frozen-lockfile \
+    && pnpm run package \
+    && cp -f ./*.vsix /app/extras/release/ \
+    && cd /app/extras/ide-extensions/rider \
+    && chmod +x ./gradlew \
+    && ./gradlew buildPlugin --no-daemon \
+    && cp -f ./build/distributions/*.zip /app/extras/release/
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -44,12 +69,14 @@ COPY . .
 # Build Next.js and TypeScript server separately to ensure both succeed
 RUN npx next build && npx tsc --project server/tsconfig.json
 
-# Merge Linux AppImage from desktop-builder into extras/release (canonical downloads path).
-# Host-provided Windows .exe / IDE packages already under extras/release (via COPY . .) are kept.
-COPY --from=desktop-builder /app/extras/release ./extras/release-built
+# Merge desktop + IDE companions into extras/release. Host-provided files from
+# COPY . . (if present in the build context) are kept and overlaid by CI builds.
+COPY --from=desktop-builder /app/extras/release ./extras/release-desktop
+COPY --from=ide-builder /app/extras/release ./extras/release-ide
 RUN mkdir -p extras/release \
-  && cp -a extras/release-built/. extras/release/ \
-  && rm -rf extras/release-built
+  && cp -a extras/release-desktop/. extras/release/ \
+  && cp -a extras/release-ide/. extras/release/ \
+  && rm -rf extras/release-desktop extras/release-ide
 
 # Production image, copy all the files and run
 FROM base AS runner

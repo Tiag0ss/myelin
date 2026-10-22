@@ -121,10 +121,22 @@
     {
       "version": "1.2.1",
       "date": "2026-10-17",
-      "title": "Implement new sprint management features, including the ability to li…",
+      "title": "MCP sprints and HTTP method labels",
       "items": [
-        "Implement new sprint management features, including the ability to list sprints with associated tasks, retrieve individual sprint details, and update sprint information. Enhance task management by allowing optional sprint assignments and including sprint details in task responses. Update documentation to reflect these changes",
-        "Standardize HTTP method usage across various components by replacing localized 'post' translations with the explicit 'POST' method. This change ensures consistency in API requests throughout the application"
+        "Add MCP sprint tools to list, read, and update sprints, with optional sprint assignment on tasks and sprint details in task responses",
+        "Show the literal HTTP method POST in API/token UI instead of a localized mistranslation"
+      ]
+    },
+    {
+      "version": "1.2.2",
+      "date": "2026-10-22",
+      "title": "Customer tasks, reporting filters, and grid prefs",
+      "items": [
+        "Add a Tasks tab on customer detail with filters, CSV export, and a completed-by-user overview chart",
+        "Add a customer filter across Reporting Hub packs and Extract, and switch reporting filter dropdowns to the searchable combo",
+        "Fix global and project-tasks column preferences so saved visibility/order is restored without needing Reset",
+        "Log TaskHistory and ActivityLogs for MCP task create/update writes",
+        "Woodpecker/Docker release builds now produce Windows desktop NSIS, VS Code/Cursor VSIX, and Rider plugin ZIP alongside the Linux AppImage (Visual Studio VSIX still needs a Windows MSBuild host)"
       ]
     }
   ]
