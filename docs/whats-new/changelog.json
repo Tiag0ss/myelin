@@ -163,6 +163,18 @@
         "Fix release notes PDF bullets so TipTap list items keep text beside the bullet",
         "Fix organization overview reporting query parameter mismatch that broke CreatedAt trend series"
       ]
+    },
+    {
+      "version": "1.2.5",
+      "date": "2026-11-11",
+      "title": "Products, patch notes, and OpenRouter AI",
+      "items": [
+        "Add Products with CRUD, navigation, and permission gating",
+        "Build application version patch notes from selected tasks and commits, with structured HTML (headings, lists, images) in PDF export",
+        "Add OpenRouter as an AI provider alongside OpenAI and Ollama",
+        "Deny OpenRouter/OpenAI training use by default, with an optional OpenRouter Zero Data Retention (ZDR) toggle in System Settings",
+        "Carry organization, project, and custom fields when creating timesheet entries"
+      ]
     }
   ]
 }
