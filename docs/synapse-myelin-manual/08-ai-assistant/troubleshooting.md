@@ -24,8 +24,9 @@ flowchart TD
 
 | Issue | Fix |
 |-------|-----|
-| No widget | Enable AI feature + configure OpenAI or Ollama; save; hard refresh |
-| Empty / error answers | Check API key, Ollama URL **reachability from the Myelin server**, model name |
+| No widget | Enable AI feature + configure OpenAI, OpenRouter, or Ollama; save; hard refresh |
+| Empty / error answers | Check API key, OpenRouter model id, Ollama URL **reachability from the Myelin server**, model name |
+| OpenRouter “no endpoints” | Model may lack ZDR / no-data-collection routes — pick another model id |
 | Timeouts / very slow | Smaller Ollama model; host CPU/RAM; network to Ollama |
 | “No budget” style omissions | User lacks `CanViewBudgetInfo` — **expected** |
 | Docs mode irrelevant | Rephrase with module keywords; docs injection is keyword-based |

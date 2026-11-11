@@ -18,10 +18,24 @@ import {
 } from '../../utils/publicUploads';
 
 // Keys that should be encrypted in the database
-const ENCRYPTED_KEYS = ['smtpPassword', 'openAIApiKey', 'outlookTenantId', 'outlookClientId', 'outlookClientSecret'];
+const ENCRYPTED_KEYS = [
+  'smtpPassword',
+  'openAIApiKey',
+  'openRouterApiKey',
+  'outlookTenantId',
+  'outlookClientId',
+  'outlookClientSecret',
+];
 
 // Keys that should be masked in GET responses
-const MASKED_KEYS = ['smtpPassword', 'openAIApiKey', 'outlookTenantId', 'outlookClientId', 'outlookClientSecret'];
+const MASKED_KEYS = [
+  'smtpPassword',
+  'openAIApiKey',
+  'openRouterApiKey',
+  'outlookTenantId',
+  'outlookClientId',
+  'outlookClientSecret',
+];
 
 const MAX_BRANDING_IMAGE_BYTES = 2 * 1024 * 1024;
 

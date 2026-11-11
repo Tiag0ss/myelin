@@ -2,7 +2,7 @@ import { pool, RowDataPacket } from '../config/database';
 import { decrypt } from './encryption';
 import logger from './logger';
 
-export type LlmProvider = 'openai' | 'ollama';
+export type LlmProvider = 'openai' | 'ollama' | 'openrouter';
 
 export type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -20,14 +20,22 @@ export type LlmConfig = {
   openAIModel: string;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  openRouterApiKey: string;
+  openRouterModel: string;
 };
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_OLLAMA_MODEL = 'llama3.2';
+const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
 
-function normalizeProvider(value: string | undefined | null): LlmProvider {
-  return String(value || '').trim().toLowerCase() === 'ollama' ? 'ollama' : 'openai';
+export function normalizeLlmProvider(value: string | undefined | null): LlmProvider {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'ollama') return 'ollama';
+  if (normalized === 'openrouter') return 'openrouter';
+  return 'openai';
 }
 
 function normalizeOllamaBaseUrl(value: string | undefined | null): string {
@@ -35,10 +43,78 @@ function normalizeOllamaBaseUrl(value: string | undefined | null): string {
   return raw.replace(/\/+$/, '');
 }
 
+function resolveAppReferer(): string {
+  const raw = String(
+    process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://myelin.local'
+  ).trim();
+  return raw.replace(/\/+$/, '') || 'https://myelin.local';
+}
+
+/**
+ * OpenRouter attribution headers (rankings / analytics). Title is required when
+ * using localhost referers.
+ */
+export function openRouterAttributionHeaders(): Record<string, string> {
+  return {
+    'HTTP-Referer': resolveAppReferer(),
+    'X-OpenRouter-Title': 'Myelin',
+    // Legacy header still accepted by OpenRouter.
+    'X-Title': 'Myelin',
+  };
+}
+
+/**
+ * Privacy defaults so cloud providers do not use prompts for training / long retention.
+ * - OpenAI: `store: false` (no distillation/evals storage; API data is not used for training by default).
+ * - OpenRouter: `data_collection: deny` + `zdr: true` (no training-capable / non-ZDR endpoints).
+ * - Ollama: local — no cloud privacy flags.
+ */
+export function applyLlmPrivacyDefaults(
+  provider: LlmProvider,
+  body: Record<string, unknown>
+): Record<string, unknown> {
+  if (provider === 'openai') {
+    return { ...body, store: false };
+  }
+  if (provider === 'openrouter') {
+    return {
+      ...body,
+      provider: {
+        data_collection: 'deny',
+        zdr: true,
+      },
+    };
+  }
+  return body;
+}
+
+export function resolveChatCompletionEndpoint(config: LlmConfig): {
+  url: string;
+  headers: Record<string, string>;
+} {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (config.provider === 'ollama') {
+    headers.Authorization = 'Bearer ollama';
+    return { url: `${config.ollamaBaseUrl}/v1/chat/completions`, headers };
+  }
+
+  if (config.provider === 'openrouter') {
+    headers.Authorization = `Bearer ${config.openRouterApiKey}`;
+    Object.assign(headers, openRouterAttributionHeaders());
+    return { url: OPENROUTER_CHAT_URL, headers };
+  }
+
+  headers.Authorization = `Bearer ${config.openAiApiKey}`;
+  return { url: OPENAI_CHAT_URL, headers };
+}
+
 export async function getLlmConfig(): Promise<LlmConfig> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT SettingKey, SettingValue FROM SystemSettings
-     WHERE SettingKey IN (?, ?, ?, ?, ?, ?, ?)`,
+     WHERE SettingKey IN (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       'aiAssistantEnabled',
       'aiProvider',
@@ -47,44 +123,65 @@ export async function getLlmConfig(): Promise<LlmConfig> {
       'openAIBehavior',
       'ollamaBaseUrl',
       'ollamaModel',
+      'openRouterApiKey',
+      'openRouterModel',
     ]
   );
 
   const settingsMap: Record<string, string> = {};
-  rows.forEach((row: any) => {
+  rows.forEach((row: RowDataPacket) => {
     settingsMap[String(row.SettingKey)] = String(row.SettingValue || '');
   });
 
-  const provider = normalizeProvider(settingsMap.aiProvider);
-  const encryptedApiKey = String(settingsMap.openAIApiKey || '').trim();
-  const openAiApiKey = encryptedApiKey ? decrypt(encryptedApiKey).trim() : '';
+  const provider = normalizeLlmProvider(settingsMap.aiProvider);
+  const encryptedOpenAiKey = String(settingsMap.openAIApiKey || '').trim();
+  const openAiApiKey = encryptedOpenAiKey ? decrypt(encryptedOpenAiKey).trim() : '';
   const openAIModel = String(settingsMap.openAIModel || '').trim() || DEFAULT_OPENAI_MODEL;
   const ollamaBaseUrl = normalizeOllamaBaseUrl(settingsMap.ollamaBaseUrl);
   const ollamaModel = String(settingsMap.ollamaModel || '').trim() || DEFAULT_OLLAMA_MODEL;
+  const encryptedOpenRouterKey = String(settingsMap.openRouterApiKey || '').trim();
+  const openRouterApiKey = encryptedOpenRouterKey
+    ? decrypt(encryptedOpenRouterKey).trim()
+    : '';
+  const openRouterModel =
+    String(settingsMap.openRouterModel || '').trim() || DEFAULT_OPENROUTER_MODEL;
   const behavior = String(settingsMap.openAIBehavior || '').trim();
   const aiAssistantEnabled = settingsMap.aiAssistantEnabled === 'true';
 
-  const isConfigured =
-    provider === 'ollama'
-      ? Boolean(ollamaBaseUrl && ollamaModel)
-      : Boolean(openAiApiKey);
+  let isConfigured = false;
+  let model = openAIModel;
+  if (provider === 'ollama') {
+    isConfigured = Boolean(ollamaBaseUrl && ollamaModel);
+    model = ollamaModel;
+  } else if (provider === 'openrouter') {
+    isConfigured = Boolean(openRouterApiKey);
+    model = openRouterModel;
+  } else {
+    isConfigured = Boolean(openAiApiKey);
+    model = openAIModel;
+  }
 
   return {
     provider,
     aiAssistantEnabled,
     isConfigured,
-    model: provider === 'ollama' ? ollamaModel : openAIModel,
+    model,
     behavior,
     openAiApiKey,
     openAIModel,
     ollamaBaseUrl,
     ollamaModel,
+    openRouterApiKey,
+    openRouterModel,
   };
 }
 
 export function llmNotConfiguredMessage(config: LlmConfig): string {
   if (config.provider === 'ollama') {
     return 'Ollama is not configured. Set Base URL and model in System Settings.';
+  }
+  if (config.provider === 'openrouter') {
+    return 'OpenRouter API key is not configured in system settings.';
   }
   return 'OpenAI API key is not configured in system settings.';
 }
@@ -121,9 +218,29 @@ export type ChatCompletionResult = {
   model: string;
 };
 
+function providerUnreachableMessage(config: LlmConfig, detail: string): string {
+  if (config.provider === 'ollama') {
+    return `Cannot reach Ollama at ${config.ollamaBaseUrl}. Is Ollama running? (${detail})`;
+  }
+  if (config.provider === 'openrouter') {
+    return `Cannot reach OpenRouter API. (${detail})`;
+  }
+  return `Cannot reach OpenAI API. (${detail})`;
+}
+
+function providerRequestFailedFallback(config: LlmConfig): string {
+  if (config.provider === 'ollama') {
+    return 'Ollama request failed. Check Base URL, model name, and that the model is pulled.';
+  }
+  if (config.provider === 'openrouter') {
+    return 'OpenRouter request failed. Check API key, model id, and that the route supports data_collection=deny / ZDR.';
+  }
+  return 'OpenAI request failed. Check API key and model configuration.';
+}
+
 /**
  * Call the configured LLM provider using the OpenAI-compatible chat completions API.
- * Ollama exposes the same shape at `{baseUrl}/v1/chat/completions`.
+ * Ollama and OpenRouter expose the same shape at their `/v1/chat/completions` endpoints.
  */
 export async function chatCompletion(
   config: LlmConfig,
@@ -135,7 +252,7 @@ export async function chatCompletion(
 
   const model = String(options.model || config.model).trim();
   const temperature = options.temperature ?? 0.2;
-  const body: Record<string, unknown> = {
+  let body: Record<string, unknown> = {
     model,
     temperature,
     messages: options.messages,
@@ -143,20 +260,9 @@ export async function chatCompletion(
   if (typeof options.maxTokens === 'number' && options.maxTokens > 0) {
     body.max_tokens = options.maxTokens;
   }
+  body = applyLlmPrivacyDefaults(config.provider, body);
 
-  let url: string;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  if (config.provider === 'ollama') {
-    url = `${config.ollamaBaseUrl}/v1/chat/completions`;
-    // Ollama accepts any bearer token; some proxies require the header.
-    headers.Authorization = 'Bearer ollama';
-  } else {
-    url = 'https://api.openai.com/v1/chat/completions';
-    headers.Authorization = `Bearer ${config.openAiApiKey}`;
-  }
+  const { url, headers } = resolveChatCompletionEndpoint(config);
 
   const timeoutMs =
     typeof options.timeoutMs === 'number' && options.timeoutMs > 0
@@ -189,27 +295,24 @@ export async function chatCompletion(
         `LLM request timed out after ${Math.round(timeoutMs / 1000)}s. Try shorter notes or a faster model.`
       );
     }
-    throw new Error(
-      config.provider === 'ollama'
-        ? `Cannot reach Ollama at ${config.ollamaBaseUrl}. Is Ollama running? (${detail})`
-        : `Cannot reach OpenAI API. (${detail})`
-    );
+    throw new Error(providerUnreachableMessage(config, detail));
   }
 
   if (!response.ok) {
     const errorJson = await response.json().catch(() => ({}));
     const apiMessage = String(
-      (errorJson as any)?.error?.message || (errorJson as any)?.message || ''
+      (errorJson as { error?: { message?: string }; message?: string })?.error?.message ||
+        (errorJson as { message?: string })?.message ||
+        ''
     ).trim();
-    const fallback =
-      config.provider === 'ollama'
-        ? 'Ollama request failed. Check Base URL, model name, and that the model is pulled.'
-        : 'OpenAI request failed. Check API key and model configuration.';
-    throw new Error(apiMessage || fallback);
+    throw new Error(apiMessage || providerRequestFailedFallback(config));
   }
 
   const llmJson = await response.json();
-  const content = String(llmJson?.choices?.[0]?.message?.content || '').trim();
+  const content = String(
+    (llmJson as { choices?: Array<{ message?: { content?: string } }> })?.choices?.[0]
+      ?.message?.content || ''
+  ).trim();
   logger.info('LLM chat completion ok', {
     provider: config.provider,
     model,

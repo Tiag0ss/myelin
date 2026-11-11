@@ -135,6 +135,8 @@ interface SystemSettings {
   openAIBehavior?: string;
   ollamaBaseUrl?: string;
   ollamaModel?: string;
+  openRouterApiKey?: string;
+  openRouterModel?: string;
   aiViewsAutoCreate?: string;
   aiViewSql_vAI_ProjectOpenTasks?: string;
   aiViewSql_vAI_UserOpenTasks?: string;
@@ -223,6 +225,8 @@ export default function SystemSettings({
     openAIBehavior: '',
     ollamaBaseUrl: 'http://127.0.0.1:11434',
     ollamaModel: 'llama3.2',
+    openRouterApiKey: '',
+    openRouterModel: 'openai/gpt-4o-mini',
     aiViewsAutoCreate: 'true',
     aiViewSql_vAI_ProjectOpenTasks: '',
     aiViewSql_vAI_UserOpenTasks: '',
@@ -242,6 +246,7 @@ export default function SystemSettings({
   const smtpPasswordRef = useRef<HTMLInputElement>(null);
   const outlookClientSecretRef = useRef<HTMLInputElement>(null);
   const openAIApiKeyRef = useRef<HTMLInputElement>(null);
+  const openRouterApiKeyRef = useRef<HTMLInputElement>(null);
   const [aiViewsSyncMessage, setAiViewsSyncMessage] = useState('');
   const [aiViewsSyncError, setAiViewsSyncError] = useState('');
   const [isUploadingBranding, setIsUploadingBranding] = useState<'logo' | 'favicon' | null>(null);
@@ -301,12 +306,17 @@ export default function SystemSettings({
           autoApproveOutOfOffice: data.settings.autoApproveOutOfOffice || 'false',
           frontpageEnabled: data.settings.frontpageEnabled !== undefined ? data.settings.frontpageEnabled : 'true',
           aiAssistantEnabled: data.settings.aiAssistantEnabled || 'false',
-          aiProvider: data.settings.aiProvider === 'ollama' ? 'ollama' : 'openai',
+          aiProvider:
+            data.settings.aiProvider === 'ollama' || data.settings.aiProvider === 'openrouter'
+              ? data.settings.aiProvider
+              : 'openai',
           openAIApiKey: data.settings.openAIApiKey || '',
           openAIModel: data.settings.openAIModel || 'gpt-4o-mini',
           openAIBehavior: data.settings.openAIBehavior || '',
           ollamaBaseUrl: data.settings.ollamaBaseUrl || 'http://127.0.0.1:11434',
           ollamaModel: data.settings.ollamaModel || 'llama3.2',
+          openRouterApiKey: data.settings.openRouterApiKey || '',
+          openRouterModel: data.settings.openRouterModel || 'openai/gpt-4o-mini',
           aiViewsAutoCreate: data.settings.aiViewsAutoCreate || 'true',
           aiViewSql_vAI_ProjectOpenTasks: data.settings.aiViewSql_vAI_ProjectOpenTasks || '',
           aiViewSql_vAI_UserOpenTasks: data.settings.aiViewSql_vAI_UserOpenTasks || '',
@@ -429,9 +439,11 @@ export default function SystemSettings({
       const smtpPassword = readPasswordInput(smtpPasswordRef);
       const outlookClientSecret = readPasswordInput(outlookClientSecretRef);
       const openAIApiKey = readPasswordInput(openAIApiKeyRef);
+      const openRouterApiKey = readPasswordInput(openRouterApiKeyRef);
       if (smtpPassword) settingsToSave.smtpPassword = smtpPassword;
       if (outlookClientSecret) settingsToSave.outlookClientSecret = outlookClientSecret;
       if (openAIApiKey) settingsToSave.openAIApiKey = openAIApiKey;
+      if (openRouterApiKey) settingsToSave.openRouterApiKey = openRouterApiKey;
 
       const response = await fetch(
         `${getApiUrl()}/api/system-settings`,
@@ -451,6 +463,7 @@ export default function SystemSettings({
         clearPasswordInput(smtpPasswordRef);
         clearPasswordInput(outlookClientSecretRef);
         clearPasswordInput(openAIApiKeyRef);
+        clearPasswordInput(openRouterApiKeyRef);
         setTimeout(() => setSuccess(''), 3000);
       } else {
         const data = await response.json();
@@ -1106,7 +1119,7 @@ export default function SystemSettings({
                       {t('lit.enableAiAssistant')}
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
-                      {t('lit.showsHidesAiFeaturesGloballyConfigureOpenaiOrOllamaBelow')}
+                      {t('lit.showsHidesAiFeaturesGloballyConfigureOpenaiOllamaOrOpenrouterBelow')}
                     </div>
                   </div>
                 </label>
@@ -1116,16 +1129,26 @@ export default function SystemSettings({
                     {t('lit.aiProvider')}
                   </label>
                   <select
-                    value={settings.aiProvider === 'ollama' ? 'ollama' : 'openai'}
+                    value={
+                      settings.aiProvider === 'ollama' || settings.aiProvider === 'openrouter'
+                        ? settings.aiProvider
+                        : 'openai'
+                    }
                     onChange={(e) => handleChange('aiProvider', e.target.value)}
                     className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                   >
                     <option value="openai">{t('lit.openai')}</option>
+                    <option value="openrouter">{t('lit.openrouter')}</option>
                     <option value="ollama">{t('lit.ollamaLocalSelfHosted')}</option>
                   </select>
                   <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
                     {t('lit.usedByTheAssistantWidgetTaskTranslateSummarizeAndPatchNotesImprovement')}
                   </p>
+                  {(settings.aiProvider === 'openai' || settings.aiProvider === 'openrouter') && (
+                    <p className="mt-1 text-[11px] text-[var(--pm-muted)]">
+                      {t('lit.aiCloudProvidersDoNotUseYourDataForTrainingByDefault')}
+                    </p>
+                  )}
                 </div>
 
                 {settings.aiProvider === 'ollama' ? (
@@ -1138,11 +1161,12 @@ export default function SystemSettings({
                         type="text"
                         value={settings.ollamaBaseUrl || 'http://127.0.0.1:11434'}
                         onChange={(e) => handleChange('ollamaBaseUrl', e.target.value)}
-                        placeholder='http://127.0.0.1:11434'
+                        placeholder="http://127.0.0.1:11434"
                         className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                       />
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                        {t('lit.fromDockerOnLinuxTry')} <code className="font-mono">http://172.17.0.1:11434</code> {t('lit.orHostNetworking')}
+                        {t('lit.fromDockerOnLinuxTry')} <code className="font-mono">http://172.17.0.1:11434</code>{' '}
+                        {t('lit.orHostNetworking')}
                       </p>
                     </div>
                     <div>
@@ -1161,45 +1185,79 @@ export default function SystemSettings({
                       </p>
                     </div>
                   </div>
+                ) : settings.aiProvider === 'openrouter' ? (
+                  <>
+                    <div>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
+                        {t('lit.openrouterApiKey')}
+                      </label>
+                      <PasswordInput
+                        ref={openRouterApiKeyRef}
+                        name="openRouterApiKey"
+                        placeholder={t('lit.skOr')}
+                        autoComplete="new-password"
+                        preventAutofill
+                        className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
+                      />
+                      <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
+                        {t('lit.leaveBlankToKeepTheExistingKeyOnlyFillInToChangeIt')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
+                        {t('lit.openrouterModel')}
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.openRouterModel || 'openai/gpt-4o-mini'}
+                        onChange={(e) => handleChange('openRouterModel', e.target.value)}
+                        placeholder="openai/gpt-4o-mini"
+                        className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
+                      />
+                      <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
+                        {t('lit.openrouterModelHint')}
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <>
-                <div>
-                  <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                    {t('lit.openaiApiKey')}
-                  </label>
-                  <PasswordInput
-                    ref={openAIApiKeyRef}
-                    name="openAIApiKey"
-                    placeholder={t('lit.sk')}
-                    autoComplete="new-password"
-                    preventAutofill
-                    className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
-                  />
-                  <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                    {t('lit.leaveBlankToKeepTheExistingKeyOnlyFillInToChangeIt')}
-                  </p>
-                </div>
+                    <div>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
+                        {t('lit.openaiApiKey')}
+                      </label>
+                      <PasswordInput
+                        ref={openAIApiKeyRef}
+                        name="openAIApiKey"
+                        placeholder={t('lit.sk')}
+                        autoComplete="new-password"
+                        preventAutofill
+                        className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
+                      />
+                      <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
+                        {t('lit.leaveBlankToKeepTheExistingKeyOnlyFillInToChangeIt')}
+                      </p>
+                    </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
-                      {t('lit.openaiModel')}
-                    </label>
-                    <select
-                      value={settings.openAIModel || 'gpt-4o-mini'}
-                      onChange={(e) => handleChange('openAIModel', e.target.value)}
-                      className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
-                    >
-                      <option value="gpt-4o-mini">{t('lit.gpt4oMiniDefault')}</option>
-                      <option value="gpt-4.1-mini">{t('lit.gpt41Mini')}</option>
-                      <option value="gpt-4.1">{t('lit.gpt41')}</option>
-                      <option value="o4-mini">{t('lit.o4Mini')}</option>
-                    </select>
-                    <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                      {t('lit.selectTheModelUsedByTheAiAssistantBackend')}
-                    </p>
-                  </div>
-                  </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--pm-muted)]">
+                          {t('lit.openaiModel')}
+                        </label>
+                        <select
+                          value={settings.openAIModel || 'gpt-4o-mini'}
+                          onChange={(e) => handleChange('openAIModel', e.target.value)}
+                          className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
+                        >
+                          <option value="gpt-4o-mini">{t('lit.gpt4oMiniDefault')}</option>
+                          <option value="gpt-4.1-mini">{t('lit.gpt41Mini')}</option>
+                          <option value="gpt-4.1">{t('lit.gpt41')}</option>
+                          <option value="o4-mini">{t('lit.o4Mini')}</option>
+                        </select>
+                        <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
+                          {t('lit.selectTheModelUsedByTheAiAssistantBackend')}
+                        </p>
+                      </div>
+                    </div>
                   </>
                 )}
 

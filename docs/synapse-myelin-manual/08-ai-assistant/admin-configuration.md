@@ -6,15 +6,17 @@
 **When disabled / missing:** Widget and AI actions stay hidden until `aiAssistantEnabled` is on **and** a provider is configured.
 
 
-Configure the optional SQL-backed AI assistant (OpenAI or Ollama). The same provider powers translate/summarize on tasks and AI-assisted patch-notes improvement. Database views are ensured on server start (`ensureAiAssistantViews`).
+Configure the optional SQL-backed AI assistant (OpenAI, OpenRouter, or Ollama). The same provider powers translate/summarize on tasks and AI-assisted patch-notes improvement. Database views are ensured on server start (`ensureAiAssistantViews`).
 
 ```mermaid
 flowchart TD
   Admin[System Settings → AI] --> En[aiAssistantEnabled]
   En --> Prov{Provider}
   Prov -->|OpenAI| OA[API key + model]
+  Prov -->|OpenRouter| OR[API key + model id]
   Prov -->|Ollama| OL[Base URL + model]
   OA --> Save[Save]
+  OR --> Save
   OL --> Save
   Save --> Widget[Floating widget + AI actions]
   Widget --> Views[AI DB views / docs slices]
@@ -30,11 +32,18 @@ flowchart TD
 | Provider | Configure |
 |----------|-----------|
 | **OpenAI** | API key + model name |
+| **OpenRouter** | API key + model id (e.g. `openai/gpt-4o-mini`) |
 | **Ollama** | Base URL + model (OpenAI-compatible `/v1/chat/completions`) |
 
 5. **Save**.
 6. Open the floating widget and ask a simple Analytics question to verify.
 7. Confirm Docs mode answers a module question (e.g. Planning).
+
+### Privacy defaults (cloud providers)
+
+- **OpenAI**: every chat request sends `store: false` (no distillation/evals storage). OpenAI API data is not used for model training unless you explicitly opt in on their side.
+- **OpenRouter**: every chat request sends `provider.data_collection: "deny"` and `provider.zdr: true`, so routing stays on providers that do not collect for training and offer zero data retention.
+- **Ollama**: local — prompts stay on your host.
 
 ![AI admin settings](../media/docs-ai-admin-settings.png)
 

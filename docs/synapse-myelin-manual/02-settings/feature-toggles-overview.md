@@ -31,7 +31,7 @@ flowchart TD
 3. Select the **Features** tab for product toggles and auto-approve switches.
 4. Change only the real flags listed below.
 5. **Save** settings (use the page save control).
-6. For AI: open the **AI** tab — enable the assistant and configure OpenAI or Ollama.
+6. For AI: open the **AI** tab — enable the assistant and configure OpenAI, OpenRouter, or Ollama.
 7. For Outlook calendar: open the **Email** section — enable Outlook calendar and enter Azure AD credentials.
 8. Ask a non-admin user to refresh and confirm nav changes.
 

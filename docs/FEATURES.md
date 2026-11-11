@@ -1092,7 +1092,7 @@ Admin-only page:
 - **Email / SMTP**: Configure mail server (see [Email & Notifications](#18-email--notifications))
 - **Outlook calendar**: Microsoft Graph credentials and enable toggle
 - **Jira / GitHub / Gitea**: Organization-level integration credentials (see respective sections)
-- **AI Assistant**: Provider (OpenAI or Ollama), credentials/model, enable toggle
+- **AI Assistant**: Provider (OpenAI, OpenRouter, or Ollama), credentials/model, enable toggle
 - **Timezone**: Default system timezone
 - **Task Form**: Global template for which task modal fields/tabs are visible (see [Task Form Visibility](#task-form-visibility-fields--tabs))
 - **User Management**: Create, edit, activate/deactivate users; assign global roles; set hourly rate; manage admin flag
@@ -1109,7 +1109,8 @@ Server operators may also set `REDIS_ENABLED` and related env vars (see [Redis C
 - Available as a floating widget on supported views
 - Queries the backend AI assistant (`/api/ai-assistant`) which answers natural language questions about project data
 - Assistant has read access to tasks, allocations, time entries, and org members via database views (see `docs/AI_ASSISTANT_VIEWS.md`)
-- **Providers**: **OpenAI** (API key + model) or **Ollama** (Base URL + model name, OpenAI-compatible `/v1/chat/completions`)
+- **Providers**: **OpenAI** (API key + model), **OpenRouter** (API key + model id), or **Ollama** (Base URL + model name, OpenAI-compatible `/v1/chat/completions`)
+- **Privacy (default)**: OpenAI requests send `store: false`; OpenRouter requests send `provider.data_collection: "deny"` and `provider.zdr: true` so data is not routed to training/non-ZDR endpoints
 - Same provider is used for translate/summarize on tasks and AI patch-notes improvement
 
 #### Assistant Modes (Analytics vs Docs)
@@ -1121,7 +1122,7 @@ Server operators may also set `REDIS_ENABLED` and related env vars (see [Redis C
 - Responses remain English-only by assistant policy.
 
 #### Availability and Access Rules
-- Assistant visibility requires global AI enablement + a configured provider in System Settings (OpenAI key, or Ollama base URL + model).
+- Assistant visibility requires global AI enablement + a configured provider in System Settings (OpenAI key, OpenRouter key, or Ollama base URL + model).
 - Analytics answers still enforce report/visibility permission constraints for business data scope.
 - Budget insights remain hidden when `canViewBudgetInfo` is denied.
 
