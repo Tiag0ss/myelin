@@ -149,6 +149,20 @@
         "Fix Downloads product-name translations and the customer External Name label",
         "Rename IDE Kanban tool window labels from PM Kanban to Myelin Kanban (VS Code/Cursor, Rider, Visual Studio)"
       ]
+    },
+    {
+      "version": "1.2.4",
+      "date": "2026-11-11",
+      "title": "Unassigned time, task filters, and release notes",
+      "items": [
+        "Allow time entries without a task (organization required, description required), with correct display and edit in calendar, timesheet, and work summary",
+        "Split Hide closed and Hide cancelled on project and customer task filters; both on by default, with Clear restoring those defaults",
+        "Ask for confirmation before clearing planning when a planned task is marked as unscheduled work",
+        "Align organization overview / portfolio RAG health with the projects list formula",
+        "Export combined release notes PDF for multiple applications in a date range",
+        "Fix release notes PDF bullets so TipTap list items keep text beside the bullet",
+        "Fix organization overview reporting query parameter mismatch that broke CreatedAt trend series"
+      ]
     }
   ]
 }
