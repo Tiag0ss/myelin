@@ -26,7 +26,7 @@ flowchart TD
 |-------|-----|
 | No widget | Enable AI feature + configure OpenAI, OpenRouter, or Ollama; save; hard refresh |
 | Empty / error answers | Check API key, OpenRouter model id, Ollama URL **reachability from the Myelin server**, model name |
-| OpenRouter “no endpoints” | Model may lack ZDR / no-data-collection routes — pick another model id |
+| OpenRouter “no endpoints” / data policy | Model may lack no-training routes, or **Require ZDR** is on — turn ZDR off for free models, or pick a ZDR-capable model; also check https://openrouter.ai/settings/privacy |
 | Timeouts / very slow | Smaller Ollama model; host CPU/RAM; network to Ollama |
 | “No budget” style omissions | User lacks `CanViewBudgetInfo` — **expected** |
 | Docs mode irrelevant | Rephrase with module keywords; docs injection is keyword-based |

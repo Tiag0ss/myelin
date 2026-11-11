@@ -1,7 +1,5 @@
 'use client';
 
-import { t } from '@/lib/i18n/runtime';
-
 import { useI18n } from '@/lib/i18n/provider';
 import { getApiUrl } from '@/lib/api/config';
 
@@ -10,94 +8,86 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import PasswordInput, { clearPasswordInput, readPasswordInput } from '@/components/PasswordInput';
 import PageTabs from '@/components/PageTabs';
-// Complete list of IANA timezones
-const TIMEZONES = [
-  { value: '', label: t('lit.useBrowserSystemDefault') },
-  { value: 'UTC', label: t('lit.utcCoordinatedUniversalTime') },
-  // Africa
-  { value: t('lit.africaCairo'), label: t('lit.africaCairoEet') },
-  { value: t('lit.africaCasablanca'), label: t('lit.africaCasablancaWet') },
-  { value: t('lit.africaJohannesburg'), label: t('lit.africaJohannesburgSast') },
-  { value: t('lit.africaLagos'), label: t('lit.africaLagosWat') },
-  { value: t('lit.africaNairobi'), label: t('lit.africaNairobiEat') },
-  // America
-  { value: t('lit.americaAnchorage'), label: t('lit.americaAnchorageAkst') },
-  { value: 'America/Argentina/Buenos_Aires', label: t('lit.americaBuenosAiresArt') },
-  { value: t('lit.americaBogota'), label: t('lit.americaBogotaCot') },
-  { value: t('lit.americaCaracas'), label: t('lit.americaCaracasVet') },
-  { value: t('lit.americaChicago'), label: t('lit.americaChicagoCst') },
-  { value: t('lit.americaDenver'), label: t('lit.americaDenverMst') },
-  { value: t('lit.americaHalifax'), label: t('lit.americaHalifaxAst') },
-  { value: t('lit.americaLima'), label: t('lit.americaLimaPet') },
-  { value: 'America/Los_Angeles', label: t('lit.americaLosAngelesPst') },
-  { value: 'America/Mexico_City', label: t('lit.americaMexicoCityCst') },
-  { value: 'America/New_York', label: t('lit.americaNewYorkEst') },
-  { value: t('lit.americaPhoenix'), label: t('lit.americaPhoenixMst') },
-  { value: t('lit.americaSantiago'), label: t('lit.americaSantiagoClt') },
-  { value: 'America/Sao_Paulo', label: t('lit.americaSaoPauloBrt') },
-  { value: 'America/St_Johns', label: t('lit.americaStJohnsNst') },
-  { value: t('lit.americaToronto'), label: t('lit.americaTorontoEst') },
-  { value: t('lit.americaVancouver'), label: t('lit.americaVancouverPst') },
-  // Asia
-  { value: t('lit.asiaBaghdad'), label: t('lit.asiaBaghdadAst') },
-  { value: t('lit.asiaBangkok'), label: t('lit.asiaBangkokIct') },
-  { value: t('lit.asiaColombo'), label: t('lit.asiaColomboIst') },
-  { value: t('lit.asiaDubai'), label: t('lit.asiaDubaiGst') },
-  { value: 'Asia/Hong_Kong', label: t('lit.asiaHongKongHkt') },
-  { value: t('lit.asiaIstanbul'), label: t('lit.asiaIstanbulTrt') },
-  { value: t('lit.asiaJakarta'), label: t('lit.asiaJakartaWib') },
-  { value: t('lit.asiaJerusalem'), label: t('lit.asiaJerusalemIst') },
-  { value: t('lit.asiaKarachi'), label: t('lit.asiaKarachiPkt') },
-  { value: t('lit.asiaKathmandu'), label: t('lit.asiaKathmanduNpt') },
-  { value: t('lit.asiaKolkata'), label: t('lit.asiaKolkataIst') },
-  { value: 'Asia/Kuala_Lumpur', label: t('lit.asiaKualaLumpurMyt') },
-  { value: t('lit.asiaManila'), label: t('lit.asiaManilaPht') },
-  { value: t('lit.asiaSeoul'), label: t('lit.asiaSeoulKst') },
-  { value: t('lit.asiaShanghai'), label: t('lit.asiaShanghaiCst') },
-  { value: t('lit.asiaSingapore'), label: t('lit.asiaSingaporeSgt') },
-  { value: t('lit.asiaTaipei'), label: t('lit.asiaTaipeiCst') },
-  { value: t('lit.asiaTehran'), label: t('lit.asiaTehranIrst') },
-  { value: t('lit.asiaTokyo'), label: t('lit.asiaTokyoJst') },
-  // Atlantic
-  { value: t('lit.atlanticAzores'), label: t('lit.atlanticAzoresAzot') },
-  { value: t('lit.atlanticReykjavik'), label: t('lit.atlanticReykjavikGmt') },
-  // Australia
-  { value: t('lit.australiaAdelaide'), label: t('lit.australiaAdelaideAcst') },
-  { value: t('lit.australiaBrisbane'), label: t('lit.australiaBrisbaneAest') },
-  { value: t('lit.australiaDarwin'), label: t('lit.australiaDarwinAcst') },
-  { value: t('lit.australiaMelbourne'), label: t('lit.australiaMelbourneAest') },
-  { value: t('lit.australiaPerth'), label: t('lit.australiaPerthAwst') },
-  { value: t('lit.australiaSydney'), label: t('lit.australiaSydneyAest') },
-  // Europe
-  { value: t('lit.europeAmsterdam'), label: t('lit.europeAmsterdamCet') },
-  { value: t('lit.europeAthens'), label: t('lit.europeAthensEet') },
-  { value: t('lit.europeBerlin'), label: t('lit.europeBerlinCet') },
-  { value: t('lit.europeBrussels'), label: t('lit.europeBrusselsCet') },
-  { value: t('lit.europeBucharest'), label: t('lit.europeBucharestEet') },
-  { value: t('lit.europeBudapest'), label: t('lit.europeBudapestCet') },
-  { value: t('lit.europeCopenhagen'), label: t('lit.europeCopenhagenCet') },
-  { value: t('lit.europeDublin'), label: t('lit.europeDublinGmt') },
-  { value: t('lit.europeHelsinki'), label: t('lit.europeHelsinkiEet') },
-  { value: t('lit.europeLisbon'), label: t('lit.europeLisbonWet') },
-  { value: t('lit.europeLondon'), label: t('lit.europeLondonGmt') },
-  { value: t('lit.europeMadrid'), label: t('lit.europeMadridCet') },
-  { value: t('lit.europeMoscow'), label: t('lit.europeMoscowMsk') },
-  { value: t('lit.europeOslo'), label: t('lit.europeOsloCet') },
-  { value: t('lit.europeParis'), label: t('lit.europeParisCet') },
-  { value: t('lit.europePrague'), label: t('lit.europePragueCet') },
-  { value: t('lit.europeRome'), label: t('lit.europeRomeCet') },
-  { value: t('lit.europeStockholm'), label: t('lit.europeStockholmCet') },
-  { value: t('lit.europeVienna'), label: t('lit.europeViennaCet') },
-  { value: t('lit.europeWarsaw'), label: t('lit.europeWarsawCet') },
-  { value: t('lit.europeZurich'), label: t('lit.europeZurichCet') },
-  // Indian
-  { value: t('lit.indianMauritius'), label: t('lit.indianMauritiusMut') },
-  // Pacific
-  { value: t('lit.pacificAuckland'), label: t('lit.pacificAucklandNzst') },
-  { value: t('lit.pacificFiji'), label: t('lit.pacificFijiFjt') },
-  { value: t('lit.pacificGuam'), label: t('lit.pacificGuamChst') },
-  { value: t('lit.pacificHonolulu'), label: t('lit.pacificHonoluluHst') },
-  { value: t('lit.pacificSamoa'), label: t('lit.pacificSamoaSst') },
+// IANA ids stay literal; labels resolve via useI18n at render time.
+const TIMEZONE_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: '', labelKey: 'lit.useBrowserSystemDefault' },
+  { value: 'UTC', labelKey: 'lit.utcCoordinatedUniversalTime' },
+  { value: 'Africa/Cairo', labelKey: 'lit.africaCairoEet' },
+  { value: 'Africa/Casablanca', labelKey: 'lit.africaCasablancaWet' },
+  { value: 'Africa/Johannesburg', labelKey: 'lit.africaJohannesburgSast' },
+  { value: 'Africa/Lagos', labelKey: 'lit.africaLagosWat' },
+  { value: 'Africa/Nairobi', labelKey: 'lit.africaNairobiEat' },
+  { value: 'America/Anchorage', labelKey: 'lit.americaAnchorageAkst' },
+  { value: 'America/Argentina/Buenos_Aires', labelKey: 'lit.americaBuenosAiresArt' },
+  { value: 'America/Bogota', labelKey: 'lit.americaBogotaCot' },
+  { value: 'America/Caracas', labelKey: 'lit.americaCaracasVet' },
+  { value: 'America/Chicago', labelKey: 'lit.americaChicagoCst' },
+  { value: 'America/Denver', labelKey: 'lit.americaDenverMst' },
+  { value: 'America/Halifax', labelKey: 'lit.americaHalifaxAst' },
+  { value: 'America/Lima', labelKey: 'lit.americaLimaPet' },
+  { value: 'America/Los_Angeles', labelKey: 'lit.americaLosAngelesPst' },
+  { value: 'America/Mexico_City', labelKey: 'lit.americaMexicoCityCst' },
+  { value: 'America/New_York', labelKey: 'lit.americaNewYorkEst' },
+  { value: 'America/Phoenix', labelKey: 'lit.americaPhoenixMst' },
+  { value: 'America/Santiago', labelKey: 'lit.americaSantiagoClt' },
+  { value: 'America/Sao_Paulo', labelKey: 'lit.americaSaoPauloBrt' },
+  { value: 'America/St_Johns', labelKey: 'lit.americaStJohnsNst' },
+  { value: 'America/Toronto', labelKey: 'lit.americaTorontoEst' },
+  { value: 'America/Vancouver', labelKey: 'lit.americaVancouverPst' },
+  { value: 'Asia/Baghdad', labelKey: 'lit.asiaBaghdadAst' },
+  { value: 'Asia/Bangkok', labelKey: 'lit.asiaBangkokIct' },
+  { value: 'Asia/Colombo', labelKey: 'lit.asiaColomboIst' },
+  { value: 'Asia/Dubai', labelKey: 'lit.asiaDubaiGst' },
+  { value: 'Asia/Hong_Kong', labelKey: 'lit.asiaHongKongHkt' },
+  { value: 'Asia/Istanbul', labelKey: 'lit.asiaIstanbulTrt' },
+  { value: 'Asia/Jakarta', labelKey: 'lit.asiaJakartaWib' },
+  { value: 'Asia/Jerusalem', labelKey: 'lit.asiaJerusalemIst' },
+  { value: 'Asia/Karachi', labelKey: 'lit.asiaKarachiPkt' },
+  { value: 'Asia/Kathmandu', labelKey: 'lit.asiaKathmanduNpt' },
+  { value: 'Asia/Kolkata', labelKey: 'lit.asiaKolkataIst' },
+  { value: 'Asia/Kuala_Lumpur', labelKey: 'lit.asiaKualaLumpurMyt' },
+  { value: 'Asia/Manila', labelKey: 'lit.asiaManilaPht' },
+  { value: 'Asia/Seoul', labelKey: 'lit.asiaSeoulKst' },
+  { value: 'Asia/Shanghai', labelKey: 'lit.asiaShanghaiCst' },
+  { value: 'Asia/Singapore', labelKey: 'lit.asiaSingaporeSgt' },
+  { value: 'Asia/Taipei', labelKey: 'lit.asiaTaipeiCst' },
+  { value: 'Asia/Tehran', labelKey: 'lit.asiaTehranIrst' },
+  { value: 'Asia/Tokyo', labelKey: 'lit.asiaTokyoJst' },
+  { value: 'Atlantic/Azores', labelKey: 'lit.atlanticAzoresAzot' },
+  { value: 'Atlantic/Reykjavik', labelKey: 'lit.atlanticReykjavikGmt' },
+  { value: 'Australia/Adelaide', labelKey: 'lit.australiaAdelaideAcst' },
+  { value: 'Australia/Brisbane', labelKey: 'lit.australiaBrisbaneAest' },
+  { value: 'Australia/Darwin', labelKey: 'lit.australiaDarwinAcst' },
+  { value: 'Australia/Melbourne', labelKey: 'lit.australiaMelbourneAest' },
+  { value: 'Australia/Perth', labelKey: 'lit.australiaPerthAwst' },
+  { value: 'Australia/Sydney', labelKey: 'lit.australiaSydneyAest' },
+  { value: 'Europe/Amsterdam', labelKey: 'lit.europeAmsterdamCet' },
+  { value: 'Europe/Athens', labelKey: 'lit.europeAthensEet' },
+  { value: 'Europe/Berlin', labelKey: 'lit.europeBerlinCet' },
+  { value: 'Europe/Brussels', labelKey: 'lit.europeBrusselsCet' },
+  { value: 'Europe/Bucharest', labelKey: 'lit.europeBucharestEet' },
+  { value: 'Europe/Budapest', labelKey: 'lit.europeBudapestCet' },
+  { value: 'Europe/Copenhagen', labelKey: 'lit.europeCopenhagenCet' },
+  { value: 'Europe/Dublin', labelKey: 'lit.europeDublinGmt' },
+  { value: 'Europe/Helsinki', labelKey: 'lit.europeHelsinkiEet' },
+  { value: 'Europe/Lisbon', labelKey: 'lit.europeLisbonWet' },
+  { value: 'Europe/London', labelKey: 'lit.europeLondonGmt' },
+  { value: 'Europe/Madrid', labelKey: 'lit.europeMadridCet' },
+  { value: 'Europe/Moscow', labelKey: 'lit.europeMoscowMsk' },
+  { value: 'Europe/Oslo', labelKey: 'lit.europeOsloCet' },
+  { value: 'Europe/Paris', labelKey: 'lit.europeParisCet' },
+  { value: 'Europe/Prague', labelKey: 'lit.europePragueCet' },
+  { value: 'Europe/Rome', labelKey: 'lit.europeRomeCet' },
+  { value: 'Europe/Stockholm', labelKey: 'lit.europeStockholmCet' },
+  { value: 'Europe/Vienna', labelKey: 'lit.europeViennaCet' },
+  { value: 'Europe/Warsaw', labelKey: 'lit.europeWarsawCet' },
+  { value: 'Europe/Zurich', labelKey: 'lit.europeZurichCet' },
+  { value: 'Indian/Mauritius', labelKey: 'lit.indianMauritiusMut' },
+  { value: 'Pacific/Auckland', labelKey: 'lit.pacificAucklandNzst' },
+  { value: 'Pacific/Fiji', labelKey: 'lit.pacificFijiFjt' },
+  { value: 'Pacific/Guam', labelKey: 'lit.pacificGuamChst' },
+  { value: 'Pacific/Honolulu', labelKey: 'lit.pacificHonoluluHst' },
+  { value: 'Pacific/Samoa', labelKey: 'lit.pacificSamoaSst' },
 ];
 
 interface SystemSettings {
@@ -137,6 +127,7 @@ interface SystemSettings {
   ollamaModel?: string;
   openRouterApiKey?: string;
   openRouterModel?: string;
+  openRouterRequireZdr?: string;
   aiViewsAutoCreate?: string;
   aiViewSql_vAI_ProjectOpenTasks?: string;
   aiViewSql_vAI_UserOpenTasks?: string;
@@ -171,20 +162,24 @@ type SystemSettingsProps = {
   onActionsStateChange?: (state: SystemSettingsActionsState | null) => void;
 };
 
-const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'branding', label: t('lit.branding') },
-  { id: 'email', label: t('lit.emailSmtp') },
-  { id: 'access', label: t('lit.accessAuth') },
-  { id: 'features', label: t('lit.features') },
-  { id: 'ai', label: 'AI' },
-  { id: 'maintenance', label: t('lit.maintenance') },
-];
-
 export default function SystemSettings({
   actionsPlacement = 'embedded',
   onActionsStateChange,
 }: SystemSettingsProps) {
   const { t } = useI18n();
+
+  const settingsTabs: { id: SettingsTab; label: string }[] = [
+    { id: 'branding', label: t('lit.branding') },
+    { id: 'email', label: t('lit.emailSmtp') },
+    { id: 'access', label: t('lit.accessAuth') },
+    { id: 'features', label: t('lit.features') },
+    { id: 'ai', label: t('lit.ai') },
+    { id: 'maintenance', label: t('lit.maintenance') },
+  ];
+  const timezones = TIMEZONE_OPTIONS.map((tz) => ({
+    value: tz.value,
+    label: t(tz.labelKey),
+  }));
 
   const { token } = useAuth();
   const { showToast } = useToast();
@@ -227,6 +222,7 @@ export default function SystemSettings({
     ollamaModel: 'llama3.2',
     openRouterApiKey: '',
     openRouterModel: 'openai/gpt-4o-mini',
+    openRouterRequireZdr: 'false',
     aiViewsAutoCreate: 'true',
     aiViewSql_vAI_ProjectOpenTasks: '',
     aiViewSql_vAI_UserOpenTasks: '',
@@ -317,6 +313,7 @@ export default function SystemSettings({
           ollamaModel: data.settings.ollamaModel || 'llama3.2',
           openRouterApiKey: data.settings.openRouterApiKey || '',
           openRouterModel: data.settings.openRouterModel || 'openai/gpt-4o-mini',
+          openRouterRequireZdr: data.settings.openRouterRequireZdr === 'true' ? 'true' : 'false',
           aiViewsAutoCreate: data.settings.aiViewsAutoCreate || 'true',
           aiViewSql_vAI_ProjectOpenTasks: data.settings.aiViewSql_vAI_ProjectOpenTasks || '',
           aiViewSql_vAI_UserOpenTasks: data.settings.aiViewSql_vAI_UserOpenTasks || '',
@@ -420,7 +417,9 @@ export default function SystemSettings({
         throw new Error(data.message || t('lit.failedToSyncAiViews'));
       }
 
-      setAiViewsSyncMessage(`AI views synced (${data.synced || 0} view(s)).`);
+      setAiViewsSyncMessage(
+        t('lit.aiViewsSyncedCount', { count: data.synced || 0 })
+      );
     } catch (err: any) {
       setAiViewsSyncError(err.message || t('lit.failedToSyncAiViews'));
     } finally {
@@ -571,7 +570,7 @@ export default function SystemSettings({
       )}
 
       <PageTabs
-        tabs={SETTINGS_TABS}
+        tabs={settingsTabs}
         activeId={activeTab}
         onChange={(id) => setActiveTab(id as SettingsTab)}
       />
@@ -899,7 +898,7 @@ export default function SystemSettings({
                       <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
                         {settings.publicRegistrationType === 'internal'
                           ? t('lit.newUsersWillBeCreatedAsInternalUsers')
-                          : 'New users will be created as customer users (linked to a specific customer)'}
+                          : t('lit.newUsersWillBeCreatedAsCustomerUsersLinkedToASpecificCustomer')}
                       </p>
                     </div>
 
@@ -943,7 +942,7 @@ export default function SystemSettings({
                     onChange={(e) => handleChange('defaultTimezone', e.target.value)}
                     className="w-full max-w-md rounded-md border border-[var(--pm-border)] bg-[var(--pm-panel)] px-3 py-1.5 text-sm text-[var(--pm-text)] outline-none focus:border-[var(--pm-accent)]"
                   >
-                    {TIMEZONES.map(tz => (
+                    {timezones.map(tz => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
                     ))}
                   </select>
@@ -1218,6 +1217,24 @@ export default function SystemSettings({
                         {t('lit.openrouterModelHint')}
                       </p>
                     </div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.openRouterRequireZdr === 'true'}
+                        onChange={(e) =>
+                          handleChange('openRouterRequireZdr', e.target.checked ? 'true' : 'false')
+                        }
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-[var(--pm-accent)] focus:ring-[var(--pm-accent)]"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-[var(--pm-text)]">
+                          {t('lit.requireOpenrouterZeroDataRetentionZdr')}
+                        </div>
+                        <div className="text-[11px] text-[var(--pm-muted)]">
+                          {t('lit.openrouterZdrHintManyFreeModelsHaveNoZdrEndpoints')}
+                        </div>
+                      </div>
+                    </label>
                   </>
                 ) : (
                   <>
@@ -1280,7 +1297,7 @@ export default function SystemSettings({
                 <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('lit.aiDataViews')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    The AI assistant reads data exclusively from these database views. You can customise the SELECT body for each view below (leave empty to use the built-in default).
+                    {t('lit.aiAssistantReadsDataExclusivelyFromTheseDatabaseViews')}
                   </p>
 
                   <label className="flex items-center gap-3 cursor-pointer mb-4">
@@ -1356,12 +1373,14 @@ export default function SystemSettings({
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-medium text-[var(--pm-text)]">{t('lit.createSystemPermissionGroups')}</h4>
                 <p className="mt-0.5 text-[11px] text-[var(--pm-muted)]">
-                  Creates the default Developer, Support, and Manager permission groups for any organization that is missing them.
-                  Safe to run multiple times — existing groups are not modified.
+                  {t('lit.createsDefaultDeveloperSupportAndManagerPermissionGroups')}
                 </p>
                 {migrationResult && (
                   <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                    Done: {migrationResult.created} groups created, {migrationResult.skipped} already existed.
+                    {t('lit.doneGroupsCreatedAlreadyExisted', {
+                      created: migrationResult.created,
+                      skipped: migrationResult.skipped,
+                    })}
                   </p>
                 )}
                 {migrationError && (
@@ -1374,7 +1393,7 @@ export default function SystemSettings({
                 disabled={isMigrating}
                 className="h-10 shrink-0 rounded-lg bg-amber-600 px-4 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:bg-amber-400"
               >
-                {isMigrating ? 'Running…' : t('lit.runMigration')}
+                {isMigrating ? t('lit.running') : t('lit.runMigration')}
               </button>
             </div>
           </div>
@@ -1390,7 +1409,7 @@ export default function SystemSettings({
                 disabled={isSyncingAiViews || isSaving}
                 className="h-10 rounded-lg border border-[var(--pm-border)] bg-[var(--pm-surface)] px-4 text-sm font-medium text-[var(--pm-text)] transition-colors hover:bg-[var(--pm-surface-2)] disabled:opacity-50"
               >
-                {isSyncingAiViews ? 'Syncing…' : t('lit.syncAiViewsNow')}
+                {isSyncingAiViews ? t('lit.syncing') : t('lit.syncAiViewsNow')}
               </button>
             )}
             <button

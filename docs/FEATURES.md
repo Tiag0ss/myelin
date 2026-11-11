@@ -1110,7 +1110,7 @@ Server operators may also set `REDIS_ENABLED` and related env vars (see [Redis C
 - Queries the backend AI assistant (`/api/ai-assistant`) which answers natural language questions about project data
 - Assistant has read access to tasks, allocations, time entries, and org members via database views (see `docs/AI_ASSISTANT_VIEWS.md`)
 - **Providers**: **OpenAI** (API key + model), **OpenRouter** (API key + model id), or **Ollama** (Base URL + model name, OpenAI-compatible `/v1/chat/completions`)
-- **Privacy (default)**: OpenAI requests send `store: false`; OpenRouter requests send `provider.data_collection: "deny"` and `provider.zdr: true` so data is not routed to training/non-ZDR endpoints
+- **Privacy (default)**: OpenAI requests send `store: false`; OpenRouter requests send `provider.data_collection: "deny"`. Optional System Setting **Require OpenRouter ZDR** adds `provider.zdr: true` (blocks many free models)
 - Same provider is used for translate/summarize on tasks and AI patch-notes improvement
 
 #### Assistant Modes (Analytics vs Docs)

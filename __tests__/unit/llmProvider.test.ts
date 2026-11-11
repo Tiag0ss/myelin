@@ -31,8 +31,19 @@ describe('applyLlmPrivacyDefaults', () => {
     });
   });
 
-  it('denies data collection and requires ZDR for OpenRouter', () => {
+  it('denies data collection for OpenRouter without forcing ZDR by default', () => {
     expect(applyLlmPrivacyDefaults('openrouter', baseBody)).toEqual({
+      ...baseBody,
+      provider: {
+        data_collection: 'deny',
+      },
+    });
+  });
+
+  it('adds zdr when OpenRouter ZDR is required', () => {
+    expect(
+      applyLlmPrivacyDefaults('openrouter', baseBody, { openRouterRequireZdr: true })
+    ).toEqual({
       ...baseBody,
       provider: {
         data_collection: 'deny',

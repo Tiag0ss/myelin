@@ -22,6 +22,8 @@ export type LlmConfig = {
   ollamaModel: string;
   openRouterApiKey: string;
   openRouterModel: string;
+  /** When true, OpenRouter requests set provider.zdr=true (ZDR-only routing). */
+  openRouterRequireZdr: boolean;
 };
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
@@ -63,26 +65,36 @@ export function openRouterAttributionHeaders(): Record<string, string> {
   };
 }
 
+export type LlmPrivacyOptions = {
+  /** OpenRouter only: require Zero Data Retention endpoints (`provider.zdr`). */
+  openRouterRequireZdr?: boolean;
+};
+
 /**
- * Privacy defaults so cloud providers do not use prompts for training / long retention.
+ * Privacy defaults so cloud providers do not use prompts for training.
  * - OpenAI: `store: false` (no distillation/evals storage; API data is not used for training by default).
- * - OpenRouter: `data_collection: deny` + `zdr: true` (no training-capable / non-ZDR endpoints).
+ * - OpenRouter: `data_collection: deny` (skip providers that may train on prompts).
+ *   Optional `openRouterRequireZdr` adds `provider.zdr: true` (many free models have no ZDR endpoints).
  * - Ollama: local — no cloud privacy flags.
  */
 export function applyLlmPrivacyDefaults(
   provider: LlmProvider,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  options?: LlmPrivacyOptions
 ): Record<string, unknown> {
   if (provider === 'openai') {
     return { ...body, store: false };
   }
   if (provider === 'openrouter') {
+    const providerPrefs: Record<string, unknown> = {
+      data_collection: 'deny',
+    };
+    if (options?.openRouterRequireZdr) {
+      providerPrefs.zdr = true;
+    }
     return {
       ...body,
-      provider: {
-        data_collection: 'deny',
-        zdr: true,
-      },
+      provider: providerPrefs,
     };
   }
   return body;
@@ -114,7 +126,7 @@ export function resolveChatCompletionEndpoint(config: LlmConfig): {
 export async function getLlmConfig(): Promise<LlmConfig> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT SettingKey, SettingValue FROM SystemSettings
-     WHERE SettingKey IN (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     WHERE SettingKey IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       'aiAssistantEnabled',
       'aiProvider',
@@ -125,6 +137,7 @@ export async function getLlmConfig(): Promise<LlmConfig> {
       'ollamaModel',
       'openRouterApiKey',
       'openRouterModel',
+      'openRouterRequireZdr',
     ]
   );
 
@@ -145,6 +158,7 @@ export async function getLlmConfig(): Promise<LlmConfig> {
     : '';
   const openRouterModel =
     String(settingsMap.openRouterModel || '').trim() || DEFAULT_OPENROUTER_MODEL;
+  const openRouterRequireZdr = settingsMap.openRouterRequireZdr === 'true';
   const behavior = String(settingsMap.openAIBehavior || '').trim();
   const aiAssistantEnabled = settingsMap.aiAssistantEnabled === 'true';
 
@@ -173,6 +187,7 @@ export async function getLlmConfig(): Promise<LlmConfig> {
     ollamaModel,
     openRouterApiKey,
     openRouterModel,
+    openRouterRequireZdr,
   };
 }
 
@@ -233,7 +248,7 @@ function providerRequestFailedFallback(config: LlmConfig): string {
     return 'Ollama request failed. Check Base URL, model name, and that the model is pulled.';
   }
   if (config.provider === 'openrouter') {
-    return 'OpenRouter request failed. Check API key, model id, and that the route supports data_collection=deny / ZDR.';
+    return 'OpenRouter request failed. Check API key, model id, data_collection=deny support, and ZDR setting if enabled.';
   }
   return 'OpenAI request failed. Check API key and model configuration.';
 }
@@ -260,7 +275,9 @@ export async function chatCompletion(
   if (typeof options.maxTokens === 'number' && options.maxTokens > 0) {
     body.max_tokens = options.maxTokens;
   }
-  body = applyLlmPrivacyDefaults(config.provider, body);
+  body = applyLlmPrivacyDefaults(config.provider, body, {
+    openRouterRequireZdr: config.openRouterRequireZdr,
+  });
 
   const { url, headers } = resolveChatCompletionEndpoint(config);
 

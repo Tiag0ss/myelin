@@ -42,7 +42,7 @@ flowchart TD
 ### Privacy defaults (cloud providers)
 
 - **OpenAI**: every chat request sends `store: false` (no distillation/evals storage). OpenAI API data is not used for model training unless you explicitly opt in on their side.
-- **OpenRouter**: every chat request sends `provider.data_collection: "deny"` and `provider.zdr: true`, so routing stays on providers that do not collect for training and offer zero data retention.
+- **OpenRouter**: every chat request sends `provider.data_collection: "deny"`. Optional **Require ZDR** (`openRouterRequireZdr`) adds `provider.zdr: true` — keep it off for most free models; turn it on when you need Zero Data Retention.
 - **Ollama**: local — prompts stay on your host.
 
 ![AI admin settings](../media/docs-ai-admin-settings.png)
