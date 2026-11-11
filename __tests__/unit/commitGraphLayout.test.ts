@@ -1,5 +1,5 @@
 import { layoutCommitGraph } from '../../lib/git/commitGraphLayout';
-import { buildRemoteCommitsListUrl } from '../../server/utils/gitRemote';
+import { buildRemoteCommitsListUrl, normalizeGitHubApiBaseUrl } from '../../server/utils/gitRemote';
 
 describe('layoutCommitGraph', () => {
   it('layouts a linear history on a single lane', () => {
@@ -49,6 +49,28 @@ describe('layoutCommitGraph', () => {
     const main = rows.find((r) => r.sha === 'main');
     expect(main?.edges.some((e) => e.fromColumn !== e.toColumn)).toBe(true);
     expect(rows[2].sha).toBe('base');
+  });
+});
+
+describe('normalizeGitHubApiBaseUrl', () => {
+  it('rewrites github.com web URL to api.github.com', () => {
+    expect(normalizeGitHubApiBaseUrl('https://github.com')).toBe('https://api.github.com');
+    expect(normalizeGitHubApiBaseUrl('https://www.github.com/')).toBe('https://api.github.com');
+    expect(normalizeGitHubApiBaseUrl('github.com')).toBe('https://api.github.com');
+  });
+
+  it('keeps api.github.com', () => {
+    expect(normalizeGitHubApiBaseUrl('https://api.github.com')).toBe('https://api.github.com');
+    expect(normalizeGitHubApiBaseUrl('https://api.github.com/')).toBe('https://api.github.com');
+  });
+
+  it('appends /api/v3 for GitHub Enterprise hosts', () => {
+    expect(normalizeGitHubApiBaseUrl('https://github.example.com')).toBe(
+      'https://github.example.com/api/v3'
+    );
+    expect(normalizeGitHubApiBaseUrl('https://github.example.com/api/v3')).toBe(
+      'https://github.example.com/api/v3'
+    );
   });
 });
 

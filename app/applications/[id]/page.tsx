@@ -30,6 +30,9 @@ import AgentDocsPanel from '@/components/mcp/AgentDocsPanel';
 import PageTabs from '@/components/PageTabs';
 import PageStickyChrome from '@/components/PageStickyChrome';
 import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
+import { buildPatchNotesFromTasksAndCommits } from '@/lib/releasePatchNotes';
+import VersionCommitsPickerModal from './_components/VersionCommitsPickerModal';
+import VersionTasksPickerModal from './_components/VersionTasksPickerModal';
 
 type Tab = 'overview' | 'versions' | 'commits' | 'agent-docs' | 'settings';
 const APPLICATION_DETAIL_TABS = ['overview', 'versions', 'commits', 'agent-docs', 'settings'] as const;
@@ -188,13 +191,17 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     ReleaseDate: '',
     PatchNotes: '',
     TaskIds: [] as number[],
+    Commits: [] as RemoteCommit[],
   });
 
   // Version detail panel
   const [selectedVersion, setSelectedVersion] = useState<AppVersion | null>(null);
   const [versionTasks, setVersionTasks] = useState<VersionTask[]>([]);
+  const [versionCommits, setVersionCommits] = useState<RemoteCommit[]>([]);
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [showCommitsPickerModal, setShowCommitsPickerModal] = useState(false);
+  const [showTasksPickerModal, setShowTasksPickerModal] = useState(false);
   const [showPatchNotes, setShowPatchNotes] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
@@ -220,14 +227,32 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     title: string;
     message: string;
     onConfirm?: () => void;
+    onCancel?: () => void;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    confirmVariant?: 'primary' | 'danger';
   } | null>(null);
 
   const showAlert = (title: string, message: string) => {
     setDialog({ type: 'alert', title, message });
   };
 
-  // Task search
-  const [taskSearch, setTaskSearch] = useState('');
+  const selectedTasksForForm = useMemo(() => {
+    const byId = new Map(availableTasks.map((task) => [task.Id, task]));
+    for (const task of versionTasks) {
+      if (!byId.has(task.Id)) {
+        byId.set(task.Id, {
+          Id: task.Id,
+          TaskName: task.TaskName,
+          ProjectName: task.ProjectName || '',
+          StatusName: task.StatusName,
+        });
+      }
+    }
+    return versionForm.TaskIds.map((id) => byId.get(id)).filter(
+      (task): task is AvailableTask => Boolean(task)
+    );
+  }, [availableTasks, versionTasks, versionForm.TaskIds]);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -489,6 +514,14 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       if (res.ok) {
         const data = await res.json();
         setVersionTasks(data.version.Tasks || []);
+        const linkedCommits = (data.version.Commits || []).map((c: RemoteCommit) => ({
+          sha: String(c.sha || ''),
+          message: String(c.message || ''),
+          author: String(c.author || ''),
+          date: String(c.date || ''),
+          url: String(c.url || ''),
+        }));
+        setVersionCommits(linkedCommits.filter((c: RemoteCommit) => c.sha));
       }
     } finally {
       setIsLoadingTasks(false);
@@ -536,19 +569,28 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
   const openCreateVersionModal = () => {
     setEditingVersion(null);
-    setVersionForm({ VersionNumber: '', VersionName: '', IsCustomerSpecific: false, CustomerId: null, Status: t('lit.planning'), ReleaseDate: '', PatchNotes: '', TaskIds: [] });
+    setVersionForm({
+      VersionNumber: '',
+      VersionName: '',
+      IsCustomerSpecific: false,
+      CustomerId: null,
+      Status: t('lit.planning'),
+      ReleaseDate: '',
+      PatchNotes: '',
+      TaskIds: [],
+      Commits: [],
+    });
     void loadAllCustomers(application?.OrganizationId);
     loadAvailableTasks();
     void loadOpenAiAvailability();
-    setTaskSearch('');
     setShowVersionModal(true);
   };
 
   const openEditVersionModal = (v: AppVersion) => {
     setEditingVersion(v);
     void loadAllCustomers(application?.OrganizationId);
-    // Pre-load current tasks
-    const currentTaskIds = versionTasks.map(t => t.Id);
+    // Pre-load current tasks and commits
+    const currentTaskIds = versionTasks.map((task) => task.Id);
     setVersionForm({
       VersionNumber: v.VersionNumber,
       VersionName: v.VersionName || '',
@@ -558,15 +600,17 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       ReleaseDate: v.ReleaseDate ? v.ReleaseDate.split('T')[0] : '',
       PatchNotes: v.PatchNotes || '',
       TaskIds: currentTaskIds,
+      Commits: versionCommits,
     });
     loadAvailableTasks(v.Id); // Pass version ID to exclude tasks from other versions
     void loadOpenAiAvailability();
-    setTaskSearch('');
     setShowVersionModal(true);
   };
 
   const closeVersionModal = () => {
     setShowVersionModal(false);
+    setShowCommitsPickerModal(false);
+    setShowTasksPickerModal(false);
     setEditingVersion(null);
     setError('');
   };
@@ -616,13 +660,39 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         body: JSON.stringify({ TaskIds: versionForm.TaskIds }),
       });
 
+      // Sync commits
+      await fetch(`${getApiUrl()}/api/applications/${id}/versions/${versionId}/commits`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          Commits: versionForm.Commits.map((c) => ({
+            sha: c.sha,
+            message: c.message,
+            author: c.author,
+            date: c.date,
+            url: c.url,
+          })),
+        }),
+      });
+
       closeVersionModal();
       await loadApplication();
-      // Refresh selected version if it's the one we just edited
+      // Refresh selected / newly created version detail
       if (editingVersion && selectedVersion?.Id === editingVersion.Id) {
         const updated = { ...editingVersion, ...versionForm, Id: editingVersion.Id };
         setSelectedVersion(updated as AppVersion);
-        loadVersionDetail(updated as AppVersion);
+        void loadVersionDetail(updated as AppVersion);
+      } else if (versionId) {
+        const refreshed = await fetch(`${getApiUrl()}/api/applications/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (refreshed.ok) {
+          const appData = await refreshed.json();
+          const target = (appData.application?.Versions || []).find(
+            (v: AppVersion) => Number(v.Id) === Number(versionId)
+          );
+          if (target) void loadVersionDetail(target);
+        }
       }
     } catch (err: any) {
       setError(err.message || t('lit.failedToSaveVersion'));
@@ -647,34 +717,6 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     });
   };
 
-  const buildPatchNotes = (taskIds: number[], tasks: AvailableTask[]): string => {
-    const selected = tasks.filter((task) => taskIds.includes(task.Id));
-    if (selected.length === 0) return '';
-
-    // Group by project
-    const byProject: Record<string, string[]> = {};
-    for (const task of selected) {
-      const proj = task.ProjectName || t('lit.general');
-      if (!byProject[proj]) byProject[proj] = [];
-      byProject[proj].push(task.TaskName);
-    }
-
-    const projects = Object.keys(byProject);
-    let html = '';
-    if (projects.length === 1) {
-      // Single project — flat list
-      html = '<ul>' + selected.map((t) => `<li>${t.TaskName}</li>`).join('') + '</ul>';
-    } else {
-      // Multiple projects — grouped
-      html = projects
-        .map(
-          (proj) =>
-            `<p><strong>${proj}</strong></p><ul>${byProject[proj].map((n) => `<li>${n}</li>`).join('')}</ul>`
-        )
-        .join('');
-    }
-    return html;
-  };
 
   const handleDownloadVersionPDF = (version: AppVersion) => {
     const url = `${getApiUrl()}/api/applications/${id}/versions/${version.Id}/pdf`;
@@ -809,27 +851,38 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     }
   };
 
-  const toggleVersionTask = (taskId: number) => {
-    setVersionForm((prev) => {
-      const newTaskIds = prev.TaskIds.includes(taskId)
-        ? prev.TaskIds.filter((id) => id !== taskId)
-        : [...prev.TaskIds, taskId];
-      return {
-        ...prev,
-        TaskIds: newTaskIds,
-      };
-    });
+  const removeVersionTask = (taskId: number) => {
+    setVersionForm((prev) => ({
+      ...prev,
+      TaskIds: prev.TaskIds.filter((id) => id !== taskId),
+    }));
+  };
+
+  const removeVersionCommit = (sha: string) => {
+    setVersionForm((prev) => ({
+      ...prev,
+      Commits: prev.Commits.filter((c) => c.sha.toLowerCase() !== sha.toLowerCase()),
+    }));
   };
 
   const handleGeneratePatchNotes = () => {
-    const generated = buildPatchNotes(versionForm.TaskIds, availableTasks);
+    const selectedTasks = availableTasks.filter((task) => versionForm.TaskIds.includes(task.Id));
+    const generated = buildPatchNotesFromTasksAndCommits({
+      tasks: selectedTasks.map((task) => ({
+        Id: task.Id,
+        TaskName: task.TaskName,
+        ProjectName: task.ProjectName,
+      })),
+      commits: versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message })),
+      generalProjectLabel: t('lit.general'),
+    });
     setVersionForm((prev) => ({
       ...prev,
       PatchNotes: generated,
     }));
   };
 
-  const handleImprovePatchNotesWithAI = async () => {
+  const runImprovePatchNotesWithAI = async (splitByChangeType: boolean) => {
     if (!token || !isOpenAIAvailable || isImprovingPatchNotes) return;
 
     setIsImprovingPatchNotes(true);
@@ -844,6 +897,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         body: JSON.stringify({
           patchNotes: versionForm.PatchNotes || '',
           taskIds: versionForm.TaskIds,
+          commits: versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message })),
+          splitByChangeType,
         }),
       });
 
@@ -869,9 +924,21 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     }
   };
 
-  const filteredAvailableTasks = availableTasks.filter((t) =>
-    !taskSearch || t.TaskName.toLowerCase().includes(taskSearch.toLowerCase()) || t.ProjectName?.toLowerCase().includes(taskSearch.toLowerCase())
-  );
+  const handleImprovePatchNotesWithAI = () => {
+    if (!token || !isOpenAIAvailable || isImprovingPatchNotes) return;
+
+    setDialog({
+      type: 'confirm',
+      title: 'Improve with AI',
+      message:
+        'Split the patch notes into Added, Changed, and Fixed sections? Choose Yes to group by change type, or No to improve without that structure.',
+      confirmLabel: 'Yes, split',
+      cancelLabel: 'No, keep flat',
+      confirmVariant: 'primary',
+      onConfirm: () => void runImprovePatchNotesWithAI(true),
+      onCancel: () => void runImprovePatchNotesWithAI(false),
+    });
+  };
 
   if (authLoading || isLoading) {
     return <PageLoadingSkeleton />;
@@ -1302,6 +1369,61 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       </div>
                     )}
                   </div>
+
+                  {/* Commits */}
+                  <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                      Commits in this version ({versionCommits.length})
+                    </h3>
+                    {isLoadingTasks ? (
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        Loading commits…
+                      </div>
+                    ) : versionCommits.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No commits linked to this version yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {versionCommits.map((commit) => (
+                          <div
+                            key={commit.sha}
+                            className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                          >
+                            {commit.url ? (
+                              <a
+                                href={commit.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono text-xs text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"
+                              >
+                                {commit.sha.slice(0, 7)}
+                              </a>
+                            ) : (
+                              <span className="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 mt-0.5">
+                                {commit.sha.slice(0, 7)}
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <CommitMessage
+                                message={commit.message}
+                                token={token || undefined}
+                                onTaskClick={(taskId) => void handleOpenTaskById(taskId)}
+                              />
+                              {(commit.author || commit.date) && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {[commit.author, commit.date ? new Date(commit.date).toLocaleString() : '']
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1683,44 +1805,103 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
                 {/* Tasks selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Tasks in this version ({versionForm.TaskIds.length} selected)
-                  </label>
-                  <div className="relative mb-2">
-                    <input
-                      type="text"
-                      value={taskSearch}
-                      onChange={(e) => setTaskSearch(e.target.value)}
-                      placeholder={t('lit.searchTasks')}
-                      className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    />
-                    <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Tasks in this version ({versionForm.TaskIds.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowTasksPickerModal(true)}
+                      className="h-9 px-3 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors"
+                    >
+                      Select tasks
+                    </button>
                   </div>
-                  <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 space-y-1">
-                    {filteredAvailableTasks.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 py-2 text-center">{t('lit.noTasksFound')}</p>
-                    ) : (
-                      filteredAvailableTasks.map((task) => (
-                        <label key={task.Id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={versionForm.TaskIds.includes(task.Id)}
-                            onChange={() => toggleVersionTask(task.Id)}
-                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <span className="text-sm text-gray-900 dark:text-white block truncate">{task.TaskName}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{task.ProjectName}</span>
+                  {selectedTasksForForm.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-3 py-4 text-center">
+                      No tasks linked yet. Use Select tasks to pick from available work.
+                    </p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                      {selectedTasksForForm.map((task) => (
+                        <div key={task.Id} className="flex items-start gap-2 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {task.TaskName}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {[task.ProjectName, task.StatusName].filter(Boolean).join(' · ')}
+                            </p>
                           </div>
-                          {task.StatusName && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto shrink-0">{task.StatusName}</span>
-                          )}
-                        </label>
-                      ))
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => removeVersionTask(task.Id)}
+                            className="shrink-0 p-1 text-gray-400 hover:text-red-500 rounded"
+                            title="Remove task"
+                            aria-label="Remove task"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Commits selection */}
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Commits in this version ({versionForm.Commits.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCommitsPickerModal(true)}
+                      className="h-9 px-3 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors"
+                    >
+                      Select commits
+                    </button>
                   </div>
+                  {versionForm.Commits.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg px-3 py-4 text-center">
+                      No commits linked yet. Use Select commits to pick from recent history.
+                    </p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                      {versionForm.Commits.map((commit) => (
+                        <div key={commit.sha} className="flex items-start gap-2 px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
+                                {commit.sha.slice(0, 7)}
+                              </span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                                {commit.author}
+                              </span>
+                            </div>
+                            <CommitMessage
+                              message={commit.message}
+                              showTaskBadges
+                              token={token || undefined}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeVersionCommit(commit.sha)}
+                            className="shrink-0 p-1 text-gray-400 hover:text-red-500 rounded"
+                            title="Remove commit"
+                            aria-label="Remove commit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Patch Notes */}
@@ -1738,17 +1919,22 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       <button
                         type="button"
                         onClick={handleGeneratePatchNotes}
-                        disabled={versionForm.TaskIds.length === 0}
+                        disabled={versionForm.TaskIds.length === 0 && versionForm.Commits.length === 0}
                         className="h-9 px-3 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors"
-                        title={t('lit.generatePatchNotesFromSelectedTasks')}
+                        title="Generate patch notes from selected tasks and commits"
                       >
-                        {t('lit.generateFromTasks')}
+                        Generate from tasks & commits
                       </button>
                       {isOpenAIAvailable && (
                         <button
                           type="button"
                           onClick={handleImprovePatchNotesWithAI}
-                          disabled={isImprovingPatchNotes || (!versionForm.PatchNotes && versionForm.TaskIds.length === 0)}
+                          disabled={
+                            isImprovingPatchNotes ||
+                            (!versionForm.PatchNotes &&
+                              versionForm.TaskIds.length === 0 &&
+                              versionForm.Commits.length === 0)
+                          }
                           className="h-9 px-3 rounded-lg text-sm font-medium bg-violet-600 hover:bg-violet-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors"
                           title={t('lit.improvePatchNotesWithAiWhilePreservingBulletPoints')}
                         >
@@ -1785,6 +1971,39 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           </div>
         </div>
       )}
+
+      <VersionTasksPickerModal
+        isOpen={showTasksPickerModal}
+        availableTasks={availableTasks}
+        initiallySelectedIds={versionForm.TaskIds}
+        commitMessages={versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message }))}
+        onClose={() => setShowTasksPickerModal(false)}
+        onConfirm={(taskIds) => {
+          setVersionForm((prev) => ({ ...prev, TaskIds: taskIds }));
+        }}
+      />
+
+      <VersionCommitsPickerModal
+        isOpen={showCommitsPickerModal}
+        applicationId={id}
+        token={token || ''}
+        hasRepositoryUrl={Boolean(application?.RepositoryUrl)}
+        initiallySelected={versionForm.Commits}
+        selectedTaskIds={versionForm.TaskIds}
+        onClose={() => setShowCommitsPickerModal(false)}
+        onConfirm={(commits) => {
+          setVersionForm((prev) => ({
+            ...prev,
+            Commits: commits.map((c) => ({
+              sha: c.sha,
+              message: c.message,
+              author: c.author,
+              date: c.date,
+              url: c.url,
+            })),
+          }));
+        }}
+      />
 
       {showTaskDetailModal && selectedTaskForModal && taskModalProject && (
         <TaskDetailModal
@@ -1937,13 +2156,19 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         type={dialog?.type || 'alert'}
         title={dialog?.title || ''}
         message={dialog?.message || ''}
-        onClose={() => setDialog(null)}
-        onConfirm={() => {
-          dialog?.onConfirm?.();
+        onClose={() => {
+          const cancel = dialog?.onCancel;
           setDialog(null);
+          cancel?.();
         }}
-        confirmLabel={t('common.delete')}
-        confirmVariant="danger"
+        onConfirm={() => {
+          const confirm = dialog?.onConfirm;
+          setDialog(null);
+          confirm?.();
+        }}
+        confirmLabel={dialog?.confirmLabel || t('common.delete')}
+        cancelLabel={dialog?.cancelLabel}
+        confirmVariant={dialog?.confirmVariant || 'danger'}
       />
 
       <ScrollToTopButton scrollContainerRef={scrollContainerRef} />

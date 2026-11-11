@@ -1,0 +1,49 @@
+{
+  "TableName": "ApplicationVersionCommits",
+  "PrimaryKeyFields": "VersionId,CommitSha",
+  "Fields": [
+    {
+      "FieldName": "VersionId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to ApplicationVersions.Id"
+    },
+    {
+      "FieldName": "CommitSha",
+      "DataType": "varchar(64)",
+      "NotNullable": true,
+      "Comment": "Git commit SHA (full or abbreviated)"
+    },
+    {
+      "FieldName": "Message",
+      "DataType": "text",
+      "NotNullable": false,
+      "Comment": "Snapshot of commit message at association time"
+    },
+    {
+      "FieldName": "Author",
+      "DataType": "varchar(255)",
+      "NotNullable": false,
+      "Comment": "Snapshot of commit author"
+    },
+    {
+      "FieldName": "CommittedAt",
+      "DataType": "datetime",
+      "NotNullable": false,
+      "Comment": "Snapshot of commit date"
+    },
+    {
+      "FieldName": "Url",
+      "DataType": "varchar(500)",
+      "NotNullable": false,
+      "Comment": "Remote URL for the commit when available"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the commit was added to the version"
+    }
+  ]
+}

@@ -31,6 +31,7 @@ import {
   llmNotConfiguredMessage,
   prepareHtmlForLlm,
 } from '../../utils/llmProvider';
+import { normalizeCommitSha } from '../../utils/releasePatchNotes';
 
 const router = Router();
 
@@ -431,7 +432,11 @@ router.get('/:id/commits', authenticateToken, async (req: AuthRequest, res: Resp
       });
     }
 
-    const allBranches = !branchRaw || branchRaw === '*' || branchRaw.toLowerCase() === 'all';
+    const allBranches =
+      !branchRaw ||
+      branchRaw === '*' ||
+      branchRaw.toLowerCase() === 'all' ||
+      branchRaw === '__all__';
     const result = await listRemoteCommits(parsed, creds, {
       page,
       perPage,
@@ -1031,6 +1036,15 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
 
     version.Tasks = tasks;
 
+    const [commits] = await pool.execute<RowDataPacket[]>(
+      `SELECT CommitSha as sha, Message as message, Author as author, CommittedAt as date, Url as url
+       FROM ApplicationVersionCommits
+       WHERE VersionId = ?
+       ORDER BY CommittedAt DESC, CommitSha ASC`,
+      [versionId]
+    );
+    version.Commits = commits;
+
     res.json({ success: true, version });
   } catch (error) {
     logger.error('Error fetching version:', error);
@@ -1324,6 +1338,7 @@ router.delete('/:id/versions/:versionId', authenticateToken, async (req: AuthReq
     }
 
     await pool.execute('DELETE FROM ApplicationVersionTasks WHERE VersionId = ?', [versionId]);
+    await pool.execute('DELETE FROM ApplicationVersionCommits WHERE VersionId = ?', [versionId]);
     // Set ReleaseVersionId to null on tasks that reference this version
     await pool.execute('UPDATE Tasks SET ReleaseVersionId = NULL WHERE ReleaseVersionId = ?', [versionId]);
     await pool.execute('DELETE FROM ApplicationVersions WHERE Id = ?', [versionId]);
@@ -1409,6 +1424,127 @@ router.put('/:id/versions/:versionId/tasks', authenticateToken, async (req: Auth
   }
 });
 
+// PUT /api/applications/:id/versions/:versionId/commits - set commits in a version
+router.put('/:id/versions/:versionId/commits', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { id, versionId } = req.params;
+    const applicationId = Array.isArray(id) ? id[0] : id;
+    const normalizedVersionId = Array.isArray(versionId) ? versionId[0] : versionId;
+    const commitsRaw = Array.isArray(req.body?.Commits) ? req.body.Commits : [];
+
+    const [apps] = await pool.execute<RowDataPacket[]>(
+      'SELECT OrganizationId FROM Applications WHERE Id = ? AND IsActive = 1',
+      [applicationId]
+    );
+    if (!apps.length) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+    const organizationId = apps[0].OrganizationId;
+
+    const [user] = await pool.execute<RowDataPacket[]>(
+      'SELECT isAdmin, IsDeveloper, IsSupport, IsManager FROM Users WHERE Id = ?',
+      [userId]
+    );
+    if (!user.length) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user[0].isAdmin) {
+      const roles: string[] = [];
+      if (user[0].IsDeveloper) roles.push('Developer');
+      if (user[0].IsSupport) roles.push('Support');
+      if (user[0].IsManager) roles.push('Manager');
+
+      let hasPermission = false;
+      if (roles.length > 0) {
+        const placeholders = roles.map(() => '?').join(',');
+        const [rolePerms] = await pool.execute<RowDataPacket[]>(
+          `SELECT CanManageReleases FROM RolePermissions WHERE RoleName IN (${placeholders})`,
+          roles
+        );
+        hasPermission = rolePerms.some((rp: any) => rp.CanManageReleases === 1);
+      }
+
+      if (!hasPermission) {
+        const [orgPerms] = await pool.execute<RowDataPacket[]>(
+          `SELECT pg.CanManageReleases FROM PermissionGroups pg
+           INNER JOIN OrganizationMembers om ON om.PermissionGroupId = pg.Id
+           WHERE om.UserId = ? AND pg.OrganizationId = ?`,
+          [userId, organizationId]
+        );
+        hasPermission = orgPerms.some((op: any) => op.CanManageReleases === 1);
+      }
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not have permission to manage releases.',
+        });
+      }
+    }
+
+    const [versionRows] = await pool.execute<RowDataPacket[]>(
+      'SELECT Id FROM ApplicationVersions WHERE Id = ? AND ApplicationId = ?',
+      [normalizedVersionId, applicationId]
+    );
+    if (!versionRows.length) {
+      return res.status(404).json({ success: false, message: 'Version not found' });
+    }
+
+    type CommitRow = {
+      sha: string;
+      message: string | null;
+      author: string | null;
+      date: string | null;
+      url: string | null;
+    };
+    const bySha = new Map<string, CommitRow>();
+    for (const raw of commitsRaw) {
+      const sha = normalizeCommitSha(raw?.sha ?? raw?.CommitSha ?? raw?.Sha);
+      if (!sha) continue;
+      if (bySha.has(sha)) continue;
+      const message = raw?.message ?? raw?.Message ?? null;
+      const author = raw?.author ?? raw?.Author ?? null;
+      const dateRaw = raw?.date ?? raw?.CommittedAt ?? raw?.committedAt ?? null;
+      let date: string | null = null;
+      if (dateRaw != null && String(dateRaw).trim()) {
+        const parsed = new Date(String(dateRaw));
+        if (!Number.isNaN(parsed.getTime())) {
+          date = parsed.toISOString().slice(0, 19).replace('T', ' ');
+        }
+      }
+      const url = raw?.url ?? raw?.Url ?? null;
+      bySha.set(sha, {
+        sha,
+        message: message != null ? String(message).slice(0, 65000) : null,
+        author: author != null ? String(author).slice(0, 255) : null,
+        date,
+        url: url != null ? String(url).slice(0, 500) : null,
+      });
+    }
+
+    await pool.execute('DELETE FROM ApplicationVersionCommits WHERE VersionId = ?', [normalizedVersionId]);
+    for (const commit of bySha.values()) {
+      await pool.execute(
+        `INSERT INTO ApplicationVersionCommits (VersionId, CommitSha, Message, Author, CommittedAt, Url)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [normalizedVersionId, commit.sha, commit.message, commit.author, commit.date, commit.url]
+      );
+    }
+
+    await invalidateByEntity('application', {
+      applicationId,
+      orgId: organizationId,
+    });
+
+    res.json({ success: true, message: 'Version commits updated' });
+  } catch (error) {
+    logger.error('Error updating version commits:', error);
+    res.status(500).json({ success: false, message: 'Failed to update version commits' });
+  }
+});
+
 // POST /api/applications/:id/versions/improve-patch-notes - improve patch notes with AI (bullet format)
 router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -1419,6 +1555,15 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
     const taskIds = taskIdsRaw
       .map((value: any) => Number(value))
       .filter((value: number) => Number.isFinite(value) && value > 0);
+    const commitsRaw = Array.isArray(req.body?.commits) ? req.body.commits : [];
+    const commitContext = commitsRaw
+      .map((c: any) => ({
+        sha: String(c?.sha || c?.CommitSha || '').trim(),
+        message: String(c?.message || c?.Message || '').trim(),
+      }))
+      .filter((c: { sha: string; message: string }) => c.message.length > 0)
+      .slice(0, 100);
+    const splitByChangeType = Boolean(req.body?.splitByChangeType);
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -1475,14 +1620,28 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       '- Keep bullet structure using <ul><li>...</li></ul>.',
       '- Use concise, clear bullet points.',
       '- Preserve factual meaning; do not invent features.',
-      '- If grouping helps, you may use <p><strong>Group</strong></p> before bullet lists.',
       '- Ensure the final output still contains bullet lists.',
+      ...(splitByChangeType
+        ? [
+            '- You MUST organize all bullets under these sections in this exact order: Added, Changed, Fixed.',
+            '- For each non-empty section use: <p><strong>Added</strong></p><ul><li>...</li></ul> (same pattern for Changed and Fixed).',
+            '- Omit a section entirely when it has no items.',
+            '- Classify each item into the best-fitting category; do not invent items to fill a section.',
+            '- Do not use other section titles.',
+          ]
+        : [
+            '- If grouping helps, you may use <p><strong>Group</strong></p> before bullet lists.',
+          ]),
     ].join('\n');
 
     const userPrompt = JSON.stringify({
       currentPatchNotesHtml: prepareHtmlForLlm(patchNotes),
       selectedTasks: taskContext,
-      instruction: 'Improve clarity and readability while preserving meaning. Keep bullets in the final result.',
+      selectedCommits: commitContext,
+      splitByChangeType,
+      instruction: splitByChangeType
+        ? 'Improve clarity and readability while preserving meaning. Separate every item into Added, Changed, or Fixed sections as required by the system rules. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.'
+        : 'Improve clarity and readability while preserving meaning. Keep bullets in the final result. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.',
     });
 
     let improved = '';

@@ -12,6 +12,7 @@ import {
 } from '../../utils/vcsIntegrationResolve';
 import { parseOwnerRepoFromUrl } from '../../utils/vcsIntegrationHelpers';
 import { integrationWriteErrorMessage } from '../../utils/integrationErrors';
+import { normalizeGitHubApiBaseUrl } from '../../utils/gitRemote';
 
 const router = express.Router();
 
@@ -79,10 +80,18 @@ router.post('/organization/:organizationId', authenticateToken, async (req: Auth
       return res.status(400).json({ success: false, message: 'GitHub URL and token are required' });
     }
 
+    const normalizedUrl = normalizeGitHubApiBaseUrl(String(gitHubUrl));
+    if (!normalizedUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'GitHub URL is invalid. Use a full URL including https:// (e.g. https://api.github.com).',
+      });
+    }
+
     let displayName = String(name || '').trim();
     if (!displayName) {
       try {
-        displayName = new URL(gitHubUrl).hostname || 'GitHub';
+        displayName = new URL(normalizedUrl).hostname || 'GitHub';
       } catch {
         return res.status(400).json({
           success: false,
@@ -100,7 +109,7 @@ router.post('/organization/:organizationId', authenticateToken, async (req: Auth
       `INSERT INTO OrganizationGitHubIntegrations
          (OrganizationId, Name, IsEnabled, IsDefault, GitHubUrl, GitHubToken)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [organizationId, displayName, isEnabled ? 1 : 0, isDefault ? 1 : 0, gitHubUrl, encryptedToken]
+      [organizationId, displayName, isEnabled ? 1 : 0, isDefault ? 1 : 0, normalizedUrl, encryptedToken]
     );
 
     res.json({
@@ -138,7 +147,14 @@ router.put('/:integrationId', authenticateToken, async (req: AuthRequest, res: R
     }
 
     const finalName = name !== undefined ? String(name).trim() || row.Name : row.Name;
-    const finalUrl = gitHubUrl !== undefined ? gitHubUrl : row.GitHubUrl;
+    const rawUrl = gitHubUrl !== undefined ? gitHubUrl : row.GitHubUrl;
+    const finalUrl = normalizeGitHubApiBaseUrl(String(rawUrl));
+    if (!finalUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'GitHub URL is invalid. Use a full URL including https:// (e.g. https://api.github.com).',
+      });
+    }
     const finalEnabled = isEnabled !== undefined ? (isEnabled ? 1 : 0) : row.IsEnabled;
     const finalDefault = isDefault !== undefined ? (isDefault ? 1 : 0) : row.IsDefault;
     const encryptedToken = gitHubToken ? encrypt(gitHubToken) : row.GitHubToken;
@@ -278,7 +294,7 @@ router.get('/organization/:organizationId/search', authenticateToken, async (req
     }
 
     const GitHubToken = decryptTokenField(integration.GitHubToken);
-    const GitHubUrl = String(integration.GitHubUrl).replace(/\/$/, '');
+    const GitHubUrl = normalizeGitHubApiBaseUrl(String(integration.GitHubUrl));
 
     const params = new URLSearchParams();
     params.append('state', 'all');

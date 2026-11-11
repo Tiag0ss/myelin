@@ -1048,6 +1048,7 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
     const userId = req.user?.userId;
     const productId = Number(req.params.id);
     const patchNotes = String(req.body?.patchNotes || '').trim();
+    const splitByChangeType = Boolean(req.body?.splitByChangeType);
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -1084,11 +1085,23 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       '- Only improve the content beneath each <h2> heading; keep the heading text unchanged.',
       '- Use concise, clear bullet points (<ul><li>...</li></ul>) within each section.',
       '- Preserve factual meaning; do not invent features.',
+      ...(splitByChangeType
+        ? [
+            '- Inside EACH application <h2> section, organize bullets under these subsections in this exact order: Added, Changed, Fixed.',
+            '- For each non-empty subsection use: <p><strong>Added</strong></p><ul><li>...</li></ul> (same pattern for Changed and Fixed).',
+            '- Omit a subsection entirely when it has no items for that application.',
+            '- Classify each item into the best-fitting category; do not invent items to fill a subsection.',
+            '- Do not use other subsection titles.',
+          ]
+        : []),
     ].join('\n');
 
     const userPrompt = JSON.stringify({
       currentPatchNotesHtml: prepareHtmlForLlm(patchNotes),
-      instruction: 'Improve clarity and readability while preserving meaning and the per-application h2 section structure.',
+      splitByChangeType,
+      instruction: splitByChangeType
+        ? 'Improve clarity and readability while preserving meaning and the per-application h2 section structure. Within each application section, separate items into Added, Changed, and Fixed as required by the system rules.'
+        : 'Improve clarity and readability while preserving meaning and the per-application h2 section structure.',
     });
 
     let improved = '';

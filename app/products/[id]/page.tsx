@@ -123,8 +123,10 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     title: string;
     message: string;
     confirmLabel?: string;
+    cancelLabel?: string;
     confirmVariant?: 'primary' | 'danger';
     onConfirm: () => void;
+    onCancel?: () => void;
   } | null>(null);
 
   useEffect(() => {
@@ -382,11 +384,13 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     });
   };
 
-  const handleImproveWithAi = async () => {
+  const runImproveWithAi = async (splitByChangeType: boolean) => {
     if (!token || !isAiAvailable || isImprovingPatchNotes) return;
     setIsImprovingPatchNotes(true);
     try {
-      const result = await improveProductPatchNotes(token, id, versionForm.PatchNotes || '');
+      const result = await improveProductPatchNotes(token, id, versionForm.PatchNotes || '', {
+        splitByChangeType,
+      });
       const improved = String(result.patchNotes || '').trim();
       if (!improved) throw new Error(t('lit.aiReturnedEmptyPatchNotes'));
       setVersionForm((prev) => ({ ...prev, PatchNotes: improved }));
@@ -399,6 +403,21 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     } finally {
       setIsImprovingPatchNotes(false);
     }
+  };
+
+  const handleImproveWithAi = () => {
+    if (!token || !isAiAvailable || isImprovingPatchNotes) return;
+
+    setConfirmModal({
+      title: 'Improve with AI',
+      message:
+        'Split the patch notes into Added, Changed, and Fixed sections (inside each application)? Choose Yes to group by change type, or No to improve without that structure.',
+      confirmLabel: 'Yes, split',
+      cancelLabel: 'No, keep flat',
+      confirmVariant: 'primary',
+      onConfirm: () => void runImproveWithAi(true),
+      onCancel: () => void runImproveWithAi(false),
+    });
   };
 
   const fillPatchNotesFromSelectedAppVersions = () => {
@@ -1181,9 +1200,18 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
         title={confirmModal?.title || ''}
         message={confirmModal?.message || ''}
         confirmLabel={confirmModal?.confirmLabel}
+        cancelLabel={confirmModal?.cancelLabel}
         confirmVariant={confirmModal?.confirmVariant || 'danger'}
-        onConfirm={confirmModal?.onConfirm}
-        onClose={() => setConfirmModal(null)}
+        onConfirm={() => {
+          const confirm = confirmModal?.onConfirm;
+          setConfirmModal(null);
+          confirm?.();
+        }}
+        onClose={() => {
+          const cancel = confirmModal?.onCancel;
+          setConfirmModal(null);
+          cancel?.();
+        }}
       />
 
       <ScrollToTopButton />

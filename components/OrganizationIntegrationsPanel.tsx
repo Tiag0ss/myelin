@@ -694,8 +694,20 @@ export default function OrganizationIntegrationsPanel({
               <input
                 value={vcsForm.url}
                 onChange={(e) => setVcsForm((f) => ({ ...f, url: e.target.value }))}
+                placeholder={
+                  tab === 'github'
+                    ? 'https://api.github.com'
+                    : tab === 'gitea'
+                      ? 'https://gitea.example.com'
+                      : 'https://api.bitbucket.org'
+                }
                 className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
+              {tab === 'github' && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Use the API base URL (https://api.github.com), not https://github.com.
+                </p>
+              )}
             </label>
             {tab === 'bitbucket' && (
               <label className="block text-sm">

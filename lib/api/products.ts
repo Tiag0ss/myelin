@@ -259,12 +259,16 @@ export async function rebuildProductVersionPatchNotes(
 export async function improveProductPatchNotes(
   token: string,
   productId: number | string,
-  patchNotes: string
+  patchNotes: string,
+  options?: { splitByChangeType?: boolean }
 ) {
   const res = await fetch(`${getApiUrl()}/api/products/${productId}/versions/improve-patch-notes`, {
     method: 'POST',
     headers: authHeaders(token, true),
-    body: JSON.stringify({ patchNotes }),
+    body: JSON.stringify({
+      patchNotes,
+      splitByChangeType: Boolean(options?.splitByChangeType),
+    }),
   });
   return parseJson<{ success: boolean; patchNotes?: string; message?: string }>(res);
 }

@@ -83,6 +83,45 @@ function hostnameOf(urlOrHost: string): string | null {
 }
 
 /**
+ * Normalize a stored GitHub integration URL to a REST API base.
+ * Users often paste https://github.com (web) which 404s on /repos/.../commits.
+ * Cloud → https://api.github.com; GHE → {origin}/api/v3 when missing.
+ */
+export function normalizeGitHubApiBaseUrl(raw: string): string {
+  let input = String(raw || '').trim();
+  if (!input) return '';
+  if (!/^https?:\/\//i.test(input)) {
+    input = `https://${input}`;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return String(raw).trim().replace(/\/$/, '');
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (host === 'github.com' || host === 'www.github.com' || host === 'api.github.com') {
+    return 'https://api.github.com';
+  }
+
+  let path = url.pathname.replace(/\/+$/, '');
+  if (!path || path === '/') {
+    path = '/api/v3';
+  } else if (!/\/api\/v3$/i.test(path)) {
+    path = `${path}/api/v3`;
+  }
+
+  return `${url.protocol}//${url.host}${path}`.replace(/\/$/, '');
+}
+
+function isAllBranchesToken(branch: string | null | undefined): boolean {
+  const raw = String(branch || '').trim().toLowerCase();
+  return !raw || raw === '*' || raw === 'all' || raw === '__all__';
+}
+
+/**
  * Parse a free-form repository URL into provider + owner/repo (or workspace/repo).
  */
 export function parseRepositoryUrl(rawUrl: string): ParsedRepo | null {
@@ -287,7 +326,7 @@ export async function resolveGitCredentials(
       ghRows[0];
     return {
       provider: 'github',
-      apiBaseUrl: String(row.GitHubUrl).replace(/\/$/, ''),
+      apiBaseUrl: normalizeGitHubApiBaseUrl(String(row.GitHubUrl)),
       token: decrypt(row.GitHubToken),
     };
   }
@@ -366,7 +405,7 @@ export async function resolveProjectRepoCredentials(
         parsed,
         creds: {
           provider: 'github',
-          apiBaseUrl: String(rows[0].GitHubUrl).replace(/\/$/, ''),
+          apiBaseUrl: normalizeGitHubApiBaseUrl(String(rows[0].GitHubUrl)),
           token: decrypt(rows[0].GitHubToken),
         },
       };
@@ -724,10 +763,20 @@ async function fetchRemoteCommitsPage(
   const response = await fetch(fetchUrl, { method: 'GET', headers });
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error('listRemoteCommits failed:', creds.provider, response.status, errorText);
+    logger.error('listRemoteCommits failed:', {
+      provider: creds.provider,
+      status: response.status,
+      url: fetchUrl,
+      body: errorText.slice(0, 500),
+    });
     if (creds.provider === 'bitbucket' && creds.bitbucketKind === 'cloud' && response.status === 401) {
       throw new Error(
         'Bitbucket Cloud authentication failed (401). Use your Atlassian account email and an API token with repository read scopes — app passwords are discontinued.'
+      );
+    }
+    if (creds.provider === 'github' && response.status === 404) {
+      throw new Error(
+        `Failed to list commits (404). Check the repository exists and the GitHub integration URL is the API base (https://api.github.com), not https://github.com. Requested: ${fetchUrl}`
       );
     }
     throw new Error(`Failed to list commits (${response.status}): ${response.statusText}`);
@@ -916,7 +965,8 @@ export async function listRemoteCommits(
   const page = Math.max(1, options.page ?? 1);
   const perPage = Math.min(100, Math.max(1, options.perPage ?? 30));
 
-  if (options.allBranches) {
+  const wantAllBranches = Boolean(options.allBranches) || isAllBranchesToken(options.branch);
+  if (wantAllBranches) {
     return listRemoteCommitsAllBranches(parsed, creds, { page, perPage });
   }
 
