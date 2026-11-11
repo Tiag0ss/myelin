@@ -511,6 +511,40 @@ async function migrateActiveTimersForMixedTimerTypes(): Promise<void> {
 }
 
 /**
+ * Migration: allow TimeEntries without a task (org/project-scoped unassigned entries).
+ * JSON schema already marks TaskId nullable; buildAllTables only adds missing columns,
+ * so existing DBs need an idempotent nullability alter.
+ */
+async function migrateTimeEntriesTaskIdNullable(): Promise<void> {
+  try {
+    const taskIdNullable = await isColumnNullable('TimeEntries', 'TaskId');
+    if (taskIdNullable === true) {
+      return;
+    }
+    if (taskIdNullable === null) {
+      logger.info('  ℹ TimeEntries.TaskId not found yet, migration will run on next startup');
+      return;
+    }
+
+    logger.info('⚡ Running migration: Allow NULL TimeEntries.TaskId for unassigned entries...');
+    await pool.execute(
+      isMssql
+        ? `ALTER TABLE TimeEntries ALTER COLUMN TaskId int NULL`
+        : `ALTER TABLE TimeEntries MODIFY COLUMN TaskId int NULL`
+    );
+    logger.info('  ✓ TimeEntries.TaskId now allows NULL');
+    logger.info('✓ Migration complete: unassigned time entries supported');
+  } catch (error: any) {
+    if (isMissingTableError(error)) {
+      logger.info('  ℹ Tables not yet created, migration will run on next startup');
+      return;
+    }
+    logger.error('✗ Migration failed (TimeEntries.TaskId nullable):', error);
+    throw error;
+  }
+}
+
+/**
  * Run all pending database migrations.
  * Called during server startup after buildAllTables.
  * All migrations must be idempotent (safe to run multiple times).
@@ -524,6 +558,7 @@ export async function runMigrations(): Promise<void> {
     await migrateDescriptionToMediumtext();
     await migrateTaskAllocationHeadersBackfill();
     await migrateActiveTimersForMixedTimerTypes();
+    await migrateTimeEntriesTaskIdNullable();
     await migrateVcsIntegrationsToMultiInstance();
     logger.info('=== Migrations Complete ===');
   } catch (error) {

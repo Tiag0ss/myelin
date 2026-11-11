@@ -119,6 +119,7 @@ interface CustomerTaskRow {
   StatusName: string | null;
   StatusColor: string | null;
   IsClosed: number;
+  IsCancelled: number;
   PriorityName: string | null;
   PriorityColor: string | null;
   TaskTypeName: string | null;
@@ -250,6 +251,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
   const [taskFilterAssignee, setTaskFilterAssignee] = useState<number | undefined>(undefined);
   const [taskFilterType, setTaskFilterType] = useState<number | undefined>(undefined);
   const [taskHideClosed, setTaskHideClosed] = useState(true);
+  const [taskHideCancelled, setTaskHideCancelled] = useState(true);
   const [taskUnplannedOnly, setTaskUnplannedOnly] = useState(false);
   const [taskModalState, setTaskModalState] = useState<{
     show: boolean;
@@ -576,6 +578,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
       if (taskFilterAssignee != null && Number(task.AssignedTo) !== taskFilterAssignee) return false;
       if (taskFilterType != null && Number(task.TaskType) !== taskFilterType) return false;
       if (taskHideClosed && Number(task.IsClosed || 0) === 1) return false;
+      if (taskHideCancelled && Number(task.IsCancelled || 0) === 1) return false;
       if (taskUnplannedOnly && Number(task.UnscheduledWork || 0) !== 1) return false;
       if (q) {
         const assignee =
@@ -597,9 +600,11 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
     taskFilterAssignee,
     taskFilterType,
     taskHideClosed,
+    taskHideCancelled,
     taskUnplannedOnly,
   ]);
 
+  // Badge / Clear: count deviations from defaults (hide closed + cancelled on by default).
   const taskFiltersActiveCount = [
     taskFilterText.trim() ? 1 : 0,
     taskFilterProjectId != null ? 1 : 0,
@@ -607,7 +612,8 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
     taskFilterPriority != null ? 1 : 0,
     taskFilterAssignee != null ? 1 : 0,
     taskFilterType != null ? 1 : 0,
-    taskHideClosed ? 1 : 0,
+    taskHideClosed ? 0 : 1,
+    taskHideCancelled ? 0 : 1,
     taskUnplannedOnly ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
@@ -619,6 +625,7 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
     setTaskFilterAssignee(undefined);
     setTaskFilterType(undefined);
     setTaskHideClosed(true);
+    setTaskHideCancelled(true);
     setTaskUnplannedOnly(false);
   };
 
@@ -1755,6 +1762,15 @@ function CustomerDetailPageContent({ params }: { params: Promise<{ id: string }>
                     className="rounded"
                   />
                   {t('lit.hideClosedTasks')}
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={taskHideCancelled}
+                    onChange={(e) => setTaskHideCancelled(e.target.checked)}
+                    className="rounded"
+                  />
+                  {t('lit.hideCancelledTasks')}
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <input

@@ -1377,9 +1377,14 @@ export default function AppChromeTools({
 
   // Save Time Entry
   const handleSaveTimeEntry = async (timeEntryForm: TimeEntryFormValues) => {
-    if (!timeEntryForm.taskId || !timeEntryForm.workDate) {
+    const isUnassigned = Boolean(timeEntryForm.unassigned);
+    if ((!isUnassigned && !timeEntryForm.taskId) || !timeEntryForm.workDate) {
       setErrorWithToast('Task and Work Date are required');
       throw new Error(t('lit.taskAndWorkDateAreRequired'));
+    }
+    if (isUnassigned && !timeEntryForm.organizationId) {
+      setErrorWithToast(t('lit.organizationIsRequired'));
+      throw new Error(t('lit.organizationIsRequired'));
     }
     
     let hours = timeEntryForm.hours ? parseFloat(timeEntryForm.hours) : 0;
@@ -1405,7 +1410,11 @@ export default function AppChromeTools({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          taskId: parseInt(timeEntryForm.taskId),
+          taskId: isUnassigned ? null : parseInt(timeEntryForm.taskId, 10),
+          organizationId: isUnassigned ? parseInt(timeEntryForm.organizationId, 10) : undefined,
+          projectId: isUnassigned && timeEntryForm.projectId
+            ? parseInt(timeEntryForm.projectId, 10)
+            : undefined,
           workDate: timeEntryForm.workDate,
           startTime: timeEntryForm.startTime || null,
           endTime: timeEntryForm.endTime || null,

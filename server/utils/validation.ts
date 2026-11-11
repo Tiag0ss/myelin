@@ -157,15 +157,39 @@ export const createDevSupportRequestSchema = z.object({
 });
 
 // Time Entry schemas
-export const createTimeEntrySchema = z.object({
-  taskId: z.coerce.number().int().positive(),
-  workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-  hours: z.coerce.number().min(0.01).max(24),
-  description: z.string().max(500).optional().nullable(),
-  startTime: z.string().max(20).optional().nullable(),
-  endTime: z.string().max(20).optional().nullable(),
-  customFields: optionalCustomFields,
-}).passthrough();
+export const createTimeEntrySchema = z
+  .object({
+    taskId: z.coerce.number().int().positive().optional().nullable(),
+    organizationId: z.coerce.number().int().positive().optional().nullable(),
+    projectId: z.coerce.number().int().positive().optional().nullable(),
+    workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+    hours: z.coerce.number().min(0.01).max(24),
+    description: z.string().max(500).optional().nullable(),
+    startTime: z.string().max(20).optional().nullable(),
+    endTime: z.string().max(20).optional().nullable(),
+    customFields: optionalCustomFields,
+  })
+  .passthrough()
+  .superRefine((value, ctx) => {
+    const hasTask = value.taskId != null && Number(value.taskId) > 0;
+    const description = String(value.description || '').replace(/<[^>]*>/g, ' ').trim();
+    if (!hasTask) {
+      if (!value.organizationId || Number(value.organizationId) <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Organization is required for unassigned time entries',
+          path: ['organizationId'],
+        });
+      }
+      if (!description) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Description is required for unassigned time entries',
+          path: ['description'],
+        });
+      }
+    }
+  });
 
 export const createExpenseSchema = z.object({
   organizationId: z.coerce.number().int().positive(),

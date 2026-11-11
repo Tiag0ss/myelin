@@ -24,6 +24,7 @@ import {
   uploadErrorMessage,
   writePublicUpload,
 } from '../../utils/publicUploads';
+import { parsePatchBlocks } from '../../utils/releaseNotesHtml';
 import {
   chatCompletion,
   getLlmConfig,
@@ -156,76 +157,6 @@ async function ensureApplicationCustomerAssociation(
   );
 }
 
-type PatchBlock =
-  | { type: 'text'; text: string; bullet: boolean }
-  | { type: 'image'; src: string; alt?: string };
-
-function decodeHtmlEntities(input: string): string {
-  return input
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function htmlToTextLines(html: string): Array<{ text: string; bullet: boolean }> {
-  const normalized = html
-    .replace(/<br\s*\/?\s*>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '\n• ')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<p[^>]*>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<strong[^>]*>/gi, '')
-    .replace(/<\/strong>/gi, '')
-    .replace(/<em[^>]*>/gi, '')
-    .replace(/<\/em>/gi, '')
-    .replace(/<[^>]*>/g, '');
-
-  return decodeHtmlEntities(normalized)
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => ({
-      text: line,
-      bullet: line.startsWith('•'),
-    }));
-}
-
-function parsePatchBlocks(html: string): PatchBlock[] {
-  const blocks: PatchBlock[] = [];
-  const imgRegex = /<img\b[^>]*>/gi;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = imgRegex.exec(html)) !== null) {
-    const before = html.slice(lastIndex, match.index);
-    const beforeLines = htmlToTextLines(before);
-    for (const line of beforeLines) {
-      blocks.push({ type: 'text', text: line.text, bullet: line.bullet });
-    }
-
-    const imgTag = match[0];
-    const srcMatch = imgTag.match(/src\s*=\s*["']([^"']+)["']/i);
-    const altMatch = imgTag.match(/alt\s*=\s*["']([^"']*)["']/i);
-    const src = srcMatch?.[1]?.trim();
-    if (src) {
-      blocks.push({ type: 'image', src, alt: altMatch?.[1] || '' });
-    }
-
-    lastIndex = imgRegex.lastIndex;
-  }
-
-  const after = html.slice(lastIndex);
-  const afterLines = htmlToTextLines(after);
-  for (const line of afterLines) {
-    blocks.push({ type: 'text', text: line.text, bullet: line.bullet });
-  }
-
-  return blocks;
-}
-
 async function loadPatchImageBuffer(src: string): Promise<Buffer | null> {
   try {
     if (!src) return null;
@@ -294,13 +225,15 @@ async function renderPatchNotesToPdf(
         continue;
       }
 
-      const textX = block.bullet ? options.x + 8 : options.x;
-      const textWidth = block.bullet ? options.width - 8 : options.width;
-
+      const display = block.bullet ? `• ${line}` : line;
       doc.fillColor(options.darkGray)
         .fontSize(options.textSize)
         .font('Helvetica')
-        .text(line, textX, doc.y, { width: textWidth, lineGap: 2 });
+        .text(display, options.x, doc.y, {
+          width: options.width,
+          lineGap: 2,
+          paragraphGap: block.bullet ? 2 : 0,
+        });
       continue;
     }
 
@@ -1897,6 +1830,167 @@ router.get('/:id/versions/:versionId/pdf', authenticateToken, async (req: AuthRe
     doc.end();
   } catch (error) {
     logger.error('Error generating version PDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    }
+  }
+});
+
+// POST /api/applications/release-notes/pdf - combined release notes PDF for multiple applications
+router.post('/release-notes/pdf', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const startDate = String(req.body?.startDate || '').trim();
+    const endDate = String(req.body?.endDate || '').trim();
+    const rawIds = Array.isArray(req.body?.applicationIds) ? req.body.applicationIds : [];
+    const applicationIds = [...new Set(
+      rawIds
+        .map((value: unknown) => Number(value))
+        .filter((value: number) => Number.isInteger(value) && value > 0)
+    )] as number[];
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'startDate and endDate are required' });
+    }
+    if (applicationIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one application' });
+    }
+
+    const placeholders = applicationIds.map(() => '?').join(', ');
+    const [apps] = await pool.execute<RowDataPacket[]>(
+      `SELECT a.Id, a.Name
+       FROM Applications a
+       INNER JOIN OrganizationMembers om ON a.OrganizationId = om.OrganizationId AND om.UserId = ?
+       WHERE a.Id IN (${placeholders}) AND a.IsActive = 1
+       ORDER BY a.Name ASC`,
+      [userId, ...applicationIds]
+    );
+
+    if (apps.length === 0) {
+      return res.status(404).json({ success: false, message: 'No accessible applications found' });
+    }
+    if (apps.length !== applicationIds.length) {
+      return res.status(403).json({ success: false, message: 'One or more applications are not accessible' });
+    }
+
+    const accessibleIds = apps.map((app) => Number(app.Id));
+    const versionPlaceholders = accessibleIds.map(() => '?').join(', ');
+    const [versions] = await pool.execute<RowDataPacket[]>(
+      `SELECT av.ApplicationId, av.VersionNumber, av.VersionName, av.ReleaseDate, av.PatchNotes, av.Status, a.Name as ApplicationName
+       FROM ApplicationVersions av
+       INNER JOIN Applications a ON a.Id = av.ApplicationId
+       WHERE av.ApplicationId IN (${versionPlaceholders})
+         AND av.Status = 'Released'
+         AND av.ReleaseDate >= ?
+         AND av.ReleaseDate <= ?
+       ORDER BY a.Name ASC, av.ReleaseDate DESC, av.Id DESC`,
+      [...accessibleIds, startDate, endDate]
+    );
+
+    if (versions.length === 0) {
+      return res.status(404).json({ success: false, message: 'No released versions found in the specified date range' });
+    }
+
+    const versionsByApp = new Map<number, RowDataPacket[]>();
+    for (const version of versions) {
+      const appId = Number(version.ApplicationId);
+      const list = versionsByApp.get(appId) || [];
+      list.push(version);
+      versionsByApp.set(appId, list);
+    }
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const filename = `multi-app-release-notes-${startDate}-to-${endDate}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+
+    const blue = '#3b82f6';
+    const darkGray = '#1f2937';
+    const midGray = '#6b7280';
+    const green = '#10b981';
+
+    doc.rect(0, 0, 595, 80).fill(blue);
+    doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('Release Notes', 40, 20);
+    doc.fontSize(12).font('Helvetica').text(`${apps.length} application(s)`, 40, 45);
+    doc.fontSize(10).text(
+      `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`,
+      40,
+      62
+    );
+    doc.fillColor(darkGray);
+    doc.y = 95;
+    doc.fontSize(9).fillColor(midGray).text(`${versions.length} version(s) released in this period`, 40);
+    doc.moveDown(1);
+
+    for (let appIndex = 0; appIndex < apps.length; appIndex++) {
+      const app = apps[appIndex];
+      const appVersions = versionsByApp.get(Number(app.Id)) || [];
+      if (appVersions.length === 0) continue;
+
+      if (doc.y > 680) {
+        doc.addPage();
+      }
+
+      doc.fillColor(blue).fontSize(16).font('Helvetica-Bold').text(String(app.Name), 40);
+      doc.moveDown(0.4);
+      doc.fontSize(9).fillColor(midGray).font('Helvetica').text(`${appVersions.length} version(s)`, 40);
+      doc.moveDown(0.8);
+
+      for (let i = 0; i < appVersions.length; i++) {
+        const version = appVersions[i];
+        if (doc.y > 700) {
+          doc.addPage();
+        }
+
+        const boxY = doc.y;
+        doc.rect(40, boxY, 515, 30).fill('#f3f4f6');
+        doc.fillColor(darkGray).fontSize(14).font('Helvetica-Bold')
+          .text(`Version ${version.VersionNumber}`, 45, boxY + 6);
+        if (version.VersionName) {
+          doc.fontSize(10).font('Helvetica').text(String(version.VersionName), 45, boxY + 22);
+        }
+        doc.y = boxY + 35;
+
+        doc.fontSize(9).fillColor(midGray);
+        if (version.ReleaseDate) {
+          doc.text(`Released: ${new Date(version.ReleaseDate).toLocaleDateString()}`, 45);
+          doc.moveDown(0.3);
+        }
+        doc.fillColor(green).text(`Status: ${version.Status}`, 45);
+        doc.moveDown(0.8);
+
+        await renderPatchNotesToPdf(doc, version.PatchNotes, {
+          textSize: 9,
+          x: 45,
+          width: 505,
+          darkGray,
+          midGray,
+        });
+
+        doc.moveDown(1.2);
+        if (i < appVersions.length - 1) {
+          doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke('#e5e7eb');
+          doc.moveDown(0.8);
+        }
+      }
+
+      if (appIndex < apps.length - 1) {
+        doc.moveDown(1);
+        doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke(blue);
+        doc.moveDown(1);
+      }
+    }
+
+    doc.fontSize(7).fillColor(midGray).text(
+      `Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}`,
+      40,
+      780,
+      { align: 'center', width: 515 }
+    );
+    doc.end();
+  } catch (error) {
+    logger.error('Error generating multi-application release notes PDF:', error);
     if (!res.headersSent) {
       res.status(500).json({ success: false, message: 'Failed to generate PDF' });
     }

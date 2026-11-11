@@ -256,7 +256,7 @@ export default function TaskDetailModal({
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [modalMessage, setModalMessage] = useState<
     | { type: 'alert'; title: string; message: string }
-    | { type: 'confirm'; title: string; message: string; onConfirm: () => void }
+    | { type: 'confirm'; title: string; message: string; onConfirm: () => void; confirmLabel?: string; confirmVariant?: 'danger' | 'primary' }
     | { type: 'delete-choice'; title: string; message: string; onDeleteOnly: () => void; onDeleteWithSubtasks: () => void }
     | null
   >(null);
@@ -746,6 +746,35 @@ export default function TaskDetailModal({
       return;
     }
 
+    const wasUnscheduled = Number(task?.UnscheduledWork || 0) === 1;
+    const becomingUnscheduled = Boolean(formData.unscheduledWork) && !wasUnscheduled;
+    const hasPlanningToClear = Boolean(
+      formData.plannedStartDate ||
+      formData.plannedEndDate ||
+      task?.PlannedStartDate ||
+      task?.PlannedEndDate ||
+      Number((task as { PlannedHours?: number } | null)?.PlannedHours || 0) > 0
+    );
+
+    if (becomingUnscheduled && hasPlanningToClear) {
+      setModalMessage({
+        type: 'confirm',
+        title: t('lit.clearPlanningConfirmTitle'),
+        message: t('lit.clearPlanningConfirmMessage'),
+        confirmLabel: t('lit.clearPlanningAndSave'),
+        confirmVariant: 'primary',
+        onConfirm: () => {
+          setModalMessage(null);
+          void performTaskSave();
+        },
+      });
+      return;
+    }
+
+    await performTaskSave();
+  };
+
+  const performTaskSave = async () => {
     setIsLoading(true);
 
     try {
@@ -4356,9 +4385,13 @@ export default function TaskDetailModal({
                     }
                   }}
                   disabled={isDeleting}
-                  className="h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white transition-colors"
+                  className={`h-10 px-4 rounded-lg text-sm font-medium inline-flex items-center justify-center text-white transition-colors ${
+                    modalMessage.confirmVariant === 'primary'
+                      ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
+                      : 'bg-red-600 hover:bg-red-700 disabled:bg-red-400'
+                  }`}
                 >
-                  {isDeleting ? 'Deleting...' : t('common.delete')}
+                  {isDeleting ? 'Deleting...' : (modalMessage.confirmLabel || t('common.delete'))}
                 </button>
               </div>
             </div>

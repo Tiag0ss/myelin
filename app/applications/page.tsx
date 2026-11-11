@@ -184,6 +184,18 @@ export default function ApplicationsPage() {
   } | null>(null);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showReleaseNotesModal, setShowReleaseNotesModal] = useState(false);
+  const [releaseNotesAppIds, setReleaseNotesAppIds] = useState<number[]>([]);
+  const [releaseNotesRange, setReleaseNotesRange] = useState(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 1);
+    return {
+      startDate: start.toISOString().slice(0, 10),
+      endDate: end.toISOString().slice(0, 10),
+    };
+  });
+  const [isExportingReleaseNotes, setIsExportingReleaseNotes] = useState(false);
   const { showToast } = useToast();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -255,6 +267,11 @@ export default function ApplicationsPage() {
         return;
       }
 
+      if (showReleaseNotesModal) {
+        setShowReleaseNotesModal(false);
+        return;
+      }
+
       if (showImportModal) {
         setShowImportModal(false);
         return;
@@ -267,7 +284,7 @@ export default function ApplicationsPage() {
 
     window.addEventListener('keydown', handleEscClose);
     return () => window.removeEventListener('keydown', handleEscClose);
-  }, [confirmModal, showImportModal, showModal]);
+  }, [confirmModal, showImportModal, showReleaseNotesModal, showModal]);
 
   // Get unique organizations
   const orgNames = Array.from(new Set(applications.map(a => a.OrganizationName).filter(Boolean))).sort();
@@ -914,6 +931,18 @@ export default function ApplicationsPage() {
             >
               {t('lit.exportCsv')}
             </button>
+            {applications.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReleaseNotesAppIds(filteredAndSortedApplications.map((app) => app.Id));
+                  setShowReleaseNotesModal(true);
+                }}
+                className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium inline-flex items-center"
+              >
+                {t('lit.exportReleaseNotesPdf')}
+              </button>
+            )}
             {permissions?.canCreateApplications && (
               <button
                 onClick={openCreateModal}
@@ -1351,6 +1380,157 @@ export default function ApplicationsPage() {
           </div>
         )}
       </div>
+
+      {showReleaseNotesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.exportReleaseNotesPdf')}</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowReleaseNotesModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  aria-label={t('common.close')}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {t('lit.exportReleaseNotesPdfHint')}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.startDate')}</label>
+                  <input
+                    type="date"
+                    value={releaseNotesRange.startDate}
+                    onChange={(e) => setReleaseNotesRange((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('lit.endDate')}</label>
+                  <input
+                    type="date"
+                    value={releaseNotesRange.endDate}
+                    onChange={(e) => setReleaseNotesRange((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('lit.applications')}</label>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => setReleaseNotesAppIds(filteredAndSortedApplications.map((app) => app.Id))}
+                  >
+                    {t('lit.selectAll')}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    onClick={() => setReleaseNotesAppIds([])}
+                  >
+                    {t('lit.clearSelection')}
+                  </button>
+                </div>
+              </div>
+              <div className="max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 mb-4">
+                {filteredAndSortedApplications.map((app) => {
+                  const checked = releaseNotesAppIds.includes(app.Id);
+                  return (
+                    <label
+                      key={app.Id}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setReleaseNotesAppIds((prev) =>
+                            e.target.checked ? [...prev, app.Id] : prev.filter((id) => id !== app.Id)
+                          );
+                        }}
+                        className="rounded"
+                      />
+                      <span className="truncate" title={app.Name}>{app.Name}</span>
+                      <span className="ml-auto text-xs text-gray-400 truncate">{app.OrganizationName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReleaseNotesModal(false)}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={isExportingReleaseNotes || releaseNotesAppIds.length === 0}
+                  onClick={async () => {
+                    if (!token || releaseNotesAppIds.length === 0) return;
+                    setIsExportingReleaseNotes(true);
+                    try {
+                      const response = await fetch(`${getApiUrl()}/api/applications/release-notes/pdf`, {
+                        method: 'POST',
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          applicationIds: releaseNotesAppIds,
+                          startDate: releaseNotesRange.startDate,
+                          endDate: releaseNotesRange.endDate,
+                        }),
+                      });
+                      if (!response.ok) {
+                        let message = t('lit.failedToDownloadPdf');
+                        try {
+                          const data = await response.json();
+                          if (data?.message) message = data.message;
+                        } catch {
+                          /* ignore */
+                        }
+                        throw new Error(message);
+                      }
+                      const blob = await response.blob();
+                      const blobUrl = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = blobUrl;
+                      link.download = `multi-app-release-notes-${releaseNotesRange.startDate}-to-${releaseNotesRange.endDate}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(blobUrl);
+                      setShowReleaseNotesModal(false);
+                    } catch (error) {
+                      showToast({
+                        type: 'error',
+                        message: error instanceof Error ? error.message : t('lit.failedToDownloadPdf'),
+                      });
+                    } finally {
+                      setIsExportingReleaseNotes(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors"
+                >
+                  {isExportingReleaseNotes ? t('lit.generating') : t('lit.downloadPdf')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">

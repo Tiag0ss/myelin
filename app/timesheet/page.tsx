@@ -30,14 +30,16 @@ interface TaskWithProject extends Task {
 
 interface TimeEntry {
   Id: number;
-  TaskId: number;
+  TaskId: number | null;
   UserId: number;
   WorkDate: string;
   Hours: number;
   Description: string;
-  TaskName: string;
-  ProjectName: string;
-  CustomerName?: string;
+  TaskName?: string | null;
+  ProjectName?: string | null;
+  CustomerName?: string | null;
+  OrganizationName?: string | null;
+  OrganizationId?: number | null;
   IsHobby?: boolean;
   CreatedAt: string;
   StartTime?: string;
@@ -265,13 +267,21 @@ export default function TimesheetPage() {
     return String(dateValue).split('T')[0];
   };
 
-  const stripHtml = (value?: string): string => {
+  const stripHtml = (value?: string | null): string => {
     if (!value) return '';
     return value
       .replace(/<br\s*\/?>/gi, ' ')
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  };
+
+  const timeEntryTaskLabel = (entry: Pick<TimeEntry, 'TaskName' | 'Description'>): string => {
+    const taskName = String(entry.TaskName || '').trim();
+    if (taskName && taskName.toLowerCase() !== 'null') return taskName;
+    const description = stripHtml(entry.Description);
+    if (description) return description;
+    return t('lit.unassignedTimeEntryNoTask');
   };
 
   const toDateString = (date: Date): string => date.toISOString().split('T')[0];
@@ -529,8 +539,18 @@ export default function TimesheetPage() {
       hours = calculateHoursFromTimes(entry.startTime, entry.endTime);
     }
 
-    if (!entry.taskId || !entry.workDate || hours <= 0) {
+    const isUnassigned = Boolean(entry.unassigned);
+    if ((!isUnassigned && !entry.taskId) || !entry.workDate || hours <= 0) {
       const validationMessage = 'Please fill all required fields (hours must be greater than 0)';
+      setMessage(validationMessage);
+      setTimeout(() => setMessage(''), 3000);
+      if (entryValues) {
+        throw new Error(validationMessage);
+      }
+      return;
+    }
+    if (isUnassigned && !entry.organizationId) {
+      const validationMessage = t('lit.organizationIsRequired');
       setMessage(validationMessage);
       setTimeout(() => setMessage(''), 3000);
       if (entryValues) {
@@ -549,13 +569,17 @@ export default function TimesheetPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            taskId: parseInt(entry.taskId),
+            taskId: isUnassigned ? null : parseInt(entry.taskId, 10),
+            organizationId: isUnassigned ? parseInt(entry.organizationId, 10) : undefined,
+            projectId: isUnassigned && entry.projectId
+              ? parseInt(entry.projectId, 10)
+              : undefined,
             workDate: entry.workDate,
             startTime: entry.startTime || null,
             endTime: entry.endTime || null,
             hours: hours,
             description: entry.description,
-            customFields: entryValues?.customFields || {},
+            customFields: entry.customFields || {},
           })
         }
       );
@@ -595,7 +619,7 @@ export default function TimesheetPage() {
     setEditingEntry(entry.Id);
     setShowEditModal(true);
     setEditEntry({
-      taskId: entry.TaskId.toString(),
+      taskId: entry.TaskId != null ? String(entry.TaskId) : '',
       workDate: (entry.WorkDate as any) instanceof Date 
         ? (entry.WorkDate as any).toISOString().split('T')[0]
         : String(entry.WorkDate).split('T')[0],
@@ -1066,10 +1090,10 @@ export default function TimesheetPage() {
                                       {new Date(normalizeDateString(entry.WorkDate) + 'T12:00:00').toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      {entry.ProjectName}
+                                      {entry.ProjectName || '-'}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                      {entry.TaskName}
+                                      {timeEntryTaskLabel(entry)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                       {entry.StartTime || '-'}
@@ -1610,16 +1634,19 @@ export default function TimesheetPage() {
                                 const entryDate = normalizeDateString(entry.WorkDate);
                                 if (historyDateFrom && entryDate < historyDateFrom) return false;
                                 if (historyDateTo && entryDate > historyDateTo) return false;
-                                if (historyProjectFilter && entry.ProjectName !== historyProjectFilter) return false;
-                                if (historyTaskFilter && entry.TaskId !== parseInt(historyTaskFilter)) return false;
+                                if (historyProjectFilter && (entry.ProjectName || '-') !== historyProjectFilter) return false;
+                                if (historyTaskFilter) {
+                                  const entryTaskKey = entry.TaskId != null ? String(entry.TaskId) : 'unassigned';
+                                  if (entryTaskKey !== historyTaskFilter) return false;
+                                }
                                 return true;
                               });
                               const header = [t('lit.date2'), t('lit.customer2'), t('lit.project3'), t('lit.task'), 'Start', 'End', t('lit.hours2'), t('lit.description2'), t('lit.status')];
                               const rows = filtered.map(e => [
                                 normalizeDateString(e.WorkDate),
-                                e.CustomerName || '',
+                                e.OrganizationName || e.CustomerName || '',
                                 e.ProjectName || '',
-                                e.TaskName || '',
+                                timeEntryTaskLabel(e),
                                 e.StartTime || '',
                                 e.EndTime || '',
                                 parseFloat(e.Hours as any).toFixed(2),
@@ -1647,17 +1674,20 @@ export default function TimesheetPage() {
                                 const entryDate = normalizeDateString(entry.WorkDate);
                                 if (historyDateFrom && entryDate < historyDateFrom) return false;
                                 if (historyDateTo && entryDate > historyDateTo) return false;
-                                if (historyProjectFilter && entry.ProjectName !== historyProjectFilter) return false;
-                                if (historyTaskFilter && entry.TaskId !== parseInt(historyTaskFilter)) return false;
+                                if (historyProjectFilter && (entry.ProjectName || '-') !== historyProjectFilter) return false;
+                                if (historyTaskFilter) {
+                                  const entryTaskKey = entry.TaskId != null ? String(entry.TaskId) : 'unassigned';
+                                  if (entryTaskKey !== historyTaskFilter) return false;
+                                }
                                 return true;
                               });
 
                               const header = [t('lit.date2'), t('lit.customer2'), t('lit.project3'), t('lit.task'), 'Start', 'End', t('lit.hours2'), t('lit.description2'), t('lit.status')];
                               const rows = filtered.map(e => [
                                 normalizeDateString(e.WorkDate),
-                                e.CustomerName || '',
+                                e.OrganizationName || e.CustomerName || '',
                                 e.ProjectName || '',
-                                e.TaskName || '',
+                                timeEntryTaskLabel(e),
                                 e.StartTime || '',
                                 e.EndTime || '',
                                 parseFloat(e.Hours as any).toFixed(2),
@@ -1728,7 +1758,7 @@ export default function TimesheetPage() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
                             <option value="">{t('lit.allProjects2')}</option>
-                            {Array.from(new Set(timeEntries.map(e => e.ProjectName))).sort().map(projectName => (
+                            {Array.from(new Set(timeEntries.map(e => e.ProjectName || '-'))).sort().map(projectName => (
                               <option key={projectName} value={projectName}>{projectName}</option>
                             ))}
                           </select>
@@ -1745,12 +1775,15 @@ export default function TimesheetPage() {
                             <option value="">{t('lit.allTasks')}</option>
                             {Array.from(new Set(
                               timeEntries
-                                .filter(e => !historyProjectFilter || e.ProjectName === historyProjectFilter)
-                                .map(e => JSON.stringify({ id: e.TaskId, name: e.TaskName }))
+                                .filter(e => !historyProjectFilter || (e.ProjectName || '-') === historyProjectFilter)
+                                .map(e => JSON.stringify({
+                                  id: e.TaskId != null ? e.TaskId : 'unassigned',
+                                  name: timeEntryTaskLabel(e),
+                                }))
                             )).map(json => {
                               const task = JSON.parse(json);
                               return (
-                                <option key={task.id} value={task.id}>{task.name}</option>
+                                <option key={task.id} value={String(task.id)}>{task.name}</option>
                               );
                             })}
                           </select>
@@ -1778,8 +1811,11 @@ export default function TimesheetPage() {
                         const entryDate = normalizeDateString(entry.WorkDate);
                         if (historyDateFrom && entryDate < historyDateFrom) return false;
                         if (historyDateTo && entryDate > historyDateTo) return false;
-                        if (historyProjectFilter && entry.ProjectName !== historyProjectFilter) return false;
-                        if (historyTaskFilter && entry.TaskId !== parseInt(historyTaskFilter)) return false;
+                        if (historyProjectFilter && (entry.ProjectName || '-') !== historyProjectFilter) return false;
+                        if (historyTaskFilter) {
+                          const entryTaskKey = entry.TaskId != null ? String(entry.TaskId) : 'unassigned';
+                          if (entryTaskKey !== historyTaskFilter) return false;
+                        }
                         return true;
                       });
 
@@ -1861,14 +1897,14 @@ export default function TimesheetPage() {
 
                                     filteredEntries.forEach(entry => {
                                       const date = normalizeDateString(entry.WorkDate);
-                                      const key = `${date}|${entry.CustomerName || 'none'}|${entry.ProjectName}|${entry.TaskId}`;
+                                      const key = `${date}|${entry.OrganizationName || entry.CustomerName || 'none'}|${entry.ProjectName || 'none'}|${entry.TaskId ?? 'unassigned'}`;
                                       
                                       if (!grouped[key]) {
                                         grouped[key] = {
                                           date,
-                                          customerName: entry.CustomerName || '-',
-                                          projectName: entry.ProjectName,
-                                          taskName: entry.TaskName,
+                                          customerName: entry.OrganizationName || entry.CustomerName || '-',
+                                          projectName: entry.ProjectName || '-',
+                                          taskName: timeEntryTaskLabel(entry),
                                           totalHours: 0,
                                           descriptions: []
                                         };
@@ -1964,13 +2000,13 @@ export default function TimesheetPage() {
                                         {new Date(normalizeDateString(entry.WorkDate) + 'T12:00:00').toLocaleDateString()}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                        {entry.CustomerName || '-'}
+                                        {entry.OrganizationName || entry.CustomerName || '-'}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                        {entry.ProjectName}
+                                        {entry.ProjectName || '-'}
                                       </td>
                                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                        {entry.TaskName}
+                                        {timeEntryTaskLabel(entry)}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {entry.StartTime || '-'}

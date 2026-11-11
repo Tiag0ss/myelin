@@ -216,7 +216,19 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
     const projectOnly = projectIdScopeSql(projectId, { alias: 'p', column: 'Id' });
 
     const projectFilter = `${projectOnly.sql}${custProject.sql}`;
-    const baseParams: Array<number | string> = [organizationId, ...projectOnly.params, ...custProject.params];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const soonDate = new Date();
+    soonDate.setDate(soonDate.getDate() + 7);
+    const soonDateStr = soonDate.toISOString().slice(0, 10);
+    // Health metric params (overdue/milestones/sprints) must match projects list RAG inputs.
+    // Only the health SELECT uses these dates — do not reuse them on other project-scoped queries.
+    const healthDateParams: Array<string> = [todayStr, todayStr, todayStr, soonDateStr, todayStr, todayStr];
+    const scopeParams: Array<number | string> = [
+      organizationId,
+      ...projectOnly.params,
+      ...custProject.params,
+    ];
+    const healthProjectParams: Array<number | string> = [...healthDateParams, ...scopeParams];
 
     const [projects] = await pool.execute<RowDataPacket[]>(
       `SELECT p.Id, p.ProjectName, p.Budget, p.EndDate,
@@ -225,35 +237,38 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
               (SELECT COALESCE(SUM(te.Hours), 0) FROM TimeEntries te
                 INNER JOIN Tasks t ON te.TaskId = t.Id
                 WHERE t.ProjectId = p.Id
-                  AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)
               ) AS HoursSpent,
               (SELECT COALESCE(SUM(te.Hours * COALESCE(t.HourlyRate, p.HourlyRate, u.HourlyRate, 0)), 0)
                 FROM TimeEntries te
                 INNER JOIN Tasks t ON te.TaskId = t.Id
                 LEFT JOIN Users u ON te.UserId = u.Id
                 WHERE t.ProjectId = p.Id
-                  AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)
               ) AS CostSpent,
               COALESCE(p.BudgetType, 'monetary') AS BudgetType,
               (SELECT COUNT(*) FROM Tasks t
                 LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
                 WHERE t.ProjectId = p.Id AND COALESCE(tsv.IsClosed,0)=0 AND COALESCE(tsv.IsCancelled,0)=0
-                  AND t.DueDate IS NOT NULL AND t.DueDate < CURRENT_TIMESTAMP) AS HealthOverdueTasks,
+                  AND t.DueDate IS NOT NULL AND t.DueDate < ?) AS HealthOverdueTasks,
               (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id) AS HealthTotalTasks,
               (SELECT COUNT(*) FROM Tasks t
-                WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL
-                  AND NOT EXISTS (SELECT 1 FROM TaskAssignees ta WHERE ta.TaskId = t.Id)) AS HealthUnassignedTasks,
-              0 AS OverdueMilestones,
-              0 AS UpcomingMilestonesSoon,
-              NULL AS NextOpenMilestoneDueDate,
+                WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL) AS HealthUnassignedTasks,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate < ?) AS OverdueMilestones,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ? AND pm.DueDate <= ?) AS UpcomingMilestonesSoon,
+              (SELECT MIN(pm.DueDate) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ?) AS NextOpenMilestoneDueDate,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintCount,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active'
-                AND s.EndDate IS NOT NULL AND s.EndDate < CURRENT_TIMESTAMP) AS OverdueActiveSprints,
+                AND s.EndDate IS NOT NULL AND s.EndDate < ?) AS OverdueActiveSprints,
               (SELECT MIN(s.EndDate) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintEndDate
        FROM Projects p
        LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
        WHERE p.OrganizationId = ?${projectFilter}`,
-      baseParams
+      healthProjectParams
     );
 
     const withHealth = projects.map((project) => {
@@ -369,7 +384,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
        FROM Sprints s
        INNER JOIN Projects p ON s.ProjectId = p.Id
        WHERE p.OrganizationId = ? AND s.Status = 'active'${projectFilter}`,
-      baseParams
+      scopeParams
     );
 
     const [completedInPeriod] = await pool.execute<RowDataPacket[]>(
@@ -525,7 +540,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
        FROM Projects p
        LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
        WHERE p.OrganizationId = ?${projectFilter}`,
-      baseParams
+      scopeParams
     );
 
     const [taskDetailStats] = await pool.execute<RowDataPacket[]>(
@@ -733,7 +748,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
        FROM Projects p
        WHERE p.OrganizationId = ?${projectFilter}
          AND p.CreatedAt < ?`,
-      [...baseParams, `${from} 00:00:00`]
+      [...scopeParams, `${from} 00:00:00`]
     );
     const [projectDailyRows] = await pool.execute<RowDataPacket[]>(
       `SELECT DATE(p.CreatedAt) AS Day, COUNT(*) AS Cnt
@@ -741,7 +756,7 @@ router.get('/organization-overview', authenticateToken, async (req: AuthRequest,
        WHERE p.OrganizationId = ?${projectFilter}
          AND p.CreatedAt >= ? AND p.CreatedAt < ?
        GROUP BY DATE(p.CreatedAt)`,
-      [...baseParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
+      [...scopeParams, `${from} 00:00:00`, `${to} 23:59:59.999`]
     );
 
     const taskDailyMap = new Map<string, number>();
@@ -1296,40 +1311,48 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
     const custTask = customerTaskScopeSql(customerId);
 
     // keep a thin dedicated payload for the Portfolio tab.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const soonDate = new Date();
+    soonDate.setDate(soonDate.getDate() + 7);
+    const soonDateStr = soonDate.toISOString().slice(0, 10);
     const [projects] = await pool.execute<RowDataPacket[]>(
       `SELECT p.Id, p.ProjectName, p.CustomerId, p.Budget, p.BudgetType, p.EndDate, p.StartDate,
               COALESCE(ps.IsClosed, 0) AS StatusIsClosed,
               COALESCE(ps.IsCancelled, 0) AS StatusIsCancelled,
               ps.StatusName,
               (SELECT COALESCE(SUM(te.Hours), 0) FROM TimeEntries te
-                INNER JOIN Tasks t ON te.TaskId = t.Id WHERE t.ProjectId = p.Id
-                AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS LoggedHours,
+                INNER JOIN Tasks t ON te.TaskId = t.Id WHERE t.ProjectId = p.Id) AS LoggedHours,
               (SELECT COALESCE(SUM(te.Hours * COALESCE(t.HourlyRate, p.HourlyRate, u.HourlyRate, 0)), 0)
                 FROM TimeEntries te
                 INNER JOIN Tasks t ON te.TaskId = t.Id
                 LEFT JOIN Users u ON te.UserId = u.Id
-                WHERE t.ProjectId = p.Id
-                  AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS CostSpent,
+                WHERE t.ProjectId = p.Id) AS CostSpent,
               (SELECT COALESCE(SUM(CASE WHEN COALESCE(t.HourlyRate, p.HourlyRate, u.HourlyRate, 0) = 0 THEN te.Hours ELSE 0 END), 0)
                 FROM TimeEntries te
                 INNER JOIN Tasks t ON te.TaskId = t.Id
                 LEFT JOIN Users u ON te.UserId = u.Id
-                WHERE t.ProjectId = p.Id
-                  AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS HoursWithoutRate,
+                WHERE t.ProjectId = p.Id) AS HoursWithoutRate,
               (SELECT COALESCE(SUM(COALESCE(t.EstimatedHours, 0)), 0) FROM Tasks t WHERE t.ProjectId = p.Id
                 AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS EstimatedHours,
               (SELECT COUNT(*) FROM Tasks t LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
                 WHERE t.ProjectId = p.Id AND COALESCE(tsv.IsClosed,0)=0 AND COALESCE(tsv.IsCancelled,0)=0
-                AND t.DueDate IS NOT NULL AND t.DueDate < CURRENT_TIMESTAMP) AS HealthOverdueTasks,
+                AND t.DueDate IS NOT NULL AND t.DueDate < ?) AS HealthOverdueTasks,
               (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id) AS HealthTotalTasks,
-              (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL
-                AND NOT EXISTS (SELECT 1 FROM TaskAssignees ta WHERE ta.TaskId = t.Id)) AS HealthUnassignedTasks,
+              (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL) AS HealthUnassignedTasks,
               (SELECT COUNT(*) FROM Tasks t LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
                 WHERE t.ProjectId = p.Id AND COALESCE(tsv.IsClosed,0)=0 AND COALESCE(tsv.IsCancelled,0)=0) AS OpenTasks,
-              0 AS OverdueMilestones, 0 AS UpcomingMilestonesSoon, NULL AS NextOpenMilestoneDueDate,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate < ?) AS OverdueMilestones,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ? AND pm.DueDate <= ?) AS UpcomingMilestonesSoon,
+              (SELECT MIN(pm.DueDate) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ?) AS NextOpenMilestoneDueDate,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintCount,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active'
-                AND s.EndDate IS NOT NULL AND s.EndDate < CURRENT_TIMESTAMP) AS OverdueActiveSprints,
+                AND s.EndDate IS NOT NULL AND s.EndDate < ?) AS OverdueActiveSprints,
               (SELECT MIN(s.EndDate) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintEndDate,
               (SELECT COUNT(*) FROM Tasks t LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
                 WHERE t.ProjectId = p.Id AND (COALESCE(tsv.IsClosed,0)=1 OR COALESCE(tsv.IsCancelled,0)=1)) AS CompletedTasks
@@ -1337,7 +1360,7 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
        LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
        WHERE p.OrganizationId = ?${custProject.sql}
        ORDER BY p.ProjectName`,
-      [organizationId, ...custProject.params]
+      [todayStr, todayStr, todayStr, soonDateStr, todayStr, todayStr, organizationId, ...custProject.params]
     );
 
     const [leafTasks] = await pool.execute<RowDataPacket[]>(
@@ -1442,8 +1465,9 @@ router.get('/portfolio', authenticateToken, async (req: AuthRequest, res: Respon
         overdueTasks: project.HealthOverdueTasks,
         totalTasks: project.HealthTotalTasks,
         unassignedTasks: project.HealthUnassignedTasks,
-        overdueMilestones: 0,
-        upcomingMilestonesSoon: 0,
+        overdueMilestones: project.OverdueMilestones,
+        upcomingMilestonesSoon: project.UpcomingMilestonesSoon,
+        nextOpenMilestoneDueDate: project.NextOpenMilestoneDueDate,
         activeSprintCount: project.ActiveSprintCount,
         overdueActiveSprints: project.OverdueActiveSprints,
         activeSprintEndDate: project.ActiveSprintEndDate,

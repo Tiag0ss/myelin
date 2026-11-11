@@ -161,11 +161,15 @@ router.get('/my-entries', authenticateToken, async (req: AuthRequest, res: Respo
       ENTITY_TTL_SECONDS,
       async () => {
         let query = `
-          SELECT te.*, t.TaskName, t.JiraIssueKey, t.ProjectId, p.ProjectName, p.IsHobby, c.Name as CustomerName
+          SELECT te.*, t.TaskName, t.JiraIssueKey,
+                 COALESCE(t.ProjectId, te.ProjectId) as ProjectId,
+                 p.ProjectName, COALESCE(p.IsHobby, 0) as IsHobby, c.Name as CustomerName,
+                 o.Name as OrganizationName
           FROM TimeEntries te
-          INNER JOIN Tasks t ON te.TaskId = t.Id
-          INNER JOIN Projects p ON t.ProjectId = p.Id
+          LEFT JOIN Tasks t ON te.TaskId = t.Id
+          LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
           LEFT JOIN Customers c ON p.CustomerId = c.Id
+          LEFT JOIN Organizations o ON o.Id = COALESCE(p.OrganizationId, te.OrganizationId)
           WHERE te.UserId = ?
         `;
         const params: Array<string | number> = [userId as number];
@@ -213,10 +217,10 @@ router.get('/my-entries-and-calls', authenticateToken, async (req: AuthRequest, 
         COALESCE(c.ExternalName, c.Name) AS CustomerName,
         o.Name              AS OrganizationName
       FROM TimeEntries te
-      INNER JOIN Tasks t ON te.TaskId = t.Id
-      INNER JOIN Projects p ON t.ProjectId = p.Id
+      LEFT JOIN Tasks t ON te.TaskId = t.Id
+      LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
       LEFT JOIN Customers c ON p.CustomerId = c.Id
-      LEFT JOIN Organizations o ON p.OrganizationId = o.Id
+      LEFT JOIN Organizations o ON o.Id = COALESCE(p.OrganizationId, te.OrganizationId)
       WHERE te.UserId = ?
     `;
     if (startDate && endDate) {
@@ -376,51 +380,104 @@ router.get('/task/:taskId', authenticateToken, async (req: AuthRequest, res: Res
 router.post('/', authenticateToken, validateRequest(createTimeEntrySchema), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { taskId, workDate, hours, description, startTime, endTime, customFields } = req.body;
+    const { taskId, organizationId, projectId, workDate, hours, description, startTime, endTime, customFields } = req.body;
+    const normalizedTaskId = taskId != null && Number(taskId) > 0 ? Number(taskId) : null;
+    const descriptionText = String(description || '').replace(/<[^>]*>/g, ' ').trim();
 
-    if (!taskId || !workDate || !hours) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'TaskId, workDate, and hours are required' 
+    if (!workDate || !hours) {
+      return res.status(400).json({
+        success: false,
+        message: 'WorkDate and hours are required',
       });
     }
 
-    // Verify user has access to the task, also get IsHobby
-    const [tasks] = await pool.execute<RowDataPacket[]>(
-      `SELECT t.Id, t.ProjectId, p.OrganizationId, p.IsHobby
-       FROM Tasks t
-       INNER JOIN Projects p ON t.ProjectId = p.Id
-       INNER JOIN OrganizationMembers om ON p.OrganizationId = om.OrganizationId
-       WHERE t.Id = ? AND om.UserId = ?`,
-      [taskId, userId]
-    );
+    let orgId: number | null = null;
+    let resolvedProjectId: number | null = null;
+    let isHobby = false;
 
-    if (tasks.length === 0) {
-      return res.status(404).json({ success: false, message: 'Task not found or access denied' });
+    if (normalizedTaskId) {
+      const [tasks] = await pool.execute<RowDataPacket[]>(
+        `SELECT t.Id, t.ProjectId, p.OrganizationId, p.IsHobby
+         FROM Tasks t
+         INNER JOIN Projects p ON t.ProjectId = p.Id
+         INNER JOIN OrganizationMembers om ON p.OrganizationId = om.OrganizationId
+         WHERE t.Id = ? AND om.UserId = ?`,
+        [normalizedTaskId, userId]
+      );
+
+      if (tasks.length === 0) {
+        return res.status(404).json({ success: false, message: 'Task not found or access denied' });
+      }
+
+      orgId = Number(tasks[0].OrganizationId);
+      resolvedProjectId = Number(tasks[0].ProjectId);
+      isHobby = !!tasks[0].IsHobby;
+    } else {
+      const orgIdNum = Number(organizationId || 0);
+      if (!orgIdNum || !descriptionText) {
+        return res.status(400).json({
+          success: false,
+          message: 'Organization and description are required for unassigned time entries',
+        });
+      }
+
+      const [membership] = await pool.execute<RowDataPacket[]>(
+        `SELECT OrganizationId FROM OrganizationMembers WHERE OrganizationId = ? AND UserId = ?`,
+        [orgIdNum, userId]
+      );
+      if (membership.length === 0) {
+        return res.status(403).json({ success: false, message: 'Not a member of this organization' });
+      }
+
+      orgId = orgIdNum;
+      if (projectId != null && Number(projectId) > 0) {
+        const [projects] = await pool.execute<RowDataPacket[]>(
+          `SELECT p.Id, p.IsHobby
+           FROM Projects p
+           INNER JOIN OrganizationMembers om ON p.OrganizationId = om.OrganizationId
+           WHERE p.Id = ? AND p.OrganizationId = ? AND om.UserId = ?`,
+          [Number(projectId), orgIdNum, userId]
+        );
+        if (projects.length === 0) {
+          return res.status(404).json({ success: false, message: 'Project not found or access denied' });
+        }
+        resolvedProjectId = Number(projects[0].Id);
+        isHobby = !!projects[0].IsHobby;
+      }
     }
 
-    // Hobby entries are automatically approved
-    const isHobby = !!tasks[0].IsHobby;
     const autoApproveTimeEntries = await isAutoApproveTimeEntriesEnabled();
     const approvalStatus = (isHobby || autoApproveTimeEntries) ? 'approved' : 'pending';
     const customFieldData = await prepareCustomFieldData('TimeEntries', customFields);
 
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO TimeEntries (TaskId, UserId, WorkDate, Hours, Description, StartTime, EndTime, ApprovalStatus${customFieldData.insertColumns.length > 0 ? `, ${customFieldData.insertColumns.join(', ')}` : ''})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?${customFieldData.insertPlaceholders.length > 0 ? `, ${customFieldData.insertPlaceholders.join(', ')}` : ''})`,
-      [taskId, userId, workDate, hours, description || null, startTime || null, endTime || null, approvalStatus, ...customFieldData.insertValues]
+      `INSERT INTO TimeEntries (TaskId, OrganizationId, ProjectId, UserId, WorkDate, Hours, Description, StartTime, EndTime, ApprovalStatus${customFieldData.insertColumns.length > 0 ? `, ${customFieldData.insertColumns.join(', ')}` : ''})
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${customFieldData.insertPlaceholders.length > 0 ? `, ${customFieldData.insertPlaceholders.join(', ')}` : ''})`,
+      [
+        normalizedTaskId,
+        orgId,
+        resolvedProjectId,
+        userId,
+        workDate,
+        hours,
+        description || null,
+        startTime || null,
+        endTime || null,
+        approvalStatus,
+        ...customFieldData.insertValues,
+      ]
     );
 
     await invalidateByEntity('timeEntry', {
-      orgId: tasks[0].OrganizationId,
-      projectId: tasks[0].ProjectId,
-      taskId,
+      orgId: orgId ?? undefined,
+      projectId: resolvedProjectId ?? undefined,
+      taskId: normalizedTaskId ?? undefined,
     });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Time entry created successfully',
-      entryId: result.insertId
+      entryId: result.insertId,
     });
   } catch (error) {
     logger.error('Error creating time entry:', error);
@@ -472,12 +529,15 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     const { id } = req.params;
     const { workDate, hours, description, startTime, endTime, customFields } = req.body;
 
-    // Verify user owns this entry, get IsHobby from project
+    // Verify user owns this entry (task-linked or unassigned with org/project columns)
     const [entries] = await pool.execute<RowDataPacket[]>(
-      `SELECT te.Id, te.ApprovalStatus, te.TaskId, p.IsHobby, p.OrganizationId, t.ProjectId
+      `SELECT te.Id, te.ApprovalStatus, te.TaskId,
+              COALESCE(p.IsHobby, 0) as IsHobby,
+              COALESCE(p.OrganizationId, te.OrganizationId) as OrganizationId,
+              COALESCE(t.ProjectId, te.ProjectId) as ProjectId
        FROM TimeEntries te
-       INNER JOIN Tasks t ON te.TaskId = t.Id
-       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Tasks t ON te.TaskId = t.Id
+       LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
        WHERE te.Id = ? AND te.UserId = ?`,
       [id, userId]
     );
@@ -568,12 +628,15 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    // Verify user owns this entry, get IsHobby from project
+    // Verify user owns this entry (task-linked or unassigned with org/project columns)
     const [entries] = await pool.execute<RowDataPacket[]>(
-      `SELECT te.Id, te.ApprovalStatus, te.TaskId, p.IsHobby, p.OrganizationId, t.ProjectId
+      `SELECT te.Id, te.ApprovalStatus, te.TaskId,
+              COALESCE(p.IsHobby, 0) as IsHobby,
+              COALESCE(p.OrganizationId, te.OrganizationId) as OrganizationId,
+              COALESCE(t.ProjectId, te.ProjectId) as ProjectId
        FROM TimeEntries te
-       INNER JOIN Tasks t ON te.TaskId = t.Id
-       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Tasks t ON te.TaskId = t.Id
+       LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
        WHERE te.Id = ? AND te.UserId = ?`,
       [id, userId]
     );
@@ -669,8 +732,8 @@ router.get('/summary-by-user', authenticateToken, async (req: AuthRequest, res: 
           SUM(CASE WHEN te.ApprovalStatus = 'rejected' THEN 1 ELSE 0 END) AS RejectedCount
        FROM TimeEntries te
        INNER JOIN Users u ON te.UserId = u.Id
-       INNER JOIN Tasks t ON te.TaskId = t.Id
-       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Tasks t ON te.TaskId = t.Id
+       LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
        LEFT JOIN Customers c ON p.CustomerId = c.Id
        ${whereClause}
        GROUP BY u.Id, u.Username, u.FirstName, u.LastName
@@ -686,8 +749,8 @@ router.get('/summary-by-user', authenticateToken, async (req: AuthRequest, res: 
           c.Name AS CustomerName
        FROM TimeEntries te
        INNER JOIN Users u ON te.UserId = u.Id
-       INNER JOIN Tasks t ON te.TaskId = t.Id
-       INNER JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Tasks t ON te.TaskId = t.Id
+       LEFT JOIN Projects p ON p.Id = COALESCE(t.ProjectId, te.ProjectId)
        LEFT JOIN Customers c ON p.CustomerId = c.Id
        ${whereClause}`,
       params

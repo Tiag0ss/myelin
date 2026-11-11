@@ -29,6 +29,7 @@ export interface TimeEntryFormValues {
   organizationId: string;
   projectId: string;
   taskId: string;
+  unassigned: boolean;
   workDate: string;
   startTime: string;
   endTime: string;
@@ -65,6 +66,7 @@ const buildDefaultFormData = (): TimeEntryFormValues => ({
   organizationId: '',
   projectId: '',
   taskId: '',
+  unassigned: false,
   workDate: new Date().toISOString().split('T')[0],
   startTime: '09:00',
   endTime: '17:00',
@@ -206,6 +208,9 @@ export default function TimeEntryFormModal({
     void (async () => {
       try {
         await loadOrganizations();
+        if (nextFormData.unassigned) {
+          return;
+        }
         if (nextFormData.organizationId) {
           await loadProjectsForOrg(nextFormData.organizationId);
         }
@@ -268,7 +273,17 @@ export default function TimeEntryFormModal({
   };
 
   const handleSubmit = async () => {
-    if (!formData.taskId) {
+    if (formData.unassigned) {
+      if (!formData.organizationId) {
+        setErrorWithToast(t('lit.organizationIsRequired'));
+        return;
+      }
+      const plainDescription = String(formData.description || '').replace(/<[^>]*>/g, ' ').trim();
+      if (!plainDescription) {
+        setErrorWithToast(t('lit.descriptionRequiredForUnassignedTime'));
+        return;
+      }
+    } else if (!formData.taskId) {
       setErrorWithToast(t('lit.taskIsRequired'));
       return;
     }
@@ -360,40 +375,61 @@ export default function TimeEntryFormModal({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('common.project')} <span className="text-red-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    value={formData.projectId}
-                    onChange={handleProjectChange}
-                    options={projects.map((project) => ({ value: String(project.Id), label: project.ProjectName }))}
-                    placeholder={t('lit.selectProject')}
-                    emptyText={t('lit.selectProject')}
-                    disabled={!formData.organizationId}
-                    autoSelectSingleOption
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.unassigned}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        unassigned: e.target.checked,
+                        taskId: e.target.checked ? '' : prev.taskId,
+                        projectId: e.target.checked ? '' : prev.projectId,
+                      }))
+                    }
+                    className="rounded"
                   />
-                </div>
+                  {t('lit.unassignedTimeEntryNoTask')}
+                </label>
+
+                {!formData.unassigned && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('common.project')} <span className="text-red-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      value={formData.projectId}
+                      onChange={handleProjectChange}
+                      options={projects.map((project) => ({ value: String(project.Id), label: project.ProjectName }))}
+                      placeholder={t('lit.selectProject')}
+                      emptyText={t('lit.selectProject')}
+                      disabled={!formData.organizationId}
+                      autoSelectSingleOption
+                    />
+                  </div>
+                )}
               </>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('common.task')} <span className="text-red-500">*</span>
-              </label>
-              <SearchableSelect
-                value={formData.taskId}
-                onChange={(value) => setFormData((prev) => ({ ...prev, taskId: value }))}
-                options={resolvedTaskOptions.map((taskOption) => ({
-                  value: String(taskOption.value),
-                  label: taskOption.label,
-                }))}
-                placeholder={t('lit.selectTask')}
-                emptyText={t('lit.selectTask')}
-                disabled={shouldUseOrgProjectFlow ? !formData.projectId : false}
-                autoSelectSingleOption
-              />
-            </div>
+            {!formData.unassigned && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('common.task')} <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  value={formData.taskId}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, taskId: value }))}
+                  options={resolvedTaskOptions.map((taskOption) => ({
+                    value: String(taskOption.value),
+                    label: taskOption.label,
+                  }))}
+                  placeholder={t('lit.selectTask')}
+                  emptyText={t('lit.selectTask')}
+                  disabled={shouldUseOrgProjectFlow ? !formData.projectId : false}
+                  autoSelectSingleOption
+                />
+              </div>
+            )}
 
             {showDateField && (
               <div>
@@ -478,6 +514,7 @@ export default function TimeEntryFormModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('common.description')}
+                {formData.unassigned && <span className="text-red-500"> *</span>}
               </label>
               <RichTextEditor
                 content={formData.description}

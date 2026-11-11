@@ -103,13 +103,28 @@ interface Task {
 
 interface TimeEntry {
   Id: number;
-  TaskId: number;
+  TaskId: number | null;
   WorkDate: string;
   Hours: number | string;
-  TaskName: string;
+  TaskName?: string | null;
   StartTime?: string;
   EndTime?: string;
   Description?: string;
+}
+
+function plainTextFromHtml(value?: string | null): string {
+  return String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function timeEntryDisplayName(entry: Pick<TimeEntry, 'TaskName' | 'Description'>, unassignedLabel: string): string {
+  const taskName = String(entry.TaskName || '').trim();
+  if (taskName && taskName.toLowerCase() !== 'null') return taskName;
+  const description = plainTextFromHtml(entry.Description);
+  if (description) return description;
+  return unassignedLabel;
 }
 
 interface CallRecord {
@@ -815,13 +830,13 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         
         calendarEvents.push({
           id: `entry-${entry.Id}`,
-          title: `⏱️ ${parseFloat(entry.Hours as any).toFixed(1)}h - ${entry.TaskName}`,
+          title: `⏱️ ${parseFloat(entry.Hours as any).toFixed(1)}h - ${timeEntryDisplayName(entry, t('lit.unassignedTimeEntryNoTask'))}`,
           start,
           end,
           resource: {
             type: 'timeEntry',
             entryId: entry.Id,
-            taskId: entry.TaskId,
+            taskId: entry.TaskId ?? undefined,
             hours: entry.Hours,
             description: entry.Description || '',
             workDate: typeof entry.WorkDate === 'string' ? entry.WorkDate.split('T')[0] : new Date(entry.WorkDate).toISOString().split('T')[0],
@@ -988,7 +1003,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         id: `${baseId}__${count}`,
       };
     });
-  }, [taskAllocations, timeEntries, callRecords, recurringAllocations, holidays, vacations, outOfOfficeEntries, devSupportEntries, outlookEvents, workStartTimes, lunchTime, lunchDuration]);
+  }, [taskAllocations, timeEntries, callRecords, recurringAllocations, holidays, vacations, outOfOfficeEntries, devSupportEntries, outlookEvents, workStartTimes, lunchTime, lunchDuration, t]);
 
   const calendarScrollToTime = useMemo(() => {
     const dayNames: Array<keyof typeof workStartTimes> = [
@@ -1064,8 +1079,8 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
       if (entry) {
         setEditingEntry({
           id: entry.Id,
-          taskId: entry.TaskId,
-          taskName: entry.TaskName,
+          taskId: entry.TaskId ?? 0,
+          taskName: timeEntryDisplayName(entry, t('lit.unassignedTimeEntryNoTask')),
           workDate: typeof entry.WorkDate === 'string' ? entry.WorkDate.split('T')[0] : new Date(entry.WorkDate).toISOString().split('T')[0],
           hours: String(parseFloat(entry.Hours as any)),
           startTime: entry.StartTime || format(event.start, 'HH:mm'),
@@ -1075,7 +1090,7 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
         setShowEditEntryModal(true);
       }
     }
-  }, [openTaskDetails, timeEntries, callRecords]);
+  }, [openTaskDetails, timeEntries, callRecords, t]);
 
   const handleNavigate = useCallback((date: Date) => {
     setCurrentDate(date);
@@ -1213,10 +1228,18 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
   };
 
   const handleCreateTimeEntry = async (entryData: TimeEntryFormValues) => {
-    if (!entryData.taskId || !selectedSlot) {
+    if (!selectedSlot) {
       throw new Error(t('lit.taskIsRequired2'));
     }
-    
+
+    const isUnassigned = Boolean(entryData.unassigned);
+    if (!isUnassigned && !entryData.taskId) {
+      throw new Error(t('lit.taskIsRequired2'));
+    }
+    if (isUnassigned && !entryData.organizationId) {
+      throw new Error(t('lit.organizationIsRequired'));
+    }
+
     setIsSaving(true);
     try {
       const response = await fetch(
@@ -1228,12 +1251,17 @@ export default function CalendarTab({ tasks: _tasks, timeEntries, callRecords, t
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            taskId: parseInt(entryData.taskId),
+            taskId: isUnassigned ? null : parseInt(entryData.taskId, 10),
+            organizationId: isUnassigned ? parseInt(entryData.organizationId, 10) : undefined,
+            projectId: isUnassigned && entryData.projectId
+              ? parseInt(entryData.projectId, 10)
+              : undefined,
             workDate: entryData.workDate || format(selectedSlot.start, 'yyyy-MM-dd'),
             hours: parseFloat(entryData.hours),
             description: entryData.description,
             startTime: entryData.startTime,
             endTime: entryData.endTime,
+            customFields: entryData.customFields || {},
           }),
         }
       );

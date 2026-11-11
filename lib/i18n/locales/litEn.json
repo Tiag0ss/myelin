@@ -497,7 +497,7 @@
   "clearFilters": "Clear filters",
   "clearFiltersAndShowAll": "Clear filters and show all",
   "clearOverlay": "Clear overlay",
-  "clearSelection": "Clear Selection",
+  "clearSelection": "Clear selection",
   "clearSnapshotOverlay": "Clear snapshot overlay",
   "click": "Click",
   "clickToEditMilestone": "Click to edit milestone",
@@ -3749,5 +3749,15 @@
   "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
   "extensionVsix": "Extension (.vsix)",
   "pluginPackageZip": "Plugin package (.zip)",
-  "tampermonkeyInstallHint": "Opens in the browser — Tampermonkey will offer to install"
+  "tampermonkeyInstallHint": "Opens in the browser — Tampermonkey will offer to install",
+  "hideCancelledTasks": "Hide cancelled tasks",
+  "clearPlanningConfirmTitle": "Clear planning?",
+  "clearPlanningConfirmMessage": "Marking this task as unscheduled work will clear its planned dates and allocations. Continue?",
+  "clearPlanningAndSave": "Clear planning and save",
+  "unassignedTimeEntryNoTask": "Unassigned (no task)",
+  "descriptionRequiredForUnassignedTime": "Description is required for unassigned time entries",
+  "exportReleaseNotesPdf": "Export release notes PDF",
+  "exportReleaseNotesPdfHint": "Select one or more applications and a date range to download a combined release notes PDF.",
+  "generating": "Generating…",
+  "downloadPdf": "Download PDF"
 }

@@ -2406,7 +2406,7 @@
   "organizationDefault": "Valeur par défaut de l’organisation",
   "organizationDeletedSuccessfully": "Organisation supprimée avec succès",
   "organizationFilters": "Filtres d'organisation",
-  "organizationIsRequired": "Une organisation est nécessaire",
+  "organizationIsRequired": "L’organisation est obligatoire",
   "organizationJiraConfiguration": "Configuration de l'organisation Jira",
   "organizationJiraIntegrationSettings": "Paramètres d'intégration Jira de l'organisation",
   "organizationMembers": "Membres de l'organisation",
@@ -3749,5 +3749,15 @@
   "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
   "extensionVsix": "Extension (.vsix)",
   "pluginPackageZip": "Package de plugin (.zip)",
-  "tampermonkeyInstallHint": "S’ouvre dans le navigateur — Tampermonkey proposera l’installation"
+  "tampermonkeyInstallHint": "S’ouvre dans le navigateur — Tampermonkey proposera l’installation",
+  "hideCancelledTasks": "Masquer les tâches annulées",
+  "clearPlanningConfirmTitle": "Effacer la planification ?",
+  "clearPlanningConfirmMessage": "Marquer cette tâche comme travail non planifié effacera ses dates planifiées et allocations. Continuer ?",
+  "clearPlanningAndSave": "Effacer la planification et enregistrer",
+  "unassignedTimeEntryNoTask": "Non assigné (sans tâche)",
+  "descriptionRequiredForUnassignedTime": "La description est obligatoire pour les saisies de temps non assignées",
+  "exportReleaseNotesPdf": "Exporter le PDF des notes de version",
+  "exportReleaseNotesPdfHint": "Sélectionnez une ou plusieurs applications et une plage de dates pour télécharger un PDF combiné de notes de version.",
+  "generating": "Génération…",
+  "downloadPdf": "Télécharger le PDF"
 }

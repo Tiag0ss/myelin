@@ -2406,7 +2406,7 @@
   "organizationDefault": "Valor predeterminado de la organización",
   "organizationDeletedSuccessfully": "Organización eliminada correctamente",
   "organizationFilters": "Filtros de organización",
-  "organizationIsRequired": "Se requiere organización",
+  "organizationIsRequired": "La organización es obligatoria",
   "organizationJiraConfiguration": "Configuración de organización Jira",
   "organizationJiraIntegrationSettings": "Configuración de integración de Jira de organización",
   "organizationMembers": "Miembros de la organización",
@@ -3749,5 +3749,15 @@
   "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
   "extensionVsix": "Extensión (.vsix)",
   "pluginPackageZip": "Paquete del plugin (.zip)",
-  "tampermonkeyInstallHint": "Se abre en el navegador — Tampermonkey ofrecerá instalarlo"
+  "tampermonkeyInstallHint": "Se abre en el navegador — Tampermonkey ofrecerá instalarlo",
+  "hideCancelledTasks": "Ocultar tareas canceladas",
+  "clearPlanningConfirmTitle": "¿Borrar la planificación?",
+  "clearPlanningConfirmMessage": "Marcar esta tarea como trabajo no programado borrará sus fechas planificadas y asignaciones. ¿Continuar?",
+  "clearPlanningAndSave": "Borrar planificación y guardar",
+  "unassignedTimeEntryNoTask": "Sin asignar (sin tarea)",
+  "descriptionRequiredForUnassignedTime": "La descripción es obligatoria para entradas de tiempo sin asignar",
+  "exportReleaseNotesPdf": "Exportar PDF de notas de versión",
+  "exportReleaseNotesPdfHint": "Seleccione una o más aplicaciones y un intervalo de fechas para descargar un PDF combinado de notas de versión.",
+  "generating": "Generando…",
+  "downloadPdf": "Descargar PDF"
 }

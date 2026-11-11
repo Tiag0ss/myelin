@@ -21,9 +21,12 @@ filterText,
   setFilterTagIds,
   hideClosed,
   setHideClosed,
+  hideCancelled,
+  setHideCancelled,
   unplannedOnly,
   setUnplannedOnly,
-  isFilterActive,
+  filterDeviationCount,
+  canClearFilters,
   resetTaskFilters,
   taskTypeOptions,
   statusOptions,
@@ -46,9 +49,12 @@ filterText,
   setFilterTagIds: (value: number[] | ((prev: number[]) => number[])) => void;
   hideClosed: boolean;
   setHideClosed: (value: boolean) => void;
+  hideCancelled: boolean;
+  setHideCancelled: (value: boolean) => void;
   unplannedOnly: boolean;
   setUnplannedOnly: (value: boolean) => void;
-  isFilterActive: boolean;
+  filterDeviationCount: number;
+  canClearFilters: boolean;
   resetTaskFilters: () => void;
   taskTypeOptions: Array<{ id: number; name: string }>;
   statusOptions: Array<{ id: number; name: string }>;
@@ -62,17 +68,8 @@ filterText,
   return (
           <CollapsibleFilterPanel
             title={t('lit.taskFilters')}
-            activeCount={[
-              filterText.trim() ? 1 : 0,
-              filterTaskType != null ? 1 : 0,
-              filterStatus != null ? 1 : 0,
-              filterPriority != null ? 1 : 0,
-              filterAssignee != null ? 1 : 0,
-              filterTagIds.length > 0 ? 1 : 0,
-              hideClosed ? 1 : 0,
-              unplannedOnly ? 1 : 0,
-            ].reduce((a, b) => a + b, 0)}
-            onClear={resetTaskFilters}
+            activeCount={filterDeviationCount}
+            onClear={canClearFilters ? resetTaskFilters : undefined}
             headerExtra={headerExtra}
             className="mb-0"
           >
@@ -146,6 +143,15 @@ filterText,
                 <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <input
                     type="checkbox"
+                    checked={hideCancelled}
+                    onChange={(e) => setHideCancelled(e.target.checked)}
+                    className="rounded"
+                  />
+                  {t('lit.hideCancelledTasks')}
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
                     checked={unplannedOnly}
                     onChange={(e) => setUnplannedOnly(e.target.checked)}
                     className="rounded"
@@ -153,7 +159,7 @@ filterText,
                   {t('lit.unplannedOnly')}
                 </label>
               </div>
-              {isFilterActive && (
+              {canClearFilters && (
                 <button
                   type="button"
                   onClick={() => {

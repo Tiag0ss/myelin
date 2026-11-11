@@ -24,16 +24,34 @@ interface TimeEntry {
   EndTime?: string;
   Hours: number;
   Description?: string;
-  TaskName?: string;
+  TaskName?: string | null;
   JiraIssueKey?: string;
-  ProjectName?: string;
-  CustomerName?: string;
-  ProjectId?: number;
-  OrganizationId?: number;
+  ProjectName?: string | null;
+  CustomerName?: string | null;
+  OrganizationName?: string | null;
+  ProjectId?: number | null;
+  OrganizationId?: number | null;
   CustomerId?: number;
   ApprovalStatus?: string;
-  TaskId?: number;
+  TaskId?: number | null;
 }
+
+const plainTextFromHtml = (value?: string | null): string =>
+  String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const timeEntryTaskLabel = (
+  entry: Pick<TimeEntry, 'TaskName' | 'Description'>,
+  unassignedLabel: string
+): string => {
+  const taskName = String(entry.TaskName || '').trim();
+  if (taskName && taskName.toLowerCase() !== 'null') return taskName;
+  const description = plainTextFromHtml(entry.Description);
+  if (description) return description;
+  return unassignedLabel;
+};
 
 interface CallRecord {
   Id: number;
@@ -427,23 +445,27 @@ export default function WorkSummaryPage() {
   const resumeAttentionUsers = useMemo(() => [...resumeSummary].filter(row => row.PendingCount > 0 || row.RejectedCount > 0).sort((a, b) => (b.PendingCount + b.RejectedCount) - (a.PendingCount + a.RejectedCount)), [resumeSummary]);
 
   const combinedEntries = useMemo<CombinedWorkEntry[]>(() => {
-    const timeEntriesMapped: CombinedWorkEntry[] = timeEntries.map((entry) => ({
-      key: `time-${entry.Id}`,
-      type: 'timeEntry',
-      date: normalizeDateString(entry.WorkDate),
-      startTime: entry.StartTime || '-',
-      endTime: entry.EndTime || '-',
-      hours: Number(entry.Hours || 0),
-      projectName: entry.ProjectName || '-',
-      taskName: entry.TaskName || '-',
-      jiraIssueKey: entry.JiraIssueKey || undefined,
-      organizationName: entry.CustomerName || '-',
-      title: entry.TaskName || t('lit.timeEntry'),
-      details: entry.Description || '-',
-      status: entry.ApprovalStatus || '-',
-      id: entry.Id,
-      taskId: entry.TaskId,
-    }));
+    const unassignedLabel = t('lit.unassignedTimeEntryNoTask');
+    const timeEntriesMapped: CombinedWorkEntry[] = timeEntries.map((entry) => {
+      const taskLabel = timeEntryTaskLabel(entry, unassignedLabel);
+      return {
+        key: `time-${entry.Id}`,
+        type: 'timeEntry' as const,
+        date: normalizeDateString(entry.WorkDate),
+        startTime: entry.StartTime || '-',
+        endTime: entry.EndTime || '-',
+        hours: Number(entry.Hours || 0),
+        projectName: entry.ProjectName || '-',
+        taskName: taskLabel,
+        jiraIssueKey: entry.JiraIssueKey || undefined,
+        organizationName: entry.OrganizationName || entry.CustomerName || '-',
+        title: taskLabel,
+        details: plainTextFromHtml(entry.Description) || '-',
+        status: entry.ApprovalStatus || '-',
+        id: entry.Id,
+        taskId: entry.TaskId ?? undefined,
+      };
+    });
 
     const callRecordsMapped: CombinedWorkEntry[] = callRecords.map((record) => ({
       key: `call-${record.Id}`,
@@ -479,7 +501,7 @@ export default function WorkSummaryPage() {
     }
 
     return all;
-  }, [timeEntries, callRecords, entryTypeFilter, projectFilter, taskFilter]);
+  }, [timeEntries, callRecords, entryTypeFilter, projectFilter, taskFilter, t]);
 
   const filteredEntriesByDay = useMemo(() => {
     if (!groupByDays) return [];
@@ -986,13 +1008,26 @@ export default function WorkSummaryPage() {
                 onSubmit={async (values) => {
                   if (!token || !editingEntry.Id) return;
                   try {
+                    let hours = values.hours ? parseFloat(values.hours) : 0;
+                    if (!hours && values.startTime && values.endTime) {
+                      const [startH, startM] = values.startTime.split(':').map(Number);
+                      const [endH, endM] = values.endTime.split(':').map(Number);
+                      hours = Math.max(0, (endH * 60 + endM - (startH * 60 + startM)) / 60);
+                    }
                     const response = await fetch(`${getApiUrl()}/api/time-entries/${editingEntry.Id}`, {
                       method: 'PUT',
                       headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                       },
-                      body: JSON.stringify(values),
+                      body: JSON.stringify({
+                        workDate: values.workDate,
+                        hours,
+                        description: values.description || null,
+                        startTime: values.startTime || null,
+                        endTime: values.endTime || null,
+                        customFields: values.customFields || {},
+                      }),
                     });
                     if (response.ok) {
                       await loadData();
@@ -1014,9 +1049,10 @@ export default function WorkSummaryPage() {
                   endTime: editingEntry.EndTime || '',
                   hours: String(editingEntry.Hours || ''),
                   description: editingEntry.Description || '',
-                  taskId: String(editingEntry.TaskId || ''),
-                  projectId: String(editingEntry.ProjectId || ''),
-                  organizationId: String(editingEntry.OrganizationId || editingEntry.CustomerId || ''),
+                  taskId: editingEntry.TaskId ? String(editingEntry.TaskId) : '',
+                  projectId: editingEntry.ProjectId ? String(editingEntry.ProjectId) : '',
+                  organizationId: editingEntry.OrganizationId ? String(editingEntry.OrganizationId) : '',
+                  unassigned: !editingEntry.TaskId,
                   customFields: {},
                 }}
                 useOrganizationProjectTaskFlow={true}

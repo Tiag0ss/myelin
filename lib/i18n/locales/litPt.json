@@ -2406,7 +2406,7 @@
   "organizationDefault": "Predefinição da organização",
   "organizationDeletedSuccessfully": "Organização eliminada com sucesso",
   "organizationFilters": "Filtros de organização",
-  "organizationIsRequired": "É necessária organização",
+  "organizationIsRequired": "A organização é obrigatória",
   "organizationJiraConfiguration": "Configuração do Jira da organização",
   "organizationJiraIntegrationSettings": "Definições de integração do Jira da organização",
   "organizationMembers": "Membros da Organização",
@@ -3745,5 +3745,15 @@
   "linuxAppImageDistros": "AppImage (CachyOS, Ubuntu, etc.)",
   "extensionVsix": "Extensão (.vsix)",
   "pluginPackageZip": "Pacote do plugin (.zip)",
-  "tampermonkeyInstallHint": "Abre no browser — o Tampermonkey oferece sugerir a instalação"
+  "tampermonkeyInstallHint": "Abre no browser — o Tampermonkey oferece sugerir a instalação",
+  "hideCancelledTasks": "Ocultar tarefas canceladas",
+  "clearPlanningConfirmTitle": "Limpar o planeamento?",
+  "clearPlanningConfirmMessage": "Marcar esta tarefa como trabalho não agendado irá limpar as datas planeadas e as alocações. Continuar?",
+  "clearPlanningAndSave": "Limpar planeamento e guardar",
+  "unassignedTimeEntryNoTask": "Não atribuído (sem tarefa)",
+  "descriptionRequiredForUnassignedTime": "A descrição é obrigatória para registos de tempo não atribuídos",
+  "exportReleaseNotesPdf": "Exportar PDF de release notes",
+  "exportReleaseNotesPdfHint": "Seleccione uma ou mais aplicações e um intervalo de datas para transferir um PDF combinado de release notes.",
+  "generating": "A gerar…",
+  "downloadPdf": "Transferir PDF"
 }

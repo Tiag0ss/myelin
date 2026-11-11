@@ -12,8 +12,20 @@
     {
       "FieldName": "TaskId",
       "DataType": "int",
-      "NotNullable": true,
-      "Comment": "Foreign key - reference to Tasks.Id"
+      "NotNullable": false,
+      "Comment": "Foreign key - reference to Tasks.Id (null for unassigned entries)"
+    },
+    {
+      "FieldName": "OrganizationId",
+      "DataType": "int",
+      "NotNullable": false,
+      "Comment": "Organization scope for unassigned entries (optional when TaskId is set)"
+    },
+    {
+      "FieldName": "ProjectId",
+      "DataType": "int",
+      "NotNullable": false,
+      "Comment": "Optional project for unassigned entries without a task"
     },
     {
       "FieldName": "UserId",

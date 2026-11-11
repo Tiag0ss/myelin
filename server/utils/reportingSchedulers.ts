@@ -15,22 +15,33 @@ async function captureHealthSnapshots(): Promise<void> {
   isSnapshotRunning = true;
   try {
     const snapshotDate = new Date().toISOString().slice(0, 10);
+    const todayStr = snapshotDate;
+    const soonDate = new Date();
+    soonDate.setDate(soonDate.getDate() + 7);
+    const soonDateStr = soonDate.toISOString().slice(0, 10);
     const [projects] = await pool.execute<RowDataPacket[]>(
       `SELECT p.Id, p.OrganizationId, p.ProjectName, p.Budget, p.EndDate,
               COALESCE(ps.IsClosed, 0) AS StatusIsClosed,
               COALESCE(ps.IsCancelled, 0) AS StatusIsCancelled,
               (SELECT COALESCE(SUM(te.Hours), 0) FROM TimeEntries te
-                INNER JOIN Tasks t ON te.TaskId = t.Id WHERE t.ProjectId = p.Id
-                AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS BudgetSpent,
+                INNER JOIN Tasks t ON te.TaskId = t.Id WHERE t.ProjectId = p.Id) AS BudgetSpent,
               (SELECT COUNT(*) FROM Tasks t LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
                 WHERE t.ProjectId = p.Id AND COALESCE(tsv.IsClosed,0)=0 AND COALESCE(tsv.IsCancelled,0)=0
-                AND t.DueDate IS NOT NULL AND t.DueDate < CURRENT_TIMESTAMP) AS HealthOverdueTasks,
+                AND t.DueDate IS NOT NULL AND t.DueDate < ?) AS HealthOverdueTasks,
               (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id) AS HealthTotalTasks,
-              (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL
-                AND NOT EXISTS (SELECT 1 FROM TaskAssignees ta WHERE ta.TaskId = t.Id)) AS HealthUnassignedTasks,
+              (SELECT COUNT(*) FROM Tasks t WHERE t.ProjectId = p.Id AND t.AssignedTo IS NULL) AS HealthUnassignedTasks,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate < ?) AS OverdueMilestones,
+              (SELECT COUNT(*) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ? AND pm.DueDate <= ?) AS UpcomingMilestonesSoon,
+              (SELECT MIN(pm.DueDate) FROM ProjectMilestones pm
+                WHERE pm.ProjectId = p.Id AND COALESCE(pm.IsCompleted, 0) = 0
+                  AND pm.DueDate IS NOT NULL AND pm.DueDate >= ?) AS NextOpenMilestoneDueDate,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintCount,
               (SELECT COUNT(*) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active'
-                AND s.EndDate IS NOT NULL AND s.EndDate < CURRENT_TIMESTAMP) AS OverdueActiveSprints,
+                AND s.EndDate IS NOT NULL AND s.EndDate < ?) AS OverdueActiveSprints,
               (SELECT MIN(s.EndDate) FROM Sprints s WHERE s.ProjectId = p.Id AND s.Status = 'active') AS ActiveSprintEndDate,
               (SELECT COALESCE(SUM(COALESCE(t.EstimatedHours,0)),0) FROM Tasks t WHERE t.ProjectId = p.Id
                 AND NOT EXISTS (SELECT 1 FROM Tasks c WHERE c.ParentTaskId = t.Id)) AS EstimatedHours,
@@ -38,7 +49,8 @@ async function captureHealthSnapshots(): Promise<void> {
                 INNER JOIN Tasks t ON te.TaskId = t.Id WHERE t.ProjectId = p.Id) AS LoggedHours
        FROM Projects p
        LEFT JOIN ProjectStatusValues ps ON p.Status = ps.Id
-       WHERE COALESCE(ps.IsClosed, 0) = 0 AND COALESCE(ps.IsCancelled, 0) = 0`
+       WHERE COALESCE(ps.IsClosed, 0) = 0 AND COALESCE(ps.IsCancelled, 0) = 0`,
+      [todayStr, todayStr, todayStr, soonDateStr, todayStr, todayStr]
     );
 
     for (const project of projects) {
@@ -52,8 +64,9 @@ async function captureHealthSnapshots(): Promise<void> {
         overdueTasks: project.HealthOverdueTasks,
         totalTasks: project.HealthTotalTasks,
         unassignedTasks: project.HealthUnassignedTasks,
-        overdueMilestones: 0,
-        upcomingMilestonesSoon: 0,
+        overdueMilestones: project.OverdueMilestones,
+        upcomingMilestonesSoon: project.UpcomingMilestonesSoon,
+        nextOpenMilestoneDueDate: project.NextOpenMilestoneDueDate,
         activeSprintCount: project.ActiveSprintCount,
         overdueActiveSprints: project.OverdueActiveSprints,
         activeSprintEndDate: project.ActiveSprintEndDate,

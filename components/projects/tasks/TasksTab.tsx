@@ -15,6 +15,7 @@ import { usePersistedFilters } from '@/hooks/usePersistedFilters';
 import { SaveTemplateModal, ApplyTemplateModal } from '@/components/projects/tasks/TaskTemplateModals';
 import {
   DEFAULT_PROJECT_TASK_FILTERS,
+  countProjectTaskFilterDeviations,
   mergeProjectTaskFilters,
 } from '@/components/projects/tasks/projectTaskFilters';
 import { TasksToolbar } from '@/components/projects/tasks/TasksToolbar';
@@ -106,6 +107,7 @@ export function TasksTab({
     filterAssignee,
     filterTaskType,
     hideClosed,
+    hideCancelled,
     unplannedOnly,
     sortField,
     sortDirection,
@@ -117,6 +119,7 @@ export function TasksTab({
   const setFilterAssignee = (value: number | undefined) => setTaskFilters({ filterAssignee: value });
   const setFilterTaskType = (value: number | undefined) => setTaskFilters({ filterTaskType: value });
   const setHideClosed = (value: boolean) => setTaskFilters({ hideClosed: value });
+  const setHideCancelled = (value: boolean) => setTaskFilters({ hideCancelled: value });
   const setUnplannedOnly = (value: boolean) => setTaskFilters({ unplannedOnly: value });
   const setSortField = (value: string) => setTaskFilters({ sortField: value });
   const setSortDirection = (value: 'asc' | 'desc' | ((prev: 'asc' | 'desc') => 'asc' | 'desc')) =>
@@ -1326,6 +1329,10 @@ export function TasksTab({
     });
   }, [tagFilterOptions]);
 
+  const filterDeviationCount = countProjectTaskFilterDeviations(taskFilters);
+  const canClearFilters = filterDeviationCount > 0;
+
+  // Constraints that change which tasks appear (includes defaults like hide closed).
   const isFilterActive = !!(
     filterText.trim() ||
     filterStatus ||
@@ -1334,6 +1341,7 @@ export function TasksTab({
     filterTaskType ||
     filterTagIds.length > 0 ||
     hideClosed ||
+    hideCancelled ||
     unplannedOnly
   );
 
@@ -1348,7 +1356,8 @@ export function TasksTab({
   );
 
   const taskMatchesFilters = (task: Task): boolean => {
-    if (hideClosed && (Number(task.StatusIsClosed || 0) === 1 || Number(task.StatusIsCancelled || 0) === 1)) return false;
+    if (hideClosed && Number(task.StatusIsClosed || 0) === 1) return false;
+    if (hideCancelled && Number(task.StatusIsCancelled || 0) === 1) return false;
     if (unplannedOnly && !isUnplannedLeafTask(task, tasks)) return false;
     const taskStatusId = task.Status !== null && task.Status !== undefined ? Number(task.Status) : undefined;
     const taskPriorityId = task.Priority !== null && task.Priority !== undefined ? Number(task.Priority) : undefined;
@@ -1537,7 +1546,7 @@ export function TasksTab({
     const ids: number[] = [];
     visibleParentTasks.forEach((task) => collectVisibleTaskIds(task, ids));
     return ids;
-  }, [visibleParentTasks, expandedTasks, shouldAutoExpandForFilters, isFilterActive, filterText, filterStatus, filterPriority, filterAssignee, filterTaskType, filterTagIds, hideClosed, unplannedOnly, sortField, sortDirection]);
+  }, [visibleParentTasks, expandedTasks, shouldAutoExpandForFilters, isFilterActive, filterText, filterStatus, filterPriority, filterAssignee, filterTaskType, filterTagIds, hideClosed, hideCancelled, unplannedOnly, sortField, sortDirection]);
 
   const allVisibleTasksSelected = visibleTaskIds.length > 0 && visibleTaskIds.every((taskId) => selectedTaskIds.has(taskId));
 
@@ -1999,9 +2008,12 @@ export function TasksTab({
               setFilterTagIds={setFilterTagIds}
               hideClosed={hideClosed}
               setHideClosed={setHideClosed}
+              hideCancelled={hideCancelled}
+              setHideCancelled={setHideCancelled}
               unplannedOnly={unplannedOnly}
               setUnplannedOnly={setUnplannedOnly}
-              isFilterActive={isFilterActive}
+              filterDeviationCount={filterDeviationCount}
+              canClearFilters={canClearFilters}
               resetTaskFilters={resetTaskFilters}
               taskTypeOptions={taskTypeOptions}
               statusOptions={statusOptions}

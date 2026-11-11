@@ -907,7 +907,7 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
         oldVal: prev === 1 ? 'Yes' : 'No',
         newVal: next === 1 ? 'Yes' : 'No',
       });
-      // Match UI API: unscheduled tasks cannot keep planned dates.
+      // Match UI API: unscheduled tasks cannot keep planned dates or allocations.
       if (next === 1) {
         updates.push('PlannedStartDate = ?');
         params.push(null);
@@ -921,6 +921,15 @@ export async function toolUpdateTask(ctx: McpToolContext, args: Record<string, u
   }
   params.push(taskId);
   await pool.execute(`UPDATE Tasks SET ${updates.join(', ')} WHERE Id = ?`, params);
+
+  const becameUnscheduled = changes.some(
+    (change) => change.field === 'UnscheduledWork' && change.newVal === 'Yes'
+  );
+  if (becameUnscheduled) {
+    await pool.execute('DELETE FROM TaskChildAllocations WHERE ParentTaskId = ?', [taskId]);
+    await pool.execute('DELETE FROM TaskAllocations WHERE TaskId = ?', [taskId]);
+    await pool.execute('DELETE FROM TaskAllocationHeaders WHERE TaskId = ?', [taskId]);
+  }
 
   for (const change of changes) {
     await recordTaskHistory(

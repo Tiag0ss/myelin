@@ -1473,6 +1473,7 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
               p.Id as ProjectId, p.ProjectName,
               tsv.StatusName, tsv.ColorCode as StatusColor,
               COALESCE(tsv.IsClosed, 0) as IsClosed,
+              COALESCE(tsv.IsCancelled, 0) as IsCancelled,
               tpv.PriorityName, tpv.ColorCode as PriorityColor,
               ttv.TypeName as TaskTypeName,
               u.FirstName as AssignedFirstName, u.LastName as AssignedLastName,
