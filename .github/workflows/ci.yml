@@ -27,5 +27,5 @@ jobs:
         run: pnpm run test:integration:smoke
         env:
           JWT_SECRET: test-jwt-secret-key-do-not-use-in-production
-      - name: Server typecheck
-        run: pnpm exec tsc --project server/tsconfig.json --noEmit
+      - name: Typecheck
+        run: pnpm typecheck

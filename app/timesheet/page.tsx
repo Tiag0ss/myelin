@@ -112,13 +112,17 @@ export default function TimesheetPage() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [myTasks, setMyTasks] = useState<TaskWithProject[]>([]);
   const [taskAllocations, setTaskAllocations] = useState<TaskAllocationForCalendar[]>([]);
-  const [newEntry, setNewEntry] = useState({
+  const [newEntry, setNewEntry] = useState<TimeEntryFormValues>({
+    organizationId: '',
+    projectId: '',
     taskId: '',
+    unassigned: false,
     workDate: new Date().toISOString().split('T')[0],
     startTime: '09:00',
     endTime: '17:00',
     hours: '',
-    description: ''
+    description: '',
+    customFields: {},
   });
   const [editingEntry, setEditingEntry] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -587,12 +591,16 @@ export default function TimesheetPage() {
       if (response.ok) {
         setMessage(t('lit.timeEntryCreatedSuccessfully'));
         setNewEntry({
+          organizationId: '',
+          projectId: '',
           taskId: '',
+          unassigned: false,
           workDate: new Date().toISOString().split('T')[0],
           startTime: '09:00',
           endTime: '17:00',
           hours: '',
-          description: ''
+          description: '',
+          customFields: {},
         });
         setShowCreateTimeEntryModal(false);
         loadTimeEntries();
