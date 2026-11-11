@@ -1,0 +1,25 @@
+{
+  "TableName": "ProductVersionApplicationVersions",
+  "PrimaryKeyFields": "ProductVersionId,ApplicationVersionId",
+  "Fields": [
+    {
+      "FieldName": "ProductVersionId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to ProductVersions.Id"
+    },
+    {
+      "FieldName": "ApplicationVersionId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to ApplicationVersions.Id included in this product version"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the association was created"
+    }
+  ]
+}

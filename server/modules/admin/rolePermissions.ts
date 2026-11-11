@@ -41,6 +41,11 @@ const emptyUserPermissions = {
   canCreateApplications: false,
   canDeleteApplications: false,
   canManageReleases: false,
+  canViewProducts: false,
+  canManageProducts: false,
+  canCreateProducts: false,
+  canDeleteProducts: false,
+  canManageProductReleases: false,
   canViewExpenses: false,
   canCreateExpenses: false,
   canManageExpenses: false,
@@ -79,6 +84,11 @@ const adminUserPermissions = {
   canCreateApplications: true,
   canDeleteApplications: true,
   canManageReleases: true,
+  canViewProducts: true,
+  canManageProducts: true,
+  canCreateProducts: true,
+  canDeleteProducts: true,
+  canManageProductReleases: true,
   canViewExpenses: true,
   canCreateExpenses: true,
   canManageExpenses: true,
@@ -151,6 +161,11 @@ const fetchUserPermissions = async (userId: number) => {
     if (perm.CanCreateApplications) combined.canCreateApplications = true;
     if (perm.CanDeleteApplications) combined.canDeleteApplications = true;
     if (perm.CanManageReleases) combined.canManageReleases = true;
+    if (perm.CanViewProducts) combined.canViewProducts = true;
+    if (perm.CanManageProducts) combined.canManageProducts = true;
+    if (perm.CanCreateProducts) combined.canCreateProducts = true;
+    if (perm.CanDeleteProducts) combined.canDeleteProducts = true;
+    if (perm.CanManageProductReleases) combined.canManageProductReleases = true;
     if (perm.CanViewExpenses) combined.canViewExpenses = true;
     if (perm.CanCreateExpenses) combined.canCreateExpenses = true;
     if (perm.CanManageExpenses) combined.canManageExpenses = true;
@@ -187,6 +202,11 @@ const fetchUserPermissions = async (userId: number) => {
     if (perm.CanCreateApplications) combined.canCreateApplications = true;
     if (perm.CanDeleteApplications) combined.canDeleteApplications = true;
     if (perm.CanManageReleases) combined.canManageReleases = true;
+    if (perm.CanViewProducts) combined.canViewProducts = true;
+    if (perm.CanManageProducts) combined.canManageProducts = true;
+    if (perm.CanCreateProducts) combined.canCreateProducts = true;
+    if (perm.CanDeleteProducts) combined.canDeleteProducts = true;
+    if (perm.CanManageProductReleases) combined.canManageProductReleases = true;
     if (perm.CanViewExpenses) combined.canViewExpenses = true;
     if (perm.CanCreateExpenses) combined.canCreateExpenses = true;
     if (perm.CanManageExpenses) combined.canManageExpenses = true;
@@ -412,6 +432,11 @@ router.put('/:roleName', authenticateToken, async (req: AuthRequest, res: Respon
     const canCreateApplications = getValue('CanCreateApplications', 'canCreateApplications');
     const canDeleteApplications = getValue('CanDeleteApplications', 'canDeleteApplications');
     const canManageReleases = getValue('CanManageReleases', 'canManageReleases');
+    const canViewProducts = getValue('CanViewProducts', 'canViewProducts');
+    const canManageProducts = getValue('CanManageProducts', 'canManageProducts');
+    const canCreateProducts = getValue('CanCreateProducts', 'canCreateProducts');
+    const canDeleteProducts = getValue('CanDeleteProducts', 'canDeleteProducts');
+    const canManageProductReleases = getValue('CanManageProductReleases', 'canManageProductReleases');
     const canViewExpenses = getValue('CanViewExpenses', 'canViewExpenses');
     const canCreateExpenses = getValue('CanCreateExpenses', 'canCreateExpenses');
     const canManageExpenses = getValue('CanManageExpenses', 'canManageExpenses');
@@ -464,6 +489,11 @@ router.put('/:roleName', authenticateToken, async (req: AuthRequest, res: Respon
           CanCreateApplications = ?,
           CanDeleteApplications = ?,
           CanManageReleases = ?,
+          CanViewProducts = ?,
+          CanManageProducts = ?,
+          CanCreateProducts = ?,
+          CanDeleteProducts = ?,
+          CanManageProductReleases = ?,
           CanViewExpenses = ?,
           CanCreateExpenses = ?,
           CanManageExpenses = ?,
@@ -502,6 +532,11 @@ router.put('/:roleName', authenticateToken, async (req: AuthRequest, res: Respon
           canCreateApplications ? 1 : 0,
           canDeleteApplications ? 1 : 0,
           canManageReleases ? 1 : 0,
+          canViewProducts ? 1 : 0,
+          canManageProducts ? 1 : 0,
+          canCreateProducts ? 1 : 0,
+          canDeleteProducts ? 1 : 0,
+          canManageProductReleases ? 1 : 0,
           canViewExpenses ? 1 : 0,
           canCreateExpenses ? 1 : 0,
           canManageExpenses ? 1 : 0,
@@ -546,11 +581,16 @@ router.put('/:roleName', authenticateToken, async (req: AuthRequest, res: Respon
           CanCreateApplications,
           CanDeleteApplications,
           CanManageReleases,
+          CanViewProducts,
+          CanManageProducts,
+          CanCreateProducts,
+          CanDeleteProducts,
+          CanManageProductReleases,
           CanViewExpenses,
           CanCreateExpenses,
           CanManageExpenses,
           CanApproveExpenses
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           roleName,
           canViewDashboard ? 1 : 0,
@@ -585,6 +625,11 @@ router.put('/:roleName', authenticateToken, async (req: AuthRequest, res: Respon
           canCreateApplications ? 1 : 0,
           canDeleteApplications ? 1 : 0,
           canManageReleases ? 1 : 0,
+          canViewProducts ? 1 : 0,
+          canManageProducts ? 1 : 0,
+          canCreateProducts ? 1 : 0,
+          canDeleteProducts ? 1 : 0,
+          canManageProductReleases ? 1 : 0,
           canViewExpenses ? 1 : 0,
           canCreateExpenses ? 1 : 0,
           canManageExpenses ? 1 : 0,

@@ -38,6 +38,11 @@ const DEFAULT_ROLE_PERMISSIONS = [
       CanCreateApplications: 0,
       CanDeleteApplications: 0,
       CanManageReleases: 0,
+      CanViewProducts: 1,
+      CanManageProducts: 0,
+      CanCreateProducts: 0,
+      CanDeleteProducts: 0,
+      CanManageProductReleases: 0,
       CanViewExpenses: 1,
       CanCreateExpenses: 1,
       CanManageExpenses: 0,
@@ -79,6 +84,11 @@ const DEFAULT_ROLE_PERMISSIONS = [
       CanCreateApplications: 0,
       CanDeleteApplications: 0,
       CanManageReleases: 0,
+      CanViewProducts: 1,
+      CanManageProducts: 0,
+      CanCreateProducts: 0,
+      CanDeleteProducts: 0,
+      CanManageProductReleases: 0,
       CanViewExpenses: 1,
       CanCreateExpenses: 1,
       CanManageExpenses: 0,
@@ -120,6 +130,11 @@ const DEFAULT_ROLE_PERMISSIONS = [
       CanCreateApplications: 1,
       CanDeleteApplications: 1,
       CanManageReleases: 1,
+      CanViewProducts: 1,
+      CanManageProducts: 1,
+      CanCreateProducts: 1,
+      CanDeleteProducts: 1,
+      CanManageProductReleases: 1,
       CanViewExpenses: 1,
       CanCreateExpenses: 1,
       CanManageExpenses: 1,
@@ -156,6 +171,28 @@ export async function seedRolePermissions(): Promise<void> {
       } catch (backfillErr: any) {
         if (backfillErr?.code !== 'ER_BAD_FIELD_ERROR') {
           logger.warn('Expense permission backfill skipped', { error: backfillErr?.message });
+        }
+      }
+
+      // Backfill product permissions for Manager/Developer/Support on existing installs
+      try {
+        await pool.execute(
+          `UPDATE RolePermissions SET
+            CanViewProducts = 1,
+            CanManageProducts = 1,
+            CanCreateProducts = 1,
+            CanDeleteProducts = 1,
+            CanManageProductReleases = 1
+           WHERE RoleName = 'Manager'`
+        );
+        await pool.execute(
+          `UPDATE RolePermissions SET
+            CanViewProducts = 1
+           WHERE RoleName IN ('Developer', 'Support')`
+        );
+      } catch (backfillErr: any) {
+        if (backfillErr?.code !== 'ER_BAD_FIELD_ERROR') {
+          logger.warn('Product permission backfill skipped', { error: backfillErr?.message });
         }
       }
       return;
@@ -201,13 +238,18 @@ export async function seedRolePermissions(): Promise<void> {
           CanCreateApplications,
           CanDeleteApplications,
           CanManageReleases,
+          CanViewProducts,
+          CanManageProducts,
+          CanCreateProducts,
+          CanDeleteProducts,
+          CanManageProductReleases,
           CanViewExpenses,
           CanCreateExpenses,
           CanManageExpenses,
           CanApproveExpenses,
           CreatedAt,
           UpdatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [
           roleName,
           permissions.CanViewDashboard,
@@ -242,6 +284,11 @@ export async function seedRolePermissions(): Promise<void> {
           permissions.CanCreateApplications,
           permissions.CanDeleteApplications,
           permissions.CanManageReleases,
+          permissions.CanViewProducts,
+          permissions.CanManageProducts,
+          permissions.CanCreateProducts,
+          permissions.CanDeleteProducts,
+          permissions.CanManageProductReleases,
           permissions.CanViewExpenses,
           permissions.CanCreateExpenses,
           permissions.CanManageExpenses,

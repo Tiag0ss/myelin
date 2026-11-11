@@ -240,6 +240,41 @@
       "Comment": "Permission to create, edit and delete application releases/versions"
     },
     {
+      "FieldName": "CanViewProducts",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "1",
+      "Comment": "Permission to view products"
+    },
+    {
+      "FieldName": "CanManageProducts",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Permission to edit products"
+    },
+    {
+      "FieldName": "CanCreateProducts",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Permission to create new products"
+    },
+    {
+      "FieldName": "CanDeleteProducts",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Permission to delete products"
+    },
+    {
+      "FieldName": "CanManageProductReleases",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Permission to create, edit and delete product releases/versions"
+    },
+    {
       "FieldName": "CanViewExpenses",
       "DataType": "tinyint(1)",
       "NotNullable": true,

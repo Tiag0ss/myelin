@@ -14,6 +14,7 @@ Comprehensive documentation of all features available in the application. Use th
 2. [Organizations & Members](#2-organizations--members)
 3. [Customers & Customer Portal](#3-customers--customer-portal)
 4. [Applications & Releases](#4-applications--releases)
+4b. [Products](#4b-products)
 5. [Projects](#5-projects)
 6. [Tasks](#6-tasks)
 7. [Tickets](#7-tickets)
@@ -209,6 +210,33 @@ Images in patch notes are fetched at render time. Supported sources:
 - Inline base64 data URIs (`data:image/...;base64,...`)
 - Local server uploads (`/uploads/...` path)
 - External HTTP/HTTPS URLs
+
+---
+
+## 4b. Products
+
+Products are org-scoped bundles that group a fixed catalog of Applications and ship product-level versions that pick application versions.
+
+### Products
+- Managed at `/products` (detail `/products/:id?tab=…`)
+- Fields: Name, Description, Organization, optional Image (`ImagePath`), `IsCustomerSpecific`, `IsActive`
+- **Catalog** (`ProductApplications`): fixed set of Applications belonging to the same organization
+- Customers linked via `ProductCustomers` (same pattern as Applications)
+- Dedicated permissions: `CanViewProducts`, `CanCreateProducts`, `CanManageProducts`, `CanDeleteProducts`, `CanManageProductReleases` (not reused from Applications)
+- Soft delete sets `IsActive = 0`
+
+### Product Versions
+Each product can have versioned releases (`ProductVersions`):
+
+- Fields: Version Number, Version Name, Status (same enum as application versions), Release Date, Patch Notes (rich text snapshot), `IsCustomerSpecific` / Customer
+- Links (`ProductVersionApplicationVersions`): **at most one** `ApplicationVersion` per catalog application (subset allowed while drafting)
+- Tasks stay on application versions — no product-level task pool in this slice
+
+### Patch notes snapshot
+- On version create (when links are provided) and on explicit **Rebuild from applications**, linked ApplicationVersions’ `PatchNotes` are merged into `ProductVersions.PatchNotes` with one HTML section per application (`<h2>{AppName} {VersionNumber}</h2>` + body), ordered by application name
+- Edits are a snapshot; later changes to application notes do **not** auto-update the product version
+- **Improve with AI** (when org LLM is configured) rewrites notes while preserving per-application section structure
+- **Single version PDF**: product/version/date header, list of included app versions, body via shared release-notes PDF renderer (section headings kept)
 
 ---
 
@@ -1386,7 +1414,8 @@ Planning remains desktop-first for editing.
 | `PermissionGroups` | Org-specific permission overrides |
 | `Customers` | External client records |
 | `CustomerUsers` | Portal user accounts scoped to a customer |
-| `Applications` | Software products |
+| `Applications` | Software products (application catalog + releases) |
+| `Products` | Org-scoped product bundles over a fixed application catalog |
 | `ApplicationVersions` | Versioned releases with patch notes |
 | `Projects` | Projects; linked to org, customer, application |
 | `Tasks` | Tasks with hierarchy (ParentTaskId), dependencies, and status |

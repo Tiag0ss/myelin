@@ -214,8 +214,9 @@ router.post('/setup', async (req: Request, res: Response) => {
             CanManageTickets, CanCreateTickets, CanDeleteTickets, CanAssignTickets, CanCreateTaskFromTicket,
             CanViewOthersPlanning, CanViewApplications,
             CanManageMembers, CanManageSettings,
-            CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases)
-           VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)` ,
+            CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases,
+            CanViewProducts, CanManageProducts, CanCreateProducts, CanDeleteProducts, CanManageProductReleases)
+           VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
           [
             organizationId, rp.RoleName, rp.RoleName,
             rp.CanManageProjects ? 1 : 0, rp.CanCreateProjects ? 1 : 0, rp.CanDeleteProjects ? 1 : 0,
@@ -231,6 +232,11 @@ router.post('/setup', async (req: Request, res: Response) => {
             rp.CanCreateApplications ? 1 : 0,
             rp.CanDeleteApplications ? 1 : 0,
             rp.CanManageReleases ? 1 : 0,
+            rp.CanViewProducts ? 1 : 0,
+            rp.CanManageProducts ? 1 : 0,
+            rp.CanCreateProducts ? 1 : 0,
+            rp.CanDeleteProducts ? 1 : 0,
+            rp.CanManageProductReleases ? 1 : 0,
           ]
         );
       }

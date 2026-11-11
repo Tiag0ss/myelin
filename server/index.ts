@@ -79,6 +79,7 @@ import projectMilestonesRoutes from './modules/projects/projectMilestones';
 import portalRoutes from './modules/portal/portal';
 import editorUploadsRoutes from './modules/uploads/editorUploads';
 import applicationsRoutes from './modules/applications/applications';
+import productsRoutes from './modules/products/products';
 import projectReportSchedulesRoutes from './modules/projects/projectReportSchedules';
 import retrospectiveActionsRoutes from './modules/projects/retrospectiveActions';
 import workflowTransitionPoliciesRoutes from './modules/projects/workflowTransitionPolicies';
@@ -305,6 +306,7 @@ app.prepare().then(async () => {
   server.use('/api/customers', customersRoutes);
   server.use('/api/applications', applicationsRoutes);
   server.use('/api/applications', applicationAgentDocsRoutes);
+  server.use('/api/products', productsRoutes);
   server.use('/api/statistics', statisticsRoutes);
   server.use('/api/dashboard-kpis', dashboardKpisRoutes);
   server.use('/api/tickets', ticketsRoutes);

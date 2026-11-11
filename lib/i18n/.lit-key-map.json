@@ -150,6 +150,7 @@
     "Application filters": "lit.applicationFilters",
     "Application image": "lit.applicationImage",
     "Applications": "nav.applications",
+    "Products": "nav.products",
     "Applied when importing Jira tickets into projects": "lit.appliedWhenImportingJiraTicketsIntoProjects",
     "Applies to Priority": "lit.appliesToPriority",
     "Apply Filters": "lit.applyFilters",

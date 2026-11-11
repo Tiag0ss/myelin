@@ -51,6 +51,7 @@ describe('recentNavAccess', () => {
     expect(recentNavParentHref('memos')).toBe('/memos');
     expect(recentNavParentHref('customers')).toBe('/customers');
     expect(recentNavParentHref('applications')).toBe('/applications');
+    expect(recentNavParentHref('products')).toBe('/products');
   });
 
   it('parses expand/collapse prefs and defaults missing kinds to expanded', () => {

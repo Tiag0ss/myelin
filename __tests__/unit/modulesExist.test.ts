@@ -8,6 +8,7 @@ const MODULES = [
   'users',
   'customers',
   'applications',
+  'products',
   'notifications',
   'tickets',
   'expenses',

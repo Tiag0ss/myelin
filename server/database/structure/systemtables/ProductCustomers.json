@@ -1,0 +1,25 @@
+{
+  "TableName": "ProductCustomers",
+  "PrimaryKeyFields": "ProductId,CustomerId",
+  "Fields": [
+    {
+      "FieldName": "ProductId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Products.Id"
+    },
+    {
+      "FieldName": "CustomerId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Customers.Id"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the association was created"
+    }
+  ]
+}

@@ -90,6 +90,12 @@ export type PagesMessages = {
     noApplications: string;
     releases: string;
   };
+  products: {
+    title: string;
+    newProduct: string;
+    noProducts: string;
+    versions: string;
+  };
   organizations: {
     title: string;
     newOrganization: string;
@@ -285,6 +291,12 @@ export const pagesEn = pages({
     noApplications: 'No applications found.',
     releases: 'Releases',
   },
+  products: {
+    title: 'Products',
+    newProduct: 'New product',
+    noProducts: 'No products found.',
+    versions: 'Versions',
+  },
   organizations: {
     title: 'Organizations',
     newOrganization: 'New organization',
@@ -473,6 +485,12 @@ export const pagesPt = pages({
     newApplication: 'Nova aplicação',
     noApplications: 'Nenhuma aplicação encontrada.',
     releases: 'Releases',
+  },
+  products: {
+    title: 'Produtos',
+    newProduct: 'Novo produto',
+    noProducts: 'Nenhum produto encontrado.',
+    versions: 'Versões',
   },
   organizations: {
     title: 'Organizações',
@@ -663,6 +681,12 @@ export const pagesEs = pages({
     noApplications: 'No se encontraron aplicaciones.',
     releases: 'Releases',
   },
+  products: {
+    title: 'Productos',
+    newProduct: 'Nuevo producto',
+    noProducts: 'No se encontraron productos.',
+    versions: 'Versiones',
+  },
   organizations: {
     title: 'Organizaciones',
     newOrganization: 'Nueva organización',
@@ -851,6 +875,12 @@ export const pagesFr = pages({
     newApplication: 'Nouvelle application',
     noApplications: 'Aucune application trouvée.',
     releases: 'Versions',
+  },
+  products: {
+    title: 'Produits',
+    newProduct: 'Nouveau produit',
+    noProducts: 'Aucun produit trouvé.',
+    versions: 'Versions',
   },
   organizations: {
     title: 'Organisations',

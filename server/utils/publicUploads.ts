@@ -6,6 +6,7 @@ const PUBLIC_ROOT = path.join(process.cwd(), 'public');
 
 export const BRANDING_UPLOAD_DIR = path.join(PUBLIC_ROOT, 'uploads', 'branding');
 export const APPLICATION_UPLOAD_DIR = path.join(PUBLIC_ROOT, 'uploads', 'applications');
+export const PRODUCT_UPLOAD_DIR = path.join(PUBLIC_ROOT, 'uploads', 'products');
 
 export const BRANDING_IMAGE_TYPES = new Set([
   'image/png',
@@ -22,6 +23,8 @@ export const APPLICATION_IMAGE_TYPES = new Set([
   'image/webp',
   'image/svg+xml',
 ]);
+
+export const PRODUCT_IMAGE_TYPES = APPLICATION_IMAGE_TYPES;
 
 const EXT_BY_TYPE: Record<string, string> = {
   'image/png': '.png',

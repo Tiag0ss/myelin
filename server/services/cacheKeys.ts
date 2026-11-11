@@ -19,6 +19,7 @@ export const cacheKeys = {
   orgAvailableUsers: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:available-users`,
   orgCustomers: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:customers`,
   orgApplications: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:applications`,
+  orgProducts: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:products`,
   orgProjects: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:projects`,
   orgTickets: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:tickets`,
   orgTags: (orgId: number | string | string[]) => `org:${keyPart(orgId)}:tags`,
@@ -38,6 +39,9 @@ export const cacheKeys = {
   application: (applicationId: number | string | string[]) => `application:${keyPart(applicationId)}`,
   applicationVersions: (applicationId: number | string | string[]) => `application:${keyPart(applicationId)}:versions`,
   applicationTasks: (applicationId: number | string | string[]) => `application:${keyPart(applicationId)}:tasks`,
+
+  product: (productId: number | string | string[]) => `product:${keyPart(productId)}`,
+  productVersions: (productId: number | string | string[]) => `product:${keyPart(productId)}:versions`,
 
   project: (projectId: number | string | string[]) => `project:${keyPart(projectId)}`,
   projectPermissions: (projectId: number | string | string[]) => `project:${keyPart(projectId)}:permissions`,

@@ -1488,6 +1488,11 @@ const PERMISSION_GROUP_FLAGS = [
   { field: 'CanCreateApplications', formKey: 'canCreateApplications', label: t('lit.createApplications') },
   { field: 'CanDeleteApplications', formKey: 'canDeleteApplications', label: t('lit.deleteApplications') },
   { field: 'CanManageReleases', formKey: 'canManageReleases', label: t('lit.manageReleases') },
+  { field: 'CanViewProducts', formKey: 'canViewProducts', label: t('lit.viewProducts') },
+  { field: 'CanManageProducts', formKey: 'canManageProducts', label: t('lit.manageProducts') },
+  { field: 'CanCreateProducts', formKey: 'canCreateProducts', label: t('lit.createProducts') },
+  { field: 'CanDeleteProducts', formKey: 'canDeleteProducts', label: t('lit.deleteProducts') },
+  { field: 'CanManageProductReleases', formKey: 'canManageProductReleases', label: t('lit.manageProductReleases') },
 ] as const;
 
 type PermissionGroupFlagField = (typeof PERMISSION_GROUP_FLAGS)[number]['field'];
@@ -1791,6 +1796,11 @@ function PermissionGroupModal({
     canCreateApplications: !!group?.CanCreateApplications,
     canDeleteApplications: !!group?.CanDeleteApplications,
     canManageReleases: !!group?.CanManageReleases,
+    canViewProducts: !!group?.CanViewProducts,
+    canManageProducts: !!group?.CanManageProducts,
+    canCreateProducts: !!group?.CanCreateProducts,
+    canDeleteProducts: !!group?.CanDeleteProducts,
+    canManageProductReleases: !!group?.CanManageProductReleases,
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);

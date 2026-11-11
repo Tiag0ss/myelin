@@ -90,6 +90,7 @@ function buildNav(flags: FeatureFlags, t: (path: string) => string): NavItem[] {
     { href: '/memos', label: t('nav.memos'), icon: NAV_ICONS['/memos'], section: t('nav.sectionService'), recentKind: 'memos' },
     { href: '/customers', label: t('nav.customers'), icon: NAV_ICONS['/customers'], section: t('nav.sectionManagement'), recentKind: 'customers' },
     { href: '/applications', label: t('nav.applications'), icon: NAV_ICONS['/applications'], section: t('nav.sectionManagement'), recentKind: 'applications' },
+    { href: '/products', label: t('nav.products'), icon: NAV_ICONS['/products'], section: t('nav.sectionManagement'), recentKind: 'products' },
     {
       href: '/approvals',
       label: flags.expensesEnabled ? t('nav.approvalsAndExpenses') : t('nav.approvals'),
@@ -211,9 +212,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setActiveMemoId(new URLSearchParams(window.location.search).get('memoId'));
   }, [pathname, recentNav.memos]);
   useEffect(() => {
-    const match = pathname.match(/^\/(projects|customers|applications)\/(\d+)(?:\/|$)/);
+    const match = pathname.match(/^\/(projects|customers|applications|products)\/(\d+)(?:\/|$)/);
     if (!match) return;
-    const segment = match[1] as 'projects' | 'customers' | 'applications';
+    const segment = match[1] as 'projects' | 'customers' | 'applications' | 'products';
     const id = Number(match[2]);
     if (!Number.isFinite(id) || id <= 0) return;
     const kind: RecentNavKind = segment;
@@ -224,7 +225,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       (existingMeta && !isPlaceholderPinnedNavLabel(id, existingMeta.label) ? existingMeta.label : null) ||
       existing?.label ||
       existingMeta?.label ||
-      (kind === 'projects' ? `Project #${id}` : kind === 'customers' ? `Customer #${id}` : `Application #${id}`);
+      (kind === 'projects'
+        ? `Project #${id}`
+        : kind === 'customers'
+          ? `Customer #${id}`
+          : kind === 'products'
+            ? `Product #${id}`
+            : `Application #${id}`);
     recordRecentNavAccess(
       kind,
       { id, label: fallbackLabel, href: `${recentNavParentHref(kind)}/${id}` },

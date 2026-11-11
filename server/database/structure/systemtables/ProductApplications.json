@@ -1,0 +1,25 @@
+{
+  "TableName": "ProductApplications",
+  "PrimaryKeyFields": "ProductId,ApplicationId",
+  "Fields": [
+    {
+      "FieldName": "ProductId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Products.Id"
+    },
+    {
+      "FieldName": "ApplicationId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Applications.Id in the product catalog"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the association was created"
+    }
+  ]
+}

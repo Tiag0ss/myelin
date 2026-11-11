@@ -1799,6 +1799,14 @@ export default function AppChromeTools({
     !!permissions?.canDeleteApplications ||
     !!permissions?.canManageReleases;
 
+  const canShowProductsOption =
+    permissionsLoading ||
+    !!permissions?.canViewProducts ||
+    !!permissions?.canManageProducts ||
+    !!permissions?.canCreateProducts ||
+    !!permissions?.canDeleteProducts ||
+    !!permissions?.canManageProductReleases;
+
   const canShowApprovalsOption = canAccessApprovals;
   const canShowVacationApprovalsOption = canAccessVacationApprovals;
   const canShowOutOfOfficeApprovalsOption = canAccessOutOfOfficeApprovals;
@@ -1839,15 +1847,21 @@ export default function AppChromeTools({
   const showDeliverySection = canShowProjectsLink || canShowPlanningLink;
   const showWorkLogsSection = canShowTimesheetLink || canShowExpensesLink || canShowCallRecordsLink || canShowWorkSummaryLink;
   const showServiceSection = canShowTicketsLink || canShowMemosLink;
-  const showManagementSection = canShowCustomersOption || canShowApplicationsOption || canShowAnyApprovalsOption || canShowDevSupportManagementOption;
+  const showManagementSection =
+    canShowCustomersOption ||
+    canShowApplicationsOption ||
+    canShowProductsOption ||
+    canShowAnyApprovalsOption ||
+    canShowDevSupportManagementOption;
   const showReportingSection = canShowReportsLink;
 
   const canShowManagementMenu =
     !isCustomerUser &&
     (canShowCustomersOption ||
       canShowApplicationsOption ||
-    canShowAnyApprovalsOption ||
-    canShowDevSupportManagementOption);
+      canShowProductsOption ||
+      canShowAnyApprovalsOption ||
+      canShowDevSupportManagementOption);
 
   const shouldUseLeftSidebarRaw = navbarMenuLayout === 'left';
   const shouldUseLeftSidebar = toolsOnly ? false : shouldUseLeftSidebarRaw;
@@ -2122,6 +2136,11 @@ export default function AppChromeTools({
                       <span className="w-5 text-center">🧩</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.applications')}</span>}
                     </Link>
                   )}
+                  {canShowProductsOption && (
+                    <Link href="/products" className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
+                      <span className="w-5 text-center">📦</span>{!isSidebarEffectivelyCollapsed && <span>{t('nav.products')}</span>}
+                    </Link>
+                  )}
                   {canShowAnyApprovalsOption && (
                     <Link href={approvalsMenuHref} className={sidebarItemClass} onClick={() => isFloatingMode && setIsFloatingSidebarOpen(false)}>
                       <span className="w-5 text-center">✅</span>{!isSidebarEffectivelyCollapsed && <span>{approvalsMenuLabel}</span>}
@@ -2387,6 +2406,12 @@ export default function AppChromeTools({
                         label: '🧩 Applications',
                         href: '/applications',
                         visible: !!canShowApplicationsOption,
+                        onClick: () => setManagementMenuOpen(false),
+                      },
+                      {
+                        label: '📦 Products',
+                        href: '/products',
+                        visible: !!canShowProductsOption,
                         onClick: () => setManagementMenuOpen(false),
                       },
                       {
@@ -3054,6 +3079,11 @@ export default function AppChromeTools({
               {canShowApplicationsOption && (
                 <Link href="/applications" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
                   <span>🧩</span><span>{t('nav.applications')}</span>
+                </Link>
+              )}
+              {canShowProductsOption && (
+                <Link href="/products" className={topMobileNavItemClass} onClick={closeTopMobileNav}>
+                  <span>📦</span><span>{t('nav.products')}</span>
                 </Link>
               )}
               {canShowAnyApprovalsOption && (

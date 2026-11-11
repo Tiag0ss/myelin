@@ -10,6 +10,7 @@ export type NavMessages = {
   memos: string;
   customers: string;
   applications: string;
+  products: string;
   approvals: string;
   approvalsAndExpenses: string;
   devSupport: string;
@@ -50,6 +51,7 @@ export const navEn: NavMessages = {
   memos: 'Memos',
   customers: 'Customers',
   applications: 'Applications',
+  products: 'Products',
   approvals: 'Approvals',
   approvalsAndExpenses: 'Approvals & Expenses',
   devSupport: 'Dev Support',
@@ -90,6 +92,7 @@ export const navPt: NavMessages = {
   memos: 'Notas',
   customers: 'Clientes',
   applications: 'Aplicações',
+  products: 'Produtos',
   approvals: 'Aprovações',
   approvalsAndExpenses: 'Aprovações e despesas',
   devSupport: 'Suporte de Desenvolvimento',
@@ -130,6 +133,7 @@ export const navEs: NavMessages = {
   memos: 'Notas',
   customers: 'Clientes',
   applications: 'Aplicaciones',
+  products: 'Productos',
   approvals: 'Aprobaciones',
   approvalsAndExpenses: 'Aprobaciones y gastos',
   devSupport: 'Soporte Dev',
@@ -170,6 +174,7 @@ export const navFr: NavMessages = {
   memos: 'Mémos',
   customers: 'Clients',
   applications: 'Applications',
+  products: 'Produits',
   approvals: 'Validations',
   approvalsAndExpenses: 'Validations et dépenses',
   devSupport: 'Support Dev',

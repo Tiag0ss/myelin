@@ -95,7 +95,25 @@ export type ChatCompletionOptions = {
   maxTokens?: number;
   /** Override model from config when needed. */
   model?: string;
+  /** Abort the provider request after this many ms (default 120s). */
+  timeoutMs?: number;
 };
+
+const DEFAULT_CHAT_TIMEOUT_MS = 120_000;
+
+/**
+ * Shrink HTML before sending to an LLM: drop huge base64 images that blow up
+ * prompt size (common in TipTap patch notes) and optionally truncate.
+ */
+export function prepareHtmlForLlm(html: string, maxChars = 60_000): string {
+  let out = String(html || '')
+    .replace(/<img\b[^>]*\bsrc=["']data:image\/[^"']+["'][^>]*>/gi, '<p><em>[image omitted]</em></p>')
+    .replace(/\bsrc=["']data:image\/[^"']+["']/gi, 'src=""');
+  if (out.length > maxChars) {
+    out = `${out.slice(0, maxChars)}\n<!-- truncated for LLM -->`;
+  }
+  return out;
+}
 
 export type ChatCompletionResult = {
   content: string;
@@ -140,20 +158,37 @@ export async function chatCompletion(
     headers.Authorization = `Bearer ${config.openAiApiKey}`;
   }
 
+  const timeoutMs =
+    typeof options.timeoutMs === 'number' && options.timeoutMs > 0
+      ? options.timeoutMs
+      : DEFAULT_CHAT_TIMEOUT_MS;
+  const startedAt = Date.now();
+
   let response: Response;
   try {
     response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
+    const timedOut =
+      (error instanceof Error && error.name === 'TimeoutError') ||
+      /aborted|timeout/i.test(detail);
     logger.error('LLM request network error', {
       provider: config.provider,
       url,
       error: detail,
+      elapsedMs: Date.now() - startedAt,
+      timedOut,
     });
+    if (timedOut) {
+      throw new Error(
+        `LLM request timed out after ${Math.round(timeoutMs / 1000)}s. Try shorter notes or a faster model.`
+      );
+    }
     throw new Error(
       config.provider === 'ollama'
         ? `Cannot reach Ollama at ${config.ollamaBaseUrl}. Is Ollama running? (${detail})`
@@ -175,5 +210,11 @@ export async function chatCompletion(
 
   const llmJson = await response.json();
   const content = String(llmJson?.choices?.[0]?.message?.content || '').trim();
+  logger.info('LLM chat completion ok', {
+    provider: config.provider,
+    model,
+    elapsedMs: Date.now() - startedAt,
+    contentChars: content.length,
+  });
   return { content, provider: config.provider, model };
 }

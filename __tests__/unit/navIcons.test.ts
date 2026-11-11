@@ -14,6 +14,7 @@ describe('navIcons', () => {
       '/memos',
       '/customers',
       '/applications',
+      '/products',
       '/approvals',
       '/dev-support',
       '/reporting',

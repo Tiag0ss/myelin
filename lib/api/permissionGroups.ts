@@ -31,6 +31,11 @@ export interface PermissionGroup {
   CanCreateApplications: number;
   CanDeleteApplications: number;
   CanManageReleases: number;
+  CanViewProducts: number;
+  CanManageProducts: number;
+  CanCreateProducts: number;
+  CanDeleteProducts: number;
+  CanManageProductReleases: number;
   LinkedRole?: string | null;
   IsSystemGroup?: number;
   MemberCount?: number;
@@ -65,6 +70,11 @@ export interface CreatePermissionGroupData {
   canCreateApplications: boolean;
   canDeleteApplications: boolean;
   canManageReleases: boolean;
+  canViewProducts: boolean;
+  canManageProducts: boolean;
+  canCreateProducts: boolean;
+  canDeleteProducts: boolean;
+  canManageProductReleases: boolean;
 }
 
 export const permissionGroupsApi = {

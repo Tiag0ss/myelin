@@ -5,7 +5,7 @@
  * Storage key: `pm:pinned-{kind}:u{userId}` (e.g. `pm:pinned-projects:u7`).
  */
 
-export const PINNED_LIST_KINDS = ['projects', 'applications', 'customers', 'memos'] as const;
+export const PINNED_LIST_KINDS = ['projects', 'applications', 'products', 'customers', 'memos'] as const;
 
 export type PinnedListKind = (typeof PINNED_LIST_KINDS)[number];
 

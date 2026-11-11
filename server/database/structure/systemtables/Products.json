@@ -1,0 +1,71 @@
+{
+  "TableName": "Products",
+  "PrimaryKeyFields": "Id",
+  "Fields": [
+    {
+      "FieldName": "Id",
+      "DataType": "int",
+      "NotNullable": true,
+      "AutoIncrement": true,
+      "Comment": "Primary key - unique product identifier"
+    },
+    {
+      "FieldName": "Name",
+      "DataType": "varchar(255)",
+      "NotNullable": true,
+      "Comment": "Name of the product"
+    },
+    {
+      "FieldName": "Description",
+      "DataType": "text",
+      "NotNullable": false,
+      "Comment": "Detailed description of the product"
+    },
+    {
+      "FieldName": "ImagePath",
+      "DataType": "varchar(500)",
+      "NotNullable": false,
+      "Comment": "Local public path to uploaded product image (e.g. /uploads/products/...)"
+    },
+    {
+      "FieldName": "IsCustomerSpecific",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Whether this product is customer-specific"
+    },
+    {
+      "FieldName": "OrganizationId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Organizations.Id that owns this product"
+    },
+    {
+      "FieldName": "IsActive",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "1",
+      "Comment": "Whether the product is active"
+    },
+    {
+      "FieldName": "CreatedBy",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Users.Id who created this product"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when the product was created"
+    },
+    {
+      "FieldName": "UpdatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+      "Comment": "Auto-updated timestamp of last modification"
+    }
+  ]
+}

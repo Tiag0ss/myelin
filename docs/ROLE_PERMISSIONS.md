@@ -27,6 +27,7 @@ Default permissions are defined in [`server/database/structure/systemtables/Role
 | `CanManageTickets` / `CanCreateTickets` / `CanDeleteTickets` / `CanAssignTickets` / `CanCreateTaskFromTicket` | Tickets |
 | `CanPlanTasks` / `CanViewOthersPlanning` | Planning edit / others’ plans |
 | `CanViewApplications` / `CanManageApplications` / `CanCreateApplications` / `CanDeleteApplications` / `CanManageReleases` | Applications & releases |
+| `CanViewProducts` / `CanManageProducts` / `CanCreateProducts` / `CanDeleteProducts` / `CanManageProductReleases` | Products & product releases |
 | `CanViewExpenses` / `CanCreateExpenses` / `CanManageExpenses` / `CanApproveExpenses` | Expenses module |
 
 **Default permission matrix (summary):**

@@ -329,8 +329,9 @@ router.post('/', authenticateToken, validateRequest(createOrganizationSchema), a
           CanManageTickets, CanCreateTickets, CanDeleteTickets, CanAssignTickets, CanCreateTaskFromTicket,
             CanViewOthersPlanning, CanViewApplications,
           CanManageMembers, CanManageSettings,
-          CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases)
-             VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)` ,
+          CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases,
+          CanViewProducts, CanManageProducts, CanCreateProducts, CanDeleteProducts, CanManageProductReleases)
+             VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           orgId, rp.RoleName, rp.RoleName,
           rp.CanManageProjects ? 1 : 0, rp.CanCreateProjects ? 1 : 0, rp.CanDeleteProjects ? 1 : 0,
@@ -346,6 +347,11 @@ router.post('/', authenticateToken, validateRequest(createOrganizationSchema), a
           rp.CanCreateApplications ? 1 : 0,
           rp.CanDeleteApplications ? 1 : 0,
           rp.CanManageReleases ? 1 : 0,
+          rp.CanViewProducts ? 1 : 0,
+          rp.CanManageProducts ? 1 : 0,
+          rp.CanCreateProducts ? 1 : 0,
+          rp.CanDeleteProducts ? 1 : 0,
+          rp.CanManageProductReleases ? 1 : 0,
         ]
       );
     }
@@ -1311,7 +1317,8 @@ router.post('/admin/create-system-groups', authenticateToken, async (req: AuthRe
                  CanManageTickets = ?, CanCreateTickets = ?, CanDeleteTickets = ?, CanAssignTickets = ?,
                  CanCreateTaskFromTicket = ?,
                  CanViewOthersPlanning = ?, CanViewApplications = ?,
-                 CanManageApplications = ?, CanCreateApplications = ?, CanDeleteApplications = ?, CanManageReleases = ?
+                 CanManageApplications = ?, CanCreateApplications = ?, CanDeleteApplications = ?, CanManageReleases = ?,
+                 CanViewProducts = ?, CanManageProducts = ?, CanCreateProducts = ?, CanDeleteProducts = ?, CanManageProductReleases = ?
              WHERE OrganizationId = ? AND LinkedRole = ? AND IsSystemGroup = 1`,
             [
               rp.CanManageProjects ? 1 : 0, rp.CanCreateProjects ? 1 : 0, rp.CanDeleteProjects ? 1 : 0,
@@ -1321,6 +1328,7 @@ router.post('/admin/create-system-groups', authenticateToken, async (req: AuthRe
               rp.CanCreateTaskFromTicket ? 1 : 0,
               rp.CanViewOthersPlanning ? 1 : 0, rp.CanViewApplications ? 1 : 0,
               rp.CanManageApplications ? 1 : 0, rp.CanCreateApplications ? 1 : 0, rp.CanDeleteApplications ? 1 : 0, rp.CanManageReleases ? 1 : 0,
+              rp.CanViewProducts ? 1 : 0, rp.CanManageProducts ? 1 : 0, rp.CanCreateProducts ? 1 : 0, rp.CanDeleteProducts ? 1 : 0, rp.CanManageProductReleases ? 1 : 0,
               org.Id,
               roleName,
             ]
@@ -1337,8 +1345,9 @@ router.post('/admin/create-system-groups', authenticateToken, async (req: AuthRe
             CanPlanTasks, CanManageTimeEntries, CanViewReports, CanViewBudgetInfo,
             CanManageTickets, CanCreateTickets, CanDeleteTickets, CanAssignTickets,
             CanCreateTaskFromTicket, CanViewOthersPlanning, CanViewApplications, CanManageMembers, CanManageSettings,
-            CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases
-          ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)` ,
+            CanManageApplications, CanCreateApplications, CanDeleteApplications, CanManageReleases,
+            CanViewProducts, CanManageProducts, CanCreateProducts, CanDeleteProducts, CanManageProductReleases
+          ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
           [
             org.Id,
             roleName,
@@ -1353,6 +1362,11 @@ router.post('/admin/create-system-groups', authenticateToken, async (req: AuthRe
             rp.CanCreateApplications ? 1 : 0,
             rp.CanDeleteApplications ? 1 : 0,
             rp.CanManageReleases ? 1 : 0,
+            rp.CanViewProducts ? 1 : 0,
+            rp.CanManageProducts ? 1 : 0,
+            rp.CanCreateProducts ? 1 : 0,
+            rp.CanDeleteProducts ? 1 : 0,
+            rp.CanManageProductReleases ? 1 : 0,
           ]
         );
         created++;

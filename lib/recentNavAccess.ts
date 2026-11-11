@@ -1,4 +1,4 @@
-export type RecentNavKind = 'projects' | 'memos' | 'customers' | 'applications';
+export type RecentNavKind = 'projects' | 'memos' | 'customers' | 'applications' | 'products';
 
 export type RecentNavItem = {
   id: number;
@@ -16,7 +16,7 @@ export const RECENT_NAV_LIMIT = 2;
 export const RECENT_NAV_EVENT = 'pm:recent-nav-access';
 export const RECENT_NAV_EXPANDED_EVENT = 'pm:recent-nav-expanded';
 
-const RECENT_NAV_KINDS: RecentNavKind[] = ['projects', 'memos', 'customers', 'applications'];
+const RECENT_NAV_KINDS: RecentNavKind[] = ['projects', 'memos', 'customers', 'applications', 'products'];
 
 export function recentNavStorageKey(userId?: number | null): string {
   return typeof userId === 'number' && Number.isFinite(userId)
@@ -36,6 +36,7 @@ export function emptyRecentNavAccess(): RecentNavAccessState {
     memos: [],
     customers: [],
     applications: [],
+    products: [],
   };
 }
 
@@ -46,6 +47,7 @@ export function defaultRecentNavExpanded(): RecentNavExpandedState {
     memos: true,
     customers: true,
     applications: true,
+    products: true,
   };
 }
 
@@ -165,6 +167,8 @@ export function recentNavParentHref(kind: RecentNavKind): string {
       return '/customers';
     case 'applications':
       return '/applications';
+    case 'products':
+      return '/products';
   }
 }
 

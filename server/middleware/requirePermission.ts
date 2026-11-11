@@ -37,6 +37,11 @@ export type PermissionKey =
   | 'canCreateApplications'
   | 'canDeleteApplications'
   | 'canManageReleases'
+  | 'canViewProducts'
+  | 'canManageProducts'
+  | 'canCreateProducts'
+  | 'canDeleteProducts'
+  | 'canManageProductReleases'
   | 'canViewExpenses'
   | 'canCreateExpenses'
   | 'canManageExpenses'
@@ -75,6 +80,11 @@ const COLUMN_BY_KEY: Record<PermissionKey, string> = {
   canCreateApplications: 'CanCreateApplications',
   canDeleteApplications: 'CanDeleteApplications',
   canManageReleases: 'CanManageReleases',
+  canViewProducts: 'CanViewProducts',
+  canManageProducts: 'CanManageProducts',
+  canCreateProducts: 'CanCreateProducts',
+  canDeleteProducts: 'CanDeleteProducts',
+  canManageProductReleases: 'CanManageProductReleases',
   canViewExpenses: 'CanViewExpenses',
   canCreateExpenses: 'CanCreateExpenses',
   canManageExpenses: 'CanManageExpenses',

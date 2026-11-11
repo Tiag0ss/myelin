@@ -37,6 +37,11 @@ export interface RolePermission {
   CanCreateApplications: boolean;
   CanDeleteApplications: boolean;
   CanManageReleases: boolean;
+  CanViewProducts: boolean;
+  CanManageProducts: boolean;
+  CanCreateProducts: boolean;
+  CanDeleteProducts: boolean;
+  CanManageProductReleases: boolean;
   CanViewExpenses: boolean;
   CanCreateExpenses: boolean;
   CanManageExpenses: boolean;
@@ -78,6 +83,11 @@ export interface UserPermissions {
   canCreateApplications: boolean;
   canDeleteApplications: boolean;
   canManageReleases: boolean;
+  canViewProducts: boolean;
+  canManageProducts: boolean;
+  canCreateProducts: boolean;
+  canDeleteProducts: boolean;
+  canManageProductReleases: boolean;
   canViewExpenses: boolean;
   canCreateExpenses: boolean;
   canManageExpenses: boolean;
