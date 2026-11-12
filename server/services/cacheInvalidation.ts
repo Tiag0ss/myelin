@@ -154,7 +154,7 @@ export async function invalidateApplicationCaches(payload: InvalidatePayload): P
   if (normalizedApplicationId !== undefined) {
     await cache.del(cacheKeys.application(normalizedApplicationId));
     await cache.del(cacheKeys.applicationVersions(normalizedApplicationId));
-    await cache.del(cacheKeys.applicationTasks(normalizedApplicationId));
+    await delKeyFamily(cacheKeys.applicationTasks(normalizedApplicationId));
   }
   if (normalizedOrgId !== undefined) {
     await delKeyFamily(cacheKeys.orgApplications(normalizedOrgId));

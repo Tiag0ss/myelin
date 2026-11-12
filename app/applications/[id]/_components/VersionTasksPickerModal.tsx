@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { getApiUrl } from '@/lib/api/config';
 import { suggestTaskIdsFromCommits } from '@/lib/releasePatchNotes';
 
 export type VersionPickerTask = {
@@ -12,15 +13,21 @@ export type VersionPickerTask = {
 
 type VersionTasksPickerModalProps = {
   isOpen: boolean;
+  applicationId: string | number;
+  token: string;
+  excludeVersionId?: number | null;
   availableTasks: VersionPickerTask[];
   initiallySelectedIds: number[];
   commitMessages?: Array<{ sha: string; message: string }>;
   onClose: () => void;
-  onConfirm: (taskIds: number[]) => void;
+  onConfirm: (taskIds: number[], selectedTasks: VersionPickerTask[]) => void;
 };
 
 export default function VersionTasksPickerModal({
   isOpen,
+  applicationId,
+  token,
+  excludeVersionId = null,
   availableTasks,
   initiallySelectedIds,
   commitMessages = [],
@@ -29,10 +36,20 @@ export default function VersionTasksPickerModal({
 }: VersionTasksPickerModalProps) {
   const [search, setSearch] = useState('');
   const [draftIds, setDraftIds] = useState<Set<number>>(new Set());
+  const [searchResults, setSearchResults] = useState<VersionPickerTask[] | null>(null);
+  const [knownTasksById, setKnownTasksById] = useState<Map<number, VersionPickerTask>>(new Map());
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
     setSearch('');
+    setSearchResults(null);
+    setSearchError('');
+    setIsSearching(false);
+    const initial = new Map<number, VersionPickerTask>();
+    for (const task of availableTasks) initial.set(task.Id, task);
+    setKnownTasksById(initial);
     setDraftIds(
       new Set(
         initiallySelectedIds
@@ -43,27 +60,85 @@ export default function VersionTasksPickerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset draft only when modal opens
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setKnownTasksById((prev) => {
+      const next = new Map(prev);
+      for (const task of availableTasks) next.set(task.Id, task);
+      return next;
+    });
+  }, [isOpen, availableTasks]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const q = search.trim();
+    if (!q) {
+      setSearchResults(null);
+      setSearchError('');
+      setIsSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError('');
+      try {
+        const params = new URLSearchParams();
+        params.set('search', q);
+        if (excludeVersionId && excludeVersionId > 0) {
+          params.set('excludeVersion', String(excludeVersionId));
+        }
+        const res = await fetch(
+          `${getApiUrl()}/api/applications/${applicationId}/tasks?${params.toString()}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) {
+          throw new Error('Search failed');
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        const mapped = tasks.map((task: VersionPickerTask) => ({
+          Id: Number(task.Id),
+          TaskName: String(task.TaskName || ''),
+          ProjectName: task.ProjectName ?? null,
+          StatusName: task.StatusName ?? null,
+        }));
+        setSearchResults(mapped);
+        setKnownTasksById((prev) => {
+          const next = new Map(prev);
+          for (const task of mapped) next.set(task.Id, task);
+          return next;
+        });
+      } catch {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchError('Failed to search tasks');
+        }
+      } finally {
+        if (!cancelled) setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [isOpen, search, applicationId, token, excludeVersionId]);
+
+  const listedTasks = search.trim() ? searchResults ?? [] : availableTasks;
+
   const suggestedIds = useMemo(
     () =>
       suggestTaskIdsFromCommits(
         commitMessages,
-        availableTasks.map((task) => task.Id),
+        listedTasks.map((task) => task.Id),
         Array.from(draftIds)
       ),
-    [commitMessages, availableTasks, draftIds]
+    [commitMessages, listedTasks, draftIds]
   );
-
-  const filteredTasks = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return availableTasks;
-    return availableTasks.filter((task) => {
-      const name = String(task.TaskName || '').toLowerCase();
-      const project = String(task.ProjectName || '').toLowerCase();
-      const status = String(task.StatusName || '').toLowerCase();
-      const id = String(task.Id);
-      return name.includes(q) || project.includes(q) || status.includes(q) || id.includes(q);
-    });
-  }, [availableTasks, search]);
 
   if (!isOpen) return null;
 
@@ -102,7 +177,9 @@ export default function VersionTasksPickerModal({
               Select tasks
             </h3>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-              {availableTasks.length} available · {draftIds.size} selected
+              {search.trim()
+                ? `${isSearching ? 'Searching…' : `${listedTasks.length} match${listedTasks.length === 1 ? '' : 'es'}`} · ${draftIds.size} selected`
+                : `${availableTasks.length} from linked projects · ${draftIds.size} selected`}
             </p>
           </div>
           <button
@@ -123,7 +200,7 @@ export default function VersionTasksPickerModal({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks by name, project, status, or id…"
+              placeholder="Search all org tasks by name, project, status, or id…"
               className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
             <svg
@@ -140,6 +217,13 @@ export default function VersionTasksPickerModal({
               />
             </svg>
           </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Without search, only tasks from projects linked to this application are listed. Search
+            ignores that link and matches any task in the organization.
+          </p>
+          {searchError ? (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{searchError}</p>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -159,13 +243,19 @@ export default function VersionTasksPickerModal({
             </div>
           )}
 
-          {filteredTasks.length === 0 ? (
+          {isSearching && search.trim() ? (
+            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Searching…</p>
+          ) : listedTasks.length === 0 ? (
             <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-              {availableTasks.length === 0 ? 'No tasks available' : 'No tasks match your search'}
+              {search.trim()
+                ? 'No tasks match your search'
+                : availableTasks.length === 0
+                  ? 'No tasks available from linked projects'
+                  : 'No tasks match your search'}
             </p>
           ) : (
             <div className="space-y-1">
-              {filteredTasks.map((task) => {
+              {listedTasks.map((task) => {
                 const checked = draftIds.has(task.Id);
                 return (
                   <label
@@ -214,7 +304,11 @@ export default function VersionTasksPickerModal({
           <button
             type="button"
             onClick={() => {
-              onConfirm(Array.from(draftIds));
+              const taskIds = Array.from(draftIds);
+              const selectedTasks = taskIds
+                .map((id) => knownTasksById.get(id))
+                .filter((task): task is VersionPickerTask => Boolean(task));
+              onConfirm(taskIds, selectedTasks);
               onClose();
             }}
             className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"

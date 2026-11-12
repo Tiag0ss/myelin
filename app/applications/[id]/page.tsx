@@ -1974,11 +1974,26 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       <VersionTasksPickerModal
         isOpen={showTasksPickerModal}
+        applicationId={id}
+        token={token || ''}
+        excludeVersionId={editingVersion?.Id ?? null}
         availableTasks={availableTasks}
         initiallySelectedIds={versionForm.TaskIds}
         commitMessages={versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message }))}
         onClose={() => setShowTasksPickerModal(false)}
-        onConfirm={(taskIds) => {
+        onConfirm={(taskIds, selectedTasks) => {
+          setAvailableTasks((prev) => {
+            const byId = new Map(prev.map((task) => [task.Id, task]));
+            for (const task of selectedTasks) {
+              byId.set(task.Id, {
+                Id: task.Id,
+                TaskName: task.TaskName,
+                ProjectName: task.ProjectName || '',
+                StatusName: task.StatusName,
+              });
+            }
+            return Array.from(byId.values());
+          });
           setVersionForm((prev) => ({ ...prev, TaskIds: taskIds }));
         }}
       />

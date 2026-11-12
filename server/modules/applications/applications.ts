@@ -32,6 +32,11 @@ import {
   prepareHtmlForLlm,
 } from '../../utils/llmProvider';
 import { normalizeCommitSha } from '../../utils/releasePatchNotes';
+import {
+  buildReleaseTaskSearchClause,
+  normalizeReleaseTaskSearch,
+  resolveReleaseTaskPickerScope,
+} from '../../utils/releaseTaskPicker';
 
 const router = Router();
 
@@ -905,56 +910,108 @@ router.put('/:id/projects', authenticateToken, async (req: AuthRequest, res: Res
   }
 });
 
-// GET /api/applications/:id/tasks - list all tasks from the application's associated projects
+// GET /api/applications/:id/tasks - release task picker
+// Default: tasks from projects linked via ApplicationProjects.
+// ?search=: org-wide match (ignores project↔application link).
 router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { excludeVersion } = req.query;
+    const { excludeVersion, search: searchRaw } = req.query;
 
     const appId = parseInt(Array.isArray(id) ? id[0] : id);
-    const excludeVersionKey = excludeVersion
-      ? `:exclude-${parseInt(String(Array.isArray(excludeVersion) ? excludeVersion[0] : excludeVersion))}`
-      : '';
+    if (!Number.isFinite(appId) || appId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid application id' });
+    }
 
-    const tasks = await cachedJson(
-      `${cacheKeys.applicationTasks(appId)}${excludeVersionKey}`,
-      ENTITY_TTL_SECONDS,
-      async () => {
-    // Build query to exclude tasks already in other versions
-    let query = `
+    const searchTerm = normalizeReleaseTaskSearch(
+      Array.isArray(searchRaw) ? String(searchRaw[0] ?? '') : String(searchRaw ?? '')
+    );
+    const scope = resolveReleaseTaskPickerScope(searchTerm);
+    const excludeVersionId = excludeVersion
+      ? parseInt(String(Array.isArray(excludeVersion) ? excludeVersion[0] : excludeVersion))
+      : null;
+    const validExcludeVersion =
+      excludeVersionId !== null && Number.isFinite(excludeVersionId) && excludeVersionId > 0
+        ? excludeVersionId
+        : null;
+
+    const fetchTasks = async (): Promise<RowDataPacket[]> => {
+      const [apps] = await pool.execute<RowDataPacket[]>(
+        'SELECT OrganizationId FROM Applications WHERE Id = ? AND IsActive = 1',
+        [appId]
+      );
+      if (!apps.length) {
+        return [];
+      }
+      const organizationId = apps[0].OrganizationId;
+
+      const idCastExpr =
+        dbProvider === 'mssql' ? 'CAST(t.Id AS NVARCHAR(50))' : 'CAST(t.Id AS CHAR)';
+
+      const selectSql = `
       SELECT t.Id, t.TaskName, t.Description, t.Status, t.Priority, t.ProjectId,
              tsv.StatusName, tsv.ColorCode as StatusColor,
              tpv.PriorityName, tpv.ColorCode as PriorityColor,
              p.ProjectName,
              u.FirstName as AssigneeFN, u.LastName as AssigneeLN
-      FROM Tasks t
+      FROM Tasks t`;
+
+      const exclusionSql = `
+      t.Id NOT IN (
+        SELECT avt.TaskId FROM ApplicationVersionTasks avt
+        INNER JOIN ApplicationVersions av ON avt.VersionId = av.Id
+        WHERE av.ApplicationId = ?${validExcludeVersion ? ' AND avt.VersionId != ?' : ''}
+      )`;
+
+      const params: Array<string | number> = [];
+      let query: string;
+
+      if (scope === 'organization-search') {
+        const searchClause = buildReleaseTaskSearchClause({
+          search: searchTerm,
+          idCastExpr,
+        });
+        query = `
+      ${selectSql}
+      INNER JOIN Projects p ON t.ProjectId = p.Id AND p.OrganizationId = ?
+      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+      LEFT JOIN Users u ON t.AssignedTo = u.Id
+      WHERE ${exclusionSql}
+        AND ${searchClause.sql}
+      ORDER BY p.ProjectName, t.DisplayOrder, t.Id`;
+        params.push(organizationId, appId);
+        if (validExcludeVersion) params.push(validExcludeVersion);
+        params.push(...searchClause.params);
+      } else {
+        query = `
+      ${selectSql}
       INNER JOIN ApplicationProjects ap ON t.ProjectId = ap.ProjectId AND ap.ApplicationId = ?
       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
       LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
       LEFT JOIN Projects p ON t.ProjectId = p.Id
       LEFT JOIN Users u ON t.AssignedTo = u.Id
-      WHERE t.Id NOT IN (
-        SELECT avt.TaskId FROM ApplicationVersionTasks avt
-        INNER JOIN ApplicationVersions av ON avt.VersionId = av.Id
-        WHERE av.ApplicationId = ?`;
-    
-    const params: number[] = [appId, appId];
-
-    // If editing a version, allow tasks from that version to be shown
-    if (excludeVersion) {
-      query += ' AND avt.VersionId != ?';
-      const versionId = parseInt(String(Array.isArray(excludeVersion) ? excludeVersion[0] : excludeVersion));
-      params.push(versionId);
-    }
-
-    query += `
-      )
+      WHERE ${exclusionSql}
       ORDER BY p.ProjectName, t.DisplayOrder, t.Id`;
+        params.push(appId, appId);
+        if (validExcludeVersion) params.push(validExcludeVersion);
+      }
 
-    const [taskRows] = await pool.execute<RowDataPacket[]>(query, params);
+      const [taskRows] = await pool.execute<RowDataPacket[]>(query, params);
+      return taskRows;
+    };
 
-    return taskRows;
-    });
+    // Do not cache search results (query-dependent, high cardinality).
+    const tasks =
+      scope === 'organization-search'
+        ? await fetchTasks()
+        : await cachedJson(
+            `${cacheKeys.applicationTasks(appId)}${
+              validExcludeVersion ? `:exclude-${validExcludeVersion}` : ''
+            }`,
+            ENTITY_TTL_SECONDS,
+            fetchTasks
+          );
 
     res.json({ success: true, tasks });
   } catch (error) {
