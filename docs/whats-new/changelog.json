@@ -175,6 +175,16 @@
         "Deny OpenRouter/OpenAI training use by default, with an optional OpenRouter Zero Data Retention (ZDR) toggle in System Settings",
         "Carry organization, project, and custom fields when creating timesheet entries"
       ]
+    },
+    {
+      "version": "1.2.6",
+      "date": "2026-11-12",
+      "title": "Release task picker and build fix",
+      "items": [
+        "Show release-linked tasks from projects associated with the application by default",
+        "Search across all organization tasks when linking work to a release (ignores project↔application association)",
+        "Fix server TypeScript build so shared release/patch-notes libraries compile in Docker"
+      ]
     }
   ]
 }
