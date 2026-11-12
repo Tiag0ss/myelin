@@ -288,8 +288,14 @@ export default function GlobalGridEnhancer() {
         if (table.dataset.gridEnhancedKey === gridKey) {
           // React often remounts rows without recreating the <table>. Re-init when column
           // markers were lost so saved visibility/order are applied again.
+          // Also re-init when tbody cells were replaced (e.g. filter changes) while headers
+          // kept their markers — otherwise hidden/reordered columns break on new rows.
           const markedHeader = table.querySelector('thead th[data-grid-column-id]');
-          if (markedHeader) {
+          const hasBodyRows = Boolean(table.querySelector('tbody tr'));
+          const hasUnmarkedBodyCell = Boolean(
+            table.querySelector('tbody tr td:not([data-grid-column-id])')
+          );
+          if (markedHeader && (!hasBodyRows || !hasUnmarkedBodyCell)) {
             return;
           }
           delete table.dataset.gridEnhancedKey;

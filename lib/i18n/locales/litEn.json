@@ -3826,5 +3826,7 @@
   "patchNotesFilledFromApplications": "Patch notes filled from selected application versions",
   "selectAtLeastOneApplicationVersion": "Select at least one application version",
   "requireOpenrouterZeroDataRetentionZdr": "Require OpenRouter Zero Data Retention (ZDR)",
-  "openrouterZdrHintManyFreeModelsHaveNoZdrEndpoints": "When enabled, requests only use ZDR endpoints. Many free models (including Google :free) will fail."
+  "openrouterZdrHintManyFreeModelsHaveNoZdrEndpoints": "When enabled, requests only use ZDR endpoints. Many free models (including Google :free) will fail.",
+  "hideUnscheduledWork": "Hide unscheduled work",
+  "github": "GitHub"
 }

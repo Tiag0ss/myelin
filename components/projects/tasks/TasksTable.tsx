@@ -317,7 +317,7 @@ export function TasksTable({
         } ${draggedTaskId === task.Id ? 'opacity-50' : ''}`}
         onDoubleClick={() => startInlineEdit(task)}
       >
-        <td className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2 text-center" onClick={(event) => event.stopPropagation()}>
+        <td data-column-key="select" className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2 text-center" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-center gap-1">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" title={t('lit.dragToReorderOrChangeParent')}>
               <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24">
@@ -333,7 +333,7 @@ export function TasksTable({
             />
           </div>
         </td>
-        <td className="px-2 py-2">
+        <td data-column-key="task-type" className="px-2 py-2">
           {isEditingRow ? (
             <SearchableSelect
               value={editingRowData.taskType ?? undefined}
@@ -371,6 +371,7 @@ export function TasksTable({
           ) : <span className="text-xs text-gray-400">-</span>}
         </td>
         <td
+          data-column-key="task"
           className={`px-2 py-2 ${isEditingRow ? '' : 'cursor-pointer'}`}
           onClick={() => {
             if (isEditingRow) return;
@@ -434,7 +435,7 @@ export function TasksTable({
             </div>
           </div>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+        <td data-column-key="assigned-to" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
           {isEditingRow ? (
             <SearchableSelect
               value={editingRowData.assignedTo ?? undefined}
@@ -457,7 +458,7 @@ export function TasksTable({
             <span className="text-gray-400 dark:text-gray-500 italic">{t('lit.unassigned')}</span>
           )}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td data-column-key="status" className="px-2 py-2 whitespace-nowrap">
           {isEditingRow ? (
             <SearchableSelect
               value={editingRowData.status ?? undefined}
@@ -477,7 +478,7 @@ export function TasksTable({
             </span>
           )}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td data-column-key="priority" className="px-2 py-2 whitespace-nowrap">
           {isEditingRow ? (
             <SearchableSelect
               value={editingRowData.priority ?? undefined}
@@ -497,7 +498,7 @@ export function TasksTable({
             </span>
           )}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+        <td data-column-key="due-date" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
           {isEditingRow ? (
             <InlineDateField
               value={editingRowData.dueDate}
@@ -510,11 +511,15 @@ export function TasksTable({
           )}
         </td>
         {additionalTaskColumnKeys.map((columnKey) => (
-          <td key={`task-${task.Id}-extra-${columnKey}`} className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+          <td
+            key={`task-${task.Id}-extra-${columnKey}`}
+            data-column-key={`extra-${columnKey}`}
+            className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+          >
             {renderAdditionalTaskColumnValue(task, columnKey)}
           </td>
         ))}
-        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+        <td data-column-key="actions" className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
           {canManage && isEditingRow ? (
             <div className="flex items-center justify-end gap-1">
               <button
@@ -594,8 +599,8 @@ export function TasksTable({
           data-task-new-subtask-parent-id={task.Id}
           className="bg-blue-50/60 dark:bg-blue-900/10"
         >
-          <td className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2"></td>
-          <td className="px-2 py-2">
+          <td data-column-key="select" className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2"></td>
+          <td data-column-key="task-type" className="px-2 py-2">
             <SearchableSelect
               value={newSubtaskData.taskType ?? undefined}
               onChange={(value) => {
@@ -609,7 +614,7 @@ export function TasksTable({
               className="w-full"
             />
           </td>
-          <td className="px-2 py-2">
+          <td data-column-key="task" className="px-2 py-2">
             <div className="flex items-center gap-1.5" style={{ marginLeft: `${(level + 1) * 24}px` }}>
               <span className="w-4"></span>
               <span className="text-gray-400 flex-shrink-0">↳</span>
@@ -625,7 +630,7 @@ export function TasksTable({
               />
             </div>
           </td>
-          <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+          <td data-column-key="assigned-to" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
             <SearchableSelect
               value={newSubtaskData.assignedTo ?? undefined}
               onChange={(value) => {
@@ -639,7 +644,7 @@ export function TasksTable({
               className="w-full"
             />
           </td>
-          <td className="px-2 py-2 whitespace-nowrap">
+          <td data-column-key="status" className="px-2 py-2 whitespace-nowrap">
             <SearchableSelect
               value={newSubtaskData.status ?? undefined}
               onChange={(value) => {
@@ -653,7 +658,7 @@ export function TasksTable({
               className="w-full"
             />
           </td>
-          <td className="px-2 py-2 whitespace-nowrap">
+          <td data-column-key="priority" className="px-2 py-2 whitespace-nowrap">
             <SearchableSelect
               value={newSubtaskData.priority ?? undefined}
               onChange={(value) => {
@@ -667,7 +672,7 @@ export function TasksTable({
               className="w-full"
             />
           </td>
-          <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+          <td data-column-key="due-date" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
             <InlineDateField
               value={newSubtaskData.dueDate}
               onChange={(e) => setNewSubtaskData((prev) => ({ ...prev, dueDate: e.target.value }))}
@@ -676,11 +681,15 @@ export function TasksTable({
             />
           </td>
           {additionalTaskColumnKeys.map((columnKey) => (
-            <td key={`new-subtask-extra-${task.Id}-${columnKey}`} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 dark:text-gray-500">
+            <td
+              key={`new-subtask-extra-${task.Id}-${columnKey}`}
+              data-column-key={`extra-${columnKey}`}
+              className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 dark:text-gray-500"
+            >
               -
             </td>
           ))}
-          <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+          <td data-column-key="actions" className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
             <div className="flex items-center justify-end gap-1">
               <button
                 type="button"
@@ -1038,8 +1047,8 @@ export function TasksTable({
                   {visibleParentTasks.map((task) => renderTaskRow(task))}
                   {creatingRootTaskInline && (
                     <tr data-task-new-root-row="true" className="bg-blue-50/60 dark:bg-blue-900/10">
-                      <td className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2"></td>
-                      <td className="px-2 py-2">
+                      <td data-column-key="select" className="w-8 min-w-[2rem] max-w-[2rem] px-1 py-2"></td>
+                      <td data-column-key="task-type" className="px-2 py-2">
                         <SearchableSelect
                           value={newRootTaskData.taskType ?? undefined}
                           onChange={(value) => {
@@ -1053,7 +1062,7 @@ export function TasksTable({
                           className="w-full"
                         />
                       </td>
-                      <td className="px-2 py-2">
+                      <td data-column-key="task" className="px-2 py-2">
                         <InlineTextField
                           key={`new-root-task-input-${newRootTaskInputResetKey}`}
                           value={newRootTaskData.taskName}
@@ -1065,7 +1074,7 @@ export function TasksTable({
                           placeholder={t('lit.newTaskName')}
                         />
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td data-column-key="assigned-to" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <SearchableSelect
                           value={newRootTaskData.assignedTo ?? undefined}
                           onChange={(value) => {
@@ -1079,7 +1088,7 @@ export function TasksTable({
                           className="w-full"
                         />
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
+                      <td data-column-key="status" className="px-2 py-2 whitespace-nowrap">
                         <SearchableSelect
                           value={newRootTaskData.status ?? undefined}
                           onChange={(value) => {
@@ -1093,7 +1102,7 @@ export function TasksTable({
                           className="w-full"
                         />
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
+                      <td data-column-key="priority" className="px-2 py-2 whitespace-nowrap">
                         <SearchableSelect
                           value={newRootTaskData.priority ?? undefined}
                           onChange={(value) => {
@@ -1107,7 +1116,7 @@ export function TasksTable({
                           className="w-full"
                         />
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td data-column-key="due-date" className="px-2 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <InlineDateField
                           value={newRootTaskData.dueDate}
                           onChange={(e) => setNewRootTaskData((prev) => ({ ...prev, dueDate: e.target.value }))}
@@ -1116,11 +1125,15 @@ export function TasksTable({
                         />
                       </td>
                       {additionalTaskColumnKeys.map((columnKey) => (
-                        <td key={`new-root-extra-${columnKey}`} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 dark:text-gray-500">
+                        <td
+                          key={`new-root-extra-${columnKey}`}
+                          data-column-key={`extra-${columnKey}`}
+                          className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 dark:text-gray-500"
+                        >
                           -
                         </td>
                       ))}
-                      <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+                      <td data-column-key="actions" className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"

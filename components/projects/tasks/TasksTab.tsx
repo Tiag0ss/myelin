@@ -769,150 +769,187 @@ export function TasksTab({
 
   useEffect(() => {
     const grid = tasksGridRef.current;
-    if (!grid) return;
+    if (!grid || !taskColumnsReady) return;
 
     const table = grid.querySelector('table');
     if (!(table instanceof HTMLTableElement)) return;
 
-    const headerRow = table.querySelector('thead tr');
-    if (!headerRow) return;
+    let applying = false;
+    let observer: MutationObserver | null = null;
 
-    const headerCells = Array.from(headerRow.children).filter((cell) => cell instanceof HTMLTableCellElement) as HTMLTableCellElement[];
-    const columnIds = headerCells.map((cell, index) => cell.dataset.columnKey?.trim() || `column-${index + 1}`);
-    const valid = new Set(columnIds);
-    const orderedColumnIds = (taskColumnOrder.length > 0 ? taskColumnOrder : columnIds)
-      .filter((columnId) => valid.has(columnId));
-    const missing = columnIds.filter((columnId) => !orderedColumnIds.includes(columnId));
-    const finalOrder = [...orderedColumnIds, ...missing];
+    const applyTaskGridLayout = () => {
+      const headerRow = table.querySelector('thead tr');
+      if (!headerRow) return;
 
-    const selectColumnIndex = finalOrder.indexOf('select');
-    if (selectColumnIndex > 0) {
-      finalOrder.splice(selectColumnIndex, 1);
-      finalOrder.unshift('select');
-    }
+      const headerCells = Array.from(headerRow.children).filter((cell) => cell instanceof HTMLTableCellElement) as HTMLTableCellElement[];
+      const columnIds = headerCells.map((cell, index) => cell.dataset.columnKey?.trim() || `column-${index + 1}`);
+      const valid = new Set(columnIds);
+      const orderedColumnIds = (taskColumnOrder.length > 0 ? taskColumnOrder : columnIds)
+        .filter((columnId) => valid.has(columnId));
+      const missing = columnIds.filter((columnId) => !orderedColumnIds.includes(columnId));
+      const finalOrder = [...orderedColumnIds, ...missing];
 
-    const actionsColumnIndex = finalOrder.indexOf('actions');
-    if (actionsColumnIndex !== -1 && actionsColumnIndex !== finalOrder.length - 1) {
-      finalOrder.splice(actionsColumnIndex, 1);
-      finalOrder.push('actions');
-    }
-
-    const hiddenSet = new Set(hiddenTaskColumns);
-
-    const rows = Array.from(table.querySelectorAll('tr')) as HTMLTableRowElement[];
-    rows.forEach((row) => {
-      const cells = Array.from(row.children) as HTMLElement[];
-      if (cells.length !== columnIds.length) return;
-      const byColumn = new Map<string, HTMLElement>();
-      cells.forEach((cell, index) => {
-        byColumn.set(columnIds[index], cell);
-      });
-      finalOrder.forEach((columnId) => {
-        const cell = byColumn.get(columnId);
-        if (cell) row.appendChild(cell);
-      });
-      const updatedCells = Array.from(row.children) as HTMLElement[];
-      updatedCells.forEach((cell, index) => {
-        const columnId = finalOrder[index];
-        const isHidden = hiddenSet.has(columnId);
-        cell.style.display = isHidden ? 'none' : '';
-
-        const isActionsColumn = columnId === 'actions';
-        if (!columnId || (!taskSelectableColumnIds.includes(columnId) && !isActionsColumn)) {
-          cell.style.removeProperty('width');
-          cell.style.removeProperty('min-width');
-          cell.style.removeProperty('max-width');
-          return;
-        }
-
-        const mode = isActionsColumn ? 'fixed' : (taskColumnSizeMode[columnId] === 'fixed' ? 'fixed' : 'grow');
-        const width = Number.isFinite(taskColumnSizing[columnId])
-          ? taskColumnSizing[columnId]
-          : (isActionsColumn ? 120 : undefined);
-        const fixedWidth = typeof width === 'number' ? width : null;
-        if (mode === 'fixed' && fixedWidth !== null && Number.isFinite(fixedWidth)) {
-          const finalWidth = `${Math.max(60, Math.min(1400, Math.round(fixedWidth)))}px`;
-          cell.style.width = finalWidth;
-          cell.style.minWidth = finalWidth;
-          cell.style.maxWidth = finalWidth;
-        } else {
-          cell.style.removeProperty('width');
-          cell.style.removeProperty('min-width');
-          cell.style.removeProperty('max-width');
-        }
-      });
-    });
-
-    const reorderedHeaderCells = Array.from(headerRow.children).filter((cell) => cell instanceof HTMLTableCellElement) as HTMLTableCellElement[];
-    reorderedHeaderCells.forEach((headerCell, index) => {
-      const columnId = finalOrder[index];
-      if (!columnId || !taskSelectableColumnIds.includes(columnId) || hiddenSet.has(columnId)) return;
-
-      if (!headerCell.style.position) {
-        headerCell.style.position = 'relative';
+      const selectColumnIndex = finalOrder.indexOf('select');
+      if (selectColumnIndex > 0) {
+        finalOrder.splice(selectColumnIndex, 1);
+        finalOrder.unshift('select');
       }
 
-      if (headerCell.dataset.taskResizeBound === 'true') return;
-      headerCell.dataset.taskResizeBound = 'true';
+      const actionsColumnIndex = finalOrder.indexOf('actions');
+      if (actionsColumnIndex !== -1 && actionsColumnIndex !== finalOrder.length - 1) {
+        finalOrder.splice(actionsColumnIndex, 1);
+        finalOrder.push('actions');
+      }
 
-      const handle = document.createElement('div');
-      handle.className = 'task-grid-column-resize-handle';
-      handle.style.position = 'absolute';
-      handle.style.top = '0';
-      handle.style.right = '0';
-      handle.style.width = '9px';
-      handle.style.height = '100%';
-      handle.style.cursor = 'col-resize';
-      handle.style.userSelect = 'none';
-      handle.style.touchAction = 'none';
-      handle.style.zIndex = '3';
+      const hiddenSet = new Set(hiddenTaskColumns);
 
-      const line = document.createElement('div');
-      line.style.position = 'absolute';
-      line.style.top = '20%';
-      line.style.right = '2px';
-      line.style.width = '2px';
-      line.style.height = '60%';
-      line.style.borderRadius = '9999px';
-      line.style.backgroundColor = 'rgba(156, 163, 175, 0.7)';
-      handle.appendChild(line);
+      applying = true;
+      observer?.disconnect();
 
-      handle.addEventListener('mousedown', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+      try {
+        const rows = Array.from(table.querySelectorAll('tr')) as HTMLTableRowElement[];
+        rows.forEach((row) => {
+          const cells = Array.from(row.children) as HTMLElement[];
+          if (cells.length !== columnIds.length) return;
+          const byColumn = new Map<string, HTMLElement>();
+          cells.forEach((cell, index) => {
+            // Prefer stable data-column-key so remounted body rows (filter changes) still
+            // map correctly even when the header was already reordered in the DOM.
+            const key = cell.dataset.columnKey?.trim() || columnIds[index];
+            if (key) byColumn.set(key, cell);
+          });
+          finalOrder.forEach((columnId) => {
+            const cell = byColumn.get(columnId);
+            if (cell) row.appendChild(cell);
+          });
+          const updatedCells = Array.from(row.children) as HTMLElement[];
+          updatedCells.forEach((cell, index) => {
+            const columnId = finalOrder[index];
+            const isHidden = hiddenSet.has(columnId);
+            cell.dataset.taskGridApplied = '1';
+            cell.style.display = isHidden ? 'none' : '';
 
-        const startX = event.clientX;
-        const startWidth = Math.max(60, Math.round(headerCell.getBoundingClientRect().width));
+            const isActionsColumn = columnId === 'actions';
+            if (!columnId || (!taskSelectableColumnIds.includes(columnId) && !isActionsColumn)) {
+              cell.style.removeProperty('width');
+              cell.style.removeProperty('min-width');
+              cell.style.removeProperty('max-width');
+              return;
+            }
 
-        setTaskColumnSizeMode((previous) => ({
-          ...previous,
-          [columnId]: 'fixed',
-        }));
-        setTaskColumnSizing((previous) => ({
-          ...previous,
-          [columnId]: Number.isFinite(previous[columnId]) ? previous[columnId] : startWidth,
-        }));
+            const mode = isActionsColumn ? 'fixed' : (taskColumnSizeMode[columnId] === 'fixed' ? 'fixed' : 'grow');
+            const width = Number.isFinite(taskColumnSizing[columnId])
+              ? taskColumnSizing[columnId]
+              : (isActionsColumn ? 120 : undefined);
+            const fixedWidth = typeof width === 'number' ? width : null;
+            if (mode === 'fixed' && fixedWidth !== null && Number.isFinite(fixedWidth)) {
+              const finalWidth = `${Math.max(60, Math.min(1400, Math.round(fixedWidth)))}px`;
+              cell.style.width = finalWidth;
+              cell.style.minWidth = finalWidth;
+              cell.style.maxWidth = finalWidth;
+            } else {
+              cell.style.removeProperty('width');
+              cell.style.removeProperty('min-width');
+              cell.style.removeProperty('max-width');
+            }
+          });
+        });
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
-          const delta = moveEvent.clientX - startX;
-          const nextWidth = Math.max(60, Math.min(1400, Math.round(startWidth + delta)));
-          setTaskColumnSizing((previous) => ({
-            ...previous,
-            [columnId]: nextWidth,
-          }));
-        };
+        const reorderedHeaderCells = Array.from(headerRow.children).filter((cell) => cell instanceof HTMLTableCellElement) as HTMLTableCellElement[];
+        reorderedHeaderCells.forEach((headerCell, index) => {
+          const columnId = finalOrder[index];
+          if (!columnId || !taskSelectableColumnIds.includes(columnId) || hiddenSet.has(columnId)) return;
 
-        const onMouseUp = () => {
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-        };
+          if (!headerCell.style.position) {
+            headerCell.style.position = 'relative';
+          }
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-      });
+          if (headerCell.dataset.taskResizeBound === 'true') return;
+          headerCell.dataset.taskResizeBound = 'true';
 
-      headerCell.appendChild(handle);
+          const handle = document.createElement('div');
+          handle.className = 'task-grid-column-resize-handle';
+          handle.style.position = 'absolute';
+          handle.style.top = '0';
+          handle.style.right = '0';
+          handle.style.width = '9px';
+          handle.style.height = '100%';
+          handle.style.cursor = 'col-resize';
+          handle.style.userSelect = 'none';
+          handle.style.touchAction = 'none';
+          handle.style.zIndex = '3';
+
+          const line = document.createElement('div');
+          line.style.position = 'absolute';
+          line.style.top = '20%';
+          line.style.right = '2px';
+          line.style.width = '2px';
+          line.style.height = '60%';
+          line.style.borderRadius = '9999px';
+          line.style.backgroundColor = 'rgba(156, 163, 175, 0.7)';
+          handle.appendChild(line);
+
+          handle.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const startX = event.clientX;
+            const startWidth = Math.max(60, Math.round(headerCell.getBoundingClientRect().width));
+
+            setTaskColumnSizeMode((previous) => ({
+              ...previous,
+              [columnId]: 'fixed',
+            }));
+            setTaskColumnSizing((previous) => ({
+              ...previous,
+              [columnId]: Number.isFinite(previous[columnId]) ? previous[columnId] : startWidth,
+            }));
+
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              const delta = moveEvent.clientX - startX;
+              const nextWidth = Math.max(60, Math.min(1400, Math.round(startWidth + delta)));
+              setTaskColumnSizing((previous) => ({
+                ...previous,
+                [columnId]: nextWidth,
+              }));
+            };
+
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          });
+
+          headerCell.appendChild(handle);
+        });
+      } finally {
+        observer?.observe(table, { childList: true, subtree: true });
+        requestAnimationFrame(() => {
+          applying = false;
+        });
+      }
+    };
+
+    applyTaskGridLayout();
+
+    observer = new MutationObserver(() => {
+      if (applying) return;
+      // React remounts tbody rows on filter changes while thead stays reordered.
+      const hasBodyRows = Boolean(table.querySelector('tbody tr'));
+      const hasUnmarkedBodyCell = Boolean(
+        table.querySelector('tbody tr td:not([data-task-grid-applied="1"])')
+      );
+      if (!hasBodyRows || !hasUnmarkedBodyCell) return;
+      applyTaskGridLayout();
     });
+    observer.observe(table, { childList: true, subtree: true });
+
+    return () => {
+      observer?.disconnect();
+    };
   }, [
     hiddenTaskColumns,
     taskColumnOrder,
@@ -927,6 +964,15 @@ export function TasksTab({
     editingRowTaskId,
     creatingSubtaskParentId,
     creatingRootTaskInline,
+    filterText,
+    filterStatus,
+    filterPriority,
+    filterAssignee,
+    filterTaskType,
+    filterTagIds,
+    hideClosed,
+    hideCancelled,
+    unplannedOnly,
   ]);
 
   // Check which integrations are configured by source type

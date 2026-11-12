@@ -49,6 +49,11 @@ import {
 import { getTaskUserAllocationSegments as buildTaskUserAllocationSegments } from '@/lib/planning/allocationSegments';
 import { filterUnplannedTasksForTray } from '@/lib/planning/filterUnplannedTasks';
 import { getDragAutoScrollDelta } from '@/lib/planning/dragAutoScroll';
+import {
+  DEFAULT_PLANNING_TASK_FILTERS,
+  taskMatchesPlanningFilters,
+} from '@/lib/planning/planningTaskFilters';
+import PlanningTasksTab from './_components/PlanningTasksTab';
 
 // Week days constant - reused throughout the component
 const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -261,7 +266,16 @@ export default function PlanningPage() {
     endDate.setDate(endDate.getDate() + 27);
     return formatDateForInput(endDate);
   });
-  const [activeTab, setActiveTab] = useState<'gantt' | 'allocations'>('gantt');
+  const [activeTab, setActiveTab] = useState<'gantt' | 'allocations' | 'tasks'>('gantt');
+  const [planningTasksFilteredCount, setPlanningTasksFilteredCount] = useState(0);
+
+  useEffect(() => {
+    setPlanningTasksFilteredCount(
+      tasks.filter((task) =>
+        taskMatchesPlanningFilters(task, DEFAULT_PLANNING_TASK_FILTERS, { allTasks: tasks })
+      ).length
+    );
+  }, [tasks]);
   const [ganttGroupBy, setGanttGroupBy] = useState<'resource' | 'customer' | 'project' | 'time-entries'>('resource');
   const [maxVisibleLevel, setMaxVisibleLevel] = useState<number>(0);
   const [allocationFilters, setAllocationFilters, resetAllocationFilters] = usePersistedFilters(
@@ -7714,9 +7728,13 @@ export default function PlanningPage() {
                     tabs={[
                       { id: 'gantt', label: t('lit.ganttChart') },
                       { id: 'allocations', label: `All Allocations (${filteredAllocationGroups.length})` },
+                      {
+                        id: 'tasks',
+                        label: `${t('lit.allTasks')} (${planningTasksFilteredCount})`,
+                      },
                     ]}
                     activeId={activeTab}
-                    onChange={(id) => setActiveTab(id as 'gantt' | 'allocations')}
+                    onChange={(id) => setActiveTab(id as 'gantt' | 'allocations' | 'tasks')}
                   />
                 </div>
                 {activeTab === 'gantt' && (
@@ -7743,7 +7761,7 @@ export default function PlanningPage() {
             </div>
             )}
 
-            {!isGanttExpanded && (isLoadingOutlookCalendar || overdueMilestones.length > 0 || hiddenUnassignedTasks.length > 0) && (
+            {!isGanttExpanded && activeTab === 'gantt' && (isLoadingOutlookCalendar || overdueMilestones.length > 0 || hiddenUnassignedTasks.length > 0) && (
               <div className="shrink-0 border-b border-amber-200/50 bg-amber-50/60 px-3 py-1 dark:border-amber-800/30 dark:bg-amber-900/10">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 {isLoadingOutlookCalendar && (
@@ -11212,7 +11230,7 @@ export default function PlanningPage() {
 
         {/* Allocations Tab */}
         {activeTab === 'allocations' && (
-          <div className="w-full space-y-2" data-grid-enhancer-ignore="true">
+          <div className="w-full flex-1 min-h-0 overflow-auto px-3 pb-3 space-y-2" data-grid-enhancer-ignore="true">
             <CollapsibleFilterPanel
               title={t('lit.allocationFilters')}
               activeCount={allocationFilterActiveCount}
@@ -11351,7 +11369,14 @@ export default function PlanningPage() {
                     </tr>
                   ) : (
                     filteredAllocationGroups.map((group: any, idx: number) => (
-                      <tr key={group.TaskId ?? idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <tr
+                        key={group.TaskId ?? idx}
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        onClick={() => {
+                          const task = tasks.find((entry) => Number(entry.Id) === Number(group.TaskId));
+                          if (task) handleTaskClick(task);
+                        }}
+                      >
                         <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                           {group.TaskName}
                         </td>
@@ -11385,7 +11410,10 @@ export default function PlanningPage() {
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                           {canPlanOnThisDevice && (
                             <button
-                              onClick={() => handleDeleteTaskAllocations(group.TaskId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTaskAllocations(group.TaskId);
+                              }}
                               title={t('lit.deleteAllAllocations')}
                               aria-label={t('lit.deleteAllAllocations')}
                               className="rounded p-1.5 text-gray-400 transition-colors hover:text-red-600 dark:hover:text-red-400"
@@ -11416,6 +11444,20 @@ export default function PlanningPage() {
               </div>
             </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'tasks' && token && (
+          <div className="flex w-full flex-1 min-h-0 flex-col overflow-hidden px-3 pb-3">
+            <PlanningTasksTab
+              tasks={tasks}
+              projects={projects}
+              users={users}
+              token={token}
+              isActive={activeTab === 'tasks'}
+              onOpenTask={handleTaskClick}
+              onFilteredCountChange={setPlanningTasksFilteredCount}
+            />
           </div>
         )}
 

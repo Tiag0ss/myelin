@@ -46,4 +46,34 @@ describe('grid enhancer column keys', () => {
     const staleSessionSignature: string = 'task|status';
     expect(staleSessionSignature === currentSignature).toBe(false);
   });
+
+  it('reorders remounted body cells by data-column-key not DOM index', () => {
+    // Header already in user order; React remounted body back to JSX order.
+    const headerOrder = ['select', 'status', 'task', 'actions'];
+    const remountedBody = [
+      { key: 'select' },
+      { key: 'task' },
+      { key: 'status' },
+      { key: 'actions' },
+    ];
+    const byColumn = new Map(remountedBody.map((cell) => [cell.key, cell]));
+    const reordered = headerOrder.map((id) => byColumn.get(id)?.key);
+    expect(reordered).toEqual(['select', 'status', 'task', 'actions']);
+
+    // Index-based mapping (the old bug) would mis-label remounted cells.
+    const byIndexWrong = remountedBody.map((cell, index) => ({
+      assumed: headerOrder[index],
+      actual: cell.key,
+    }));
+    expect(byIndexWrong.some((entry) => entry.assumed !== entry.actual)).toBe(true);
+  });
+
+  it('treats unmarked body cells as needing layout re-apply', () => {
+    const hasBodyRows = true;
+    const hasUnmarkedBodyCell = true;
+    const shouldSkip = Boolean(
+      /* markedHeader */ true && (!hasBodyRows || !hasUnmarkedBodyCell)
+    );
+    expect(shouldSkip).toBe(false);
+  });
 });

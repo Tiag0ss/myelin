@@ -2206,7 +2206,9 @@
     "Your projects": "lit.yourProjects",
     "Your projects, your infrastructure.": "lit.yourProjectsYourInfrastructure",
     "your-email@company.com": "lit.yourEmailCompanyCom",
-    "your@email.com": "lit.yourEmailCom"
+    "your@email.com": "lit.yourEmailCom",
+    "Hide unscheduled work": "lit.hideUnscheduledWork",
+    "GitHub": "lit.github"
   },
   "keyToEn": {
     "saveToCreateYourPersonalOverride": " — save to create your personal override.",
@@ -4328,7 +4330,9 @@
     "yourProjects": "Your projects",
     "yourProjectsYourInfrastructure": "Your projects, your infrastructure.",
     "yourEmailCompanyCom": "your-email@company.com",
-    "yourEmailCom": "your@email.com"
+    "yourEmailCom": "your@email.com",
+    "hideUnscheduledWork": "Hide unscheduled work",
+    "github": "GitHub"
   },
   "missing": {
     "pt": [
