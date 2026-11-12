@@ -185,6 +185,19 @@
         "Search across all organization tasks when linking work to a release (ignores project↔application association)",
         "Fix server TypeScript build so shared release/patch-notes libraries compile in Docker"
       ]
+    },
+    {
+      "version": "1.2.7",
+      "date": "2026-11-12",
+      "title": "Planning All Tasks and grid column stability",
+      "items": [
+        "Add an All Tasks tab in Planning with project-style filters (status multi-select, priority, assignee, type, tags, hide closed/cancelled, unplanned, unscheduled)",
+        "Default Planning task filters hide closed, cancelled, and unplanned work; show an active-filter count badge",
+        "Keep Planning task filters and table headers sticky while scrolling the grid",
+        "Open the task from Planning allocation rows; keep Gantt-only amber banners off the All Tasks tab",
+        "Fix grid column visibility and order after filter remounts in the global enhancer and the project Tasks local enhancer",
+        "Handle null application StatusName values without breaking the application detail page"
+      ]
     }
   ]
 }
