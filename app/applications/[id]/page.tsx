@@ -1989,7 +1989,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 Id: task.Id,
                 TaskName: task.TaskName,
                 ProjectName: task.ProjectName || '',
-                StatusName: task.StatusName,
+                StatusName: task.StatusName ?? null,
               });
             }
             return Array.from(byId.values());
