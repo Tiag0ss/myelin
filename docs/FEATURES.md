@@ -94,7 +94,7 @@ Organizations are the top-level grouping entity. Projects, tasks, tickets, and t
 - Admin users can create organizations at `/organizations`
 - Each organization has a name and rich-text description
 - Member who creates an org is automatically added as a member
-- Organization detail includes an **Agent docs** tab for org-scoped MCP skills and rules (see [Remote MCP](#21c-remote-mcp-cursor--agents))
+- Organization detail includes an **Agent docs** tab for org-scoped MCP skills and rules — archive / unarchive / hard delete in UI; MCP soft-archives only (see [Remote MCP](#21c-remote-mcp-cursor--agents))
 
 ### Members & Roles
 Users are added to organizations with a **role** (`Developer`, `Support`, `Manager`) and an optional **Permission Group**.
@@ -184,7 +184,8 @@ Applications represent software products that projects may be building or mainta
 - Projects and tasks can reference an application; tasks can further reference a specific **version**
 - Detail and list pages show the uploaded image (or a package icon fallback)
 - Sidebar tabs on detail pages persist in `?tab=` (overview / versions / commits / agent-docs) so refresh keeps the active panel
-- **Agent docs** tab: Application-scoped agent skills and rules (merged after org docs for MCP clients)
+- **Agent docs** tab: Application-scoped agent skills and rules (merged after org docs for MCP clients). UI supports create/edit, **archive / unarchive**, and hard delete. Archived docs are hidden from MCP list/get
+- **Commits** tab / release commit picker: commits can show **membership branches** (branches that contain the commit), not only tip branches — filter and badges help when building patch notes
 
 ### Application Versions (Releases)
 Each application can have multiple versioned releases:
@@ -192,6 +193,8 @@ Each application can have multiple versioned releases:
 - Fields: Version Number, Version Name, Status, Release Date, Patch Notes (rich text with images), `IsCustomerSpecific` flag
 - Tasks are linked to a version — once linked, the task disappears from the available pool for other versions
 - Linking tasks auto-sets `Tasks.ReleaseVersionId`
+- Release task picker defaults to tasks from projects associated with the application; search can expand to all organization tasks
+- Patch notes can be built from selected tasks and commits (structured HTML: headings, lists, images) before PDF export
 
 ### Patch Notes PDF Export
 Two export modes exist:
@@ -263,7 +266,16 @@ Each product can have versioned releases (`ProductVersions`):
 - Drag-and-drop within and between columns changes task status
 - `DisplayOrder` field persists card order within each column
 - Cards show: task name, priority badge, assignee avatar, completion %, linked Jira badge (if any)
+- **Assignee filter** (and other project Kanban filters) narrows visible cards; filters persist with the project UI filter helpers
 - **Import Tasks** dropdown: CSV import, Jira import, Check Jira Ticket Status
+
+#### Milestones Tab
+Project milestones (`ProjectMilestones`) are dated checkpoints on the project:
+
+- Fields: Name, Description, Due Date, Milestone Type (org vocabulary when configured), **optional `AssignedTo`** (user), `IsCompleted`, Sort Order
+- Assignee is optional — unassigned milestones do not drive personal dashboard alerts
+- Completing a milestone (`IsCompleted = 1`) stops dashboard alerts; there is **no** separate notification table — alerts are computed from status + due date
+- Also editable from Planning milestone editors where the project exposes them
 
 #### Gantt Tab (Project Gantt)
 - Hierarchical view: parent tasks with indented children
@@ -273,7 +285,7 @@ Each product can have versioned releases (`ProductVersions`):
 - Clicking a bar opens the task detail modal
 
 #### Reporting Tab
-Four sub-tabs:
+Sub-tabs (filters use the shared **CollapsibleFilterPanel** pattern; grids participate in the global grid enhancer unless explicitly ignored):
 - **Summary**: Task table with estimated/allocated/worked hours; totals use **leaf tasks only**; CSV export
 - **By User**: Per-user statistics (allocated hours, worked hours, task count)
 - **Allocations**: All allocation rows with dates, users, and `SplitOrder` / `TaskAllocationHeaderId` identifiers
@@ -475,9 +487,10 @@ On viewports ≤767px (`useIsMobile`), Planning is **read-only** even when the u
 | Month | 90 days | ±90 days | Month + week labels |
 | Year | 365 days | ±365 days | Month labels |
 
-### Resource View vs Task View
+### Resource View vs Task View vs All Tasks
 - **Resource View**: Rows grouped by user. Each row shows all tasks allocated to that user across all projects. Ideal for checking individual capacity.
 - **Task View**: Rows grouped by task. Each task row shows which users are allocated and for how long.
+- **All Tasks** tab: Project-style task grid (not the Gantt). Filters: status multi-select, priority, assignee, type, tags, hide closed/cancelled, unplanned, unscheduled. Defaults hide closed, cancelled, and unplanned; active-filter count badge; sticky filter bar + table headers while scrolling. Opens tasks from allocation rows; Gantt-only amber banners stay off this tab.
 
 ### Toolbar Filters
 - Filter by organization, project, user
@@ -486,6 +499,7 @@ On viewports ≤767px (`useIsMobile`), Planning is **read-only** even when the u
 - **Hide not-planned tasks without hours**: when enabled in resource grouping, hides **Not Planned** parent tasks that have no estimated hours (leaf or own). Unplanned tasks that still have estimated hours remain visible. Unscheduled work remains on assignee rows. A top amber warning lists the hidden tasks (expandable, open task, or restore them in Not Planned).
 - 🔴 **Critical Path** toggle: highlights tasks on the critical path with a red ring (CPM forward/backward pass)
 - 📏 **Baseline** toggle + 📐 **Set Baseline**: captures `BaselineStartDate`/`BaselineEndDate` snapshot; drift bars rendered as coloured thin strips beside each bar (🟢 ahead / 🟡 minor drift / 🟣 late)
+- Marking a planned task as **unscheduled work** asks for confirmation before clearing its planning allocations
 
 ### Allocation Mechanics
 
@@ -799,9 +813,21 @@ Expense amounts are **not** mixed into hourly `CostSpent` / budget hours calcula
 
 ### Dashboard (`/dashboard`)
 Tabs:
-- **Overview**: KPI cards (open tasks, overdue tasks, pending time entries, open tickets)
+- **Overview**: KPI cards (open tasks, overdue tasks, pending time entries, open tickets), attention lists, and personal work surfaces
 - **Calendar**: Month view showing tasks due on each day; click a day to see all tasks
-- **Analytics**: Admin-only global KPIs, hours, top projects/contributors, plus a **Task analytics** 2×2 widget grid (priority breakdown, types of work, team workload, parent-task progress). Task widgets are a current-state snapshot; the period selector still drives hours and other period KPIs.
+- **Kanban**: Status board of **your assigned** tasks across projects
+- **Analytics**: Managers/admins — period KPIs, hours, top projects/contributors, plus a **Task analytics** 2×2 widget grid (priority breakdown, types of work, team workload, parent-task progress). Task widgets are a current-state snapshot; the period selector still drives hours and other period KPIs.
+
+### Attention lists & personal work
+- **My Pending Tasks** (and similar lists): scrollable panel — not capped at a fixed “top 5” only; use the list scroll for longer queues
+- Deep-link `/dashboard?task=<id>` (also `?taskId=`) opens `TaskDetailModal`
+
+### Milestone alerts (assignee)
+Computed from project milestones — **no notification table**:
+- Milestone has optional `AssignedTo`
+- Alert when assigned to the current user, `IsCompleted = 0`, and `DueDate` is **today or earlier**
+- Warns on the due day; if overdue, warns **every day** until completed
+- Endpoint: `GET /api/project-milestones/mine/alerts` (dashboard banners link into the project milestones tab)
 
 ### KPI Cards & Drilldown
 - Each KPI card is configurable (widget system via `DashboardKPIs` table)
@@ -871,7 +897,7 @@ Customer portal users never see org-wide packs or Explore. APIs under `/api/repo
 
 ### Filters
 
-Shared bar: **organization** (required for manager packs), optional **customer**, optional **project** (narrowed by customer when set), **date range**. Manager packs show metrics vs the **previous period of equal length**. Org context sticks across Organization / Portfolio / Delivery / Capacity / Data Quality. Customer filter applies to Organization, Portfolio, Delivery, Data Quality, Expenses, and Extract (client-side on datasets with `CustomerId`).
+Shared bar (often wrapped in **CollapsibleFilterPanel**): **organization** (required for manager packs), optional **customer**, optional **project** (narrowed by customer when set), **date range**. Manager packs show metrics vs the **previous period of equal length**. Org context sticks across Organization / Portfolio / Delivery / Capacity / Data Quality. Customer filter applies to Organization, Portfolio, Delivery, Data Quality, Expenses, and Extract (client-side on datasets with `CustomerId`). Result grids use the global grid enhancer (column visibility/order) unless a panel opts out.
 
 ### Packs
 
@@ -1444,9 +1470,10 @@ Planning remains desktop-first for editing.
 | `PasswordResetTokens` | Single-use tokens for password recovery |
 | `OrganizationJiraIntegrations` | Jira credentials per org (two-tier) |
 | `ApiTokens` | Personal API tokens (`TokenHash`, prefix, expiry) |
-| `OrganizationAgentSkills` / `OrganizationAgentRules` | Org-scoped MCP agent skills and rules |
-| `ApplicationAgentSkills` / `ApplicationAgentRules` | Application-scoped MCP agent skills and rules |
-| `Users.McpWritesEnabled` | Server-side preference for MCP task writes (default off) |
+| `OrganizationAgentSkills` / `OrganizationAgentRules` | Org-scoped MCP agent skills and rules (`IsArchived` hides from MCP) |
+| `ApplicationAgentSkills` / `ApplicationAgentRules` | Application-scoped MCP agent skills and rules (`IsArchived` hides from MCP) |
+| `Users.McpWritesEnabled` | Server-side preference for MCP writes (tasks/sprints/agent docs; default off) |
+| `ProjectMilestones` | Project milestones; optional `AssignedTo`; `IsCompleted` + due date drive dashboard alerts |
 | `EmailTaskQueue` | Pending emails for task import per user |
 | `SLARules` | Per-org per-priority SLA thresholds |
 | `ProjectReportSchedules` | Scheduled PDF report config |

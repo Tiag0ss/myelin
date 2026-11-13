@@ -33,8 +33,12 @@ flowchart TB
 | **Task** | Unit of work; parent or leaf; optional ticket/Jira/Git links |
 | **Leaf task** | Task with no children — only leaves count in hour totals |
 | **Ticket** | Support request in the **internal ticket system** (`internalTicketsEnabled`) |
-| **Application / Version** | Product registry and release; tasks link to a version |
+| **Application / Version** | Software catalog entry and release; tasks link to a version |
+| **Product** | Org-scoped bundle of applications with its own product versions |
+| **Milestone** | Project dated checkpoint; optional assignee; open + due ≤ today → dashboard alert |
 | **Sprint** | Project iteration container for tasks |
+| **Agent docs** | Org/application skills & rules for MCP; archive hides from agents |
+| **MCP** | Model Context Protocol endpoint (`/api/mcp`) for Cursor and similar clients |
 | **Allocation** | Planned hours for a user on a task across dates (Planning) |
 | **Allocation header** | Logical slice (`TaskAllocationHeader`); one Gantt bar per header |
 | **Split (Parallel / Sequential)** | Multiple headers on one task — shared dates or chained |
@@ -67,7 +71,8 @@ flowchart TB
 | **Admin** | `isAdmin` — all permissions |
 | **Feature flag** | Real System Settings Features/AI/Outlook switches only — see [[02-settings/feature-toggles-overview]] |
 | **Task form visibility** | UI-only hide of optional task fields/tabs (personal → org → global) |
-| **pt_ token** | Personal API token for IDE, scripts, webhooks |
+| **pt_ token** | Personal API token for IDE, MCP, scripts, webhooks |
+| **MCP writes** | Dual gate: Profile `McpWritesEnabled` + client `allowWrite` |
 | **SSO companion** | OAuth-style handoff for Synapse and similar apps |
 | **StatusType** | Ticket status category: `open`, `in_progress`, `waiting`, `resolved`, `closed`, `other` |
 | **SLA** | Per-org first-response / resolution hours by priority |

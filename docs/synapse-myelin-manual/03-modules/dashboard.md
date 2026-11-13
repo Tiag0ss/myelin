@@ -68,6 +68,8 @@ flowchart LR
 ### Attention lists and calendar strip
 
 - Overview often includes overdue / due-soon / unassigned-style summaries depending on permissions.
+- **My Pending Tasks** (and similar personal lists) scroll inside the panel — they are not limited to a fixed “top five” only.
+- **Milestone alerts:** if a project milestone is assigned to you, still open (`IsCompleted = 0`), and due today or earlier, Overview shows a warning. Overdue milestones keep alerting daily until completed. Unassigned milestones do not alert you.
 - Optional **show calendar in Overview** keeps a compact month strip without leaving the tab.
 - Pending approval badges may appear when you have approval scope (time, leave, expenses).
 
@@ -75,6 +77,7 @@ flowchart LR
 
 - If a total looks wrong, open the drill-down first — then check status filters and whether tickets are enabled for the instance.
 - Leaf-hour rules and planning capacity live in Planning / Reporting, not on Overview cards.
+- Complete or reassign milestones to clear personal milestone banners.
 
 
 ## 3 — Calendar tab

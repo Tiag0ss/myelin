@@ -47,8 +47,10 @@ flowchart LR
 3. Choose board type:
    - **Resource view** — rows by **user** (capacity balancing).
    - **Task view** — rows by **task** (who is on what).
+   - **All Tasks** — project-style task **grid** (not the Gantt): status multi-select, priority, assignee, type, tags, hide closed/cancelled, unplanned, unscheduled. Defaults hide closed, cancelled, and unplanned; badge shows active filter count; filters and headers stay sticky while scrolling.
 4. Filter by organization / project / user; optional **Show only my tasks**.
 5. View options (often persisted locally): dependencies, critical path, baseline, daily totals, bar hours, time entries overlay, user visibility, hide not-planned without hours.
+6. Marking a planned task as **unscheduled work** asks for confirmation before clearing its planning.
 
 ![Planning toolbar](../media/docs-planning-toolbar.png)
 

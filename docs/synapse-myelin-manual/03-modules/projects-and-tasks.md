@@ -157,8 +157,9 @@ Global **Planning** (resource Gantt) is **not** a project tab — [[03-modules/p
 2. Columns = organization **task statuses**.
 3. Drag cards within/between columns → status + `DisplayOrder` update.
 4. Cards show name, priority, assignee avatar, completion %, type icon, Jira badge when linked.
-5. Parent/child hierarchy may collapse/expand.
-6. **Import Tasks** dropdown often lives here: CSV, Import from Jira, Check Jira Ticket Status, GitHub/Gitea/Outlook when configured.
+5. Filter by **assignee** (and other project Kanban filters) when the board is large; filters persist with the project UI helpers.
+6. Parent/child hierarchy may collapse/expand.
+7. **Import Tasks** dropdown often lives here: CSV, Import from Jira, Check Jira Ticket Status, GitHub/Gitea/Outlook when configured.
 
 ![Project kanban](../media/docs-project-kanban.png)
 
@@ -200,9 +201,11 @@ For capacity planning across users, use [[03-modules/planning]].
 ## 10 — Milestones
 
 1. Open **Milestones**.
-2. Create a milestone: **name**, **description**, **due date**, **milestone type** (org vocabulary), **completed** flag, **sort order**.
-3. Edit / delete with manage permission.
-4. Overview surfaces overdue and upcoming milestones automatically.
+2. Create a milestone: **name**, **description**, **due date**, **milestone type** (org vocabulary), optional **assignee**, **completed** flag, **sort order**.
+3. Assignee is optional. Unassigned milestones do not appear on a user’s dashboard alerts.
+4. Edit / delete with manage permission. Mark **completed** when done — that clears dashboard alerts (no separate notification table; alerts use `IsCompleted` + due date).
+5. Overview surfaces overdue and upcoming milestones automatically.
+6. If you are the assignee and the milestone is still open: the **Dashboard** warns on the due day and **every day after** while overdue. Open the project milestones tab from the banner when offered.
 
 
 ## 11 — Attachments (project)

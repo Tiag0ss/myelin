@@ -46,11 +46,11 @@ Exact labels follow your UI language. Items appear only when system rules allow 
 
 | Section | Typical items | Notes |
 |---------|---------------|-------|
-| (top) | **Dashboard** | Overview, Calendar, Analytics (role-dependent) |
+| (top) | **Dashboard** | Overview, Calendar, Kanban, Analytics (role-dependent); milestone assignee alerts on Overview |
 | **Delivery** | Projects, Planning | Planning is **not** a feature flag — page needs `CanViewPlanning` |
 | **Work** | Timesheet, Expenses, Call Records, Work Summary | Expenses needs `expensesEnabled` + expense permission |
 | **Service** | Tickets, Memos | Tickets → `internalTicketsEnabled` + Support/ticket perms; Memos → `memosEnabled` |
-| **Management** | Customers, Applications, Approvals (or Approvals & Expenses), Dev Support | Dev Support is for leaders/admins managing others |
+| **Management** | Customers, Applications, Products, Approvals (or Approvals & Expenses), Dev Support | Products need product permissions; Dev Support is for leaders/admins managing others |
 | **Reporting** | Reporting | Needs report / manager access for packs |
 
 Customer users never see Delivery/Work/Management/Reporting catalogs — only portal-safe links.

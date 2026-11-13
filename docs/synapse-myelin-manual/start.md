@@ -1,7 +1,7 @@
 # Myelin manual (Synapse vault)
 
-**Manual version:** 1.3.0  
-**Date:** 2026-10-09  
+**Manual version:** 1.4.0  
+**Date:** 2026-11-13  
 **Language:** English
 
 This vault is the end-user and operator guide for **Myelin**. Import the ZIP into a Synapse vault, then replace screenshot placeholders under `media/` with real PNGs.
@@ -68,7 +68,13 @@ flowchart TD
 1. [[03-modules/integrations]]
 2. [[04-workflows/import-first-delivery]]
 3. [[04-workflows/jira-sync]] · [[04-workflows/email-to-task]]
-4. [[07-companions/ide-extensions]] · [[07-companions/tampermonkey]]
+4. [[07-companions/ide-extensions]] · [[07-companions/tampermonkey]] · [[07-companions/remote-mcp]]
+
+### Path D2 — Products & multi-app releases
+
+1. [[03-modules/applications-and-releases]]
+2. [[03-modules/products]]
+3. [[04-workflows/release-readiness]]
 
 ### Path E — Operator (install & run)
 
@@ -119,7 +125,9 @@ flowchart LR
 | [[04-workflows/task-first-delivery]] | Branched playbooks |
 | [[05-reference/glossary]] | Glossary, permissions, FAQ, exports |
 | [[06-install-and-ops/install-wizard]] | Install, Docker, env, deploy, Redis, schema |
-| [[07-companions/desktop-app]] | Desktop, IDE Kanban, Tampermonkey |
+| [[07-companions/desktop-app]] | Desktop, IDE Kanban, Tampermonkey, Remote MCP |
+| [[03-modules/products]] | Product bundles over applications |
+| [[07-companions/remote-mcp]] | Cursor MCP + agent skills/rules |
 | [[08-ai-assistant/admin-configuration]] | AI admin + widget |
 
 ## Workflow index

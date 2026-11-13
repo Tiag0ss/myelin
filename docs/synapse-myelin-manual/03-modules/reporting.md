@@ -31,12 +31,13 @@ flowchart LR
 ## 1 — Open the Reporting hub
 
 1. Open **Reporting**.
-2. Use the shared filter bar:
+2. Use the shared **collapsible** filter panel:
    - **Organization** (required for manager packs)
-   - Optional **project**
+   - Optional **customer** / **project** (project narrows by customer when set)
    - **Date range**
 3. Org context sticks across Organization / Portfolio / Delivery / Capacity / Data Quality.
 4. Manager packs show metrics vs the **previous period of equal length**.
+5. Result tables support the global grid enhancer (column show/hide and order) unless a panel opts out.
 
 ![Reporting hub](../media/docs-reporting-hub.png)
 

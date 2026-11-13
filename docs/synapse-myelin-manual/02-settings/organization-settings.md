@@ -41,6 +41,7 @@ flowchart TD
 | **Workflow transition policies** | DoR/DoD-style transition rules (manage-settings) |
 | **Task form** | Org default field visibility — [[02-settings/task-form-visibility]] |
 | **Attachments** | Org-level files |
+| **Agent docs** | Org-scoped MCP skills & rules (archive / unarchive / delete) — [[07-companions/remote-mcp]] |
 | **History** | Change audit for the organization |
 
 

@@ -37,7 +37,8 @@ flowchart TD
 | **Recurring tasks** | Internal | Recurring capacity blocks (pink 🔄 on Planning) |
 | **My attachments** | Everyone | Personal attachments list |
 | **Security** | Everyone | Change password |
-| **API Tokens** | Internal | Personal `pt_…` tokens for integrations / companions |
+| **API Tokens** | Internal | Personal `pt_…` tokens for integrations / companions / MCP |
+| **Myelin MCP** | Internal | Toggle **Allow MCP task writes** (`McpWritesEnabled`) — required with client `allowWrite` for agent mutations |
 | **Email preferences** | Everyone | Opt in/out of email categories — [[02-settings/email-preferences]] |
 | **Task form** | Internal | Personal field/tab visibility per org — [[02-settings/task-form-visibility]] |
 
@@ -116,15 +117,19 @@ These show as reserved/pink blocks on the Gantt; see [[03-modules/planning]].
 
 ## 6 — API Tokens (internal)
 
-For IDE extensions, Cloudflare email queue, scripts, or companions:
+For IDE extensions, Cloudflare email queue, scripts, companions, or **Remote MCP**:
 
 1. Open **API Tokens**.
 2. Create a token with a name and optional expiry.
 3. Copy the `pt_…` secret **immediately** — it is shown once.
-4. Send as `Authorization: Bearer pt_…` on API calls.
+4. Send as `Authorization: Bearer pt_…` on API calls (and in Cursor `mcp.json` via env substitution).
 5. **Deactivate** to revoke; **Delete** to remove from the list.
 
 Admins can also review all tokens under Administration → API Tokens. Creating a token there still creates it for the admin’s own account.
+
+### MCP write toggle
+
+Near API Tokens, enable **Allow MCP task writes** only when you want Cursor (or another MCP client) to create/update tasks, sprints, or agent docs. See [[07-companions/remote-mcp]].
 
 
 ## 7 — Attachments
@@ -162,3 +167,4 @@ Use **My attachments** to review files associated with your user profile. For ta
 - [[02-settings/task-form-visibility]]
 - [[03-modules/planning]]
 - [[07-companions/ide-extensions]]
+- [[07-companions/remote-mcp]]

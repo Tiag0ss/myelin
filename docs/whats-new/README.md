@@ -2,6 +2,17 @@
 
 Static release notes shipped with the app (`changelog.json`). Served by `GET /api/whats-new`.
 
+Feature reference and end-user docs live elsewhere and should stay current even between version bumps:
+
+| Doc | Role |
+|-----|------|
+| [`docs/FEATURES.md`](../FEATURES.md) | Engineer / agent feature SOT |
+| [`docs/ROLE_PERMISSIONS.md`](../ROLE_PERMISSIONS.md) | Permissions |
+| [`docs/mcp/`](../mcp/) | Remote MCP connect + Cursor rule |
+| [`docs/synapse-myelin-manual/`](../synapse-myelin-manual/) | Synapse vault end-user manual |
+
+When you ship behaviour that users will notice, update **FEATURES** (and the Synapse manual when it is a user-facing flow) in the same change set as the code — do not wait for the next `whats-new:generate` pass.
+
 ## Source of truth: `package.json` version (not Git tags)
 
 Woodpecker builds Docker images from `V*` tags. Your release sequence is:

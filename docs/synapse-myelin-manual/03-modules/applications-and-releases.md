@@ -6,7 +6,7 @@
 **When disabled / missing:** Missing menu = permissions/nav — not a module toggle.
 
 
-Applications are the products you build or maintain. **Versions (releases)** hold patch notes, dates, and linked tasks. Export PDFs for release communication.
+Applications are the software products you build or maintain (distinct from org **Products** bundles — [[03-modules/products]]). **Versions (releases)** hold patch notes, dates, and linked tasks. Export PDFs for release communication.
 
 ```mermaid
 flowchart TD
@@ -58,7 +58,8 @@ Sidebar/tabs persist in `?tab=` so refresh keeps the panel:
 |-----|---------|
 | **Overview** | Description, image, customers, metadata |
 | **Versions** | Release list + selected version detail |
-| **Commits** | Commit-oriented panel when present in your build |
+| **Commits** | Commit history; membership branches (not only tip branches) for filters/badges when building notes |
+| **Agent docs** | Application MCP skills & rules — archive / unarchive / delete ([[07-companions/remote-mcp]]) |
 
 1. Open an application.
 2. Switch tabs; confirm the URL updates with `?tab=`.
@@ -79,8 +80,9 @@ Sidebar/tabs persist in `?tab=` so refresh keeps the panel:
 | Patch notes | Rich text **with images** |
 | Customer-specific | Optional flag |
 
-3. **Link tasks** to the version. A task linked to one version leaves the available pool for other versions; `ReleaseVersionId` is set on the task.
-4. Unlink or reassign according to your release process before freezing notes.
+3. **Link tasks** to the version. The picker defaults to tasks from projects associated with the application; search can expand to **all organization tasks**. A task linked to one version leaves the available pool for other versions; `ReleaseVersionId` is set on the task.
+4. Build **patch notes** from selected tasks and/or commits when offered (structured HTML: headings, lists, images). Commit pickers can show **membership branches** for each commit.
+5. Unlink or reassign according to your release process before freezing notes.
 
 ![Release detail](../media/docs-releases-detail.png)
 
@@ -140,9 +142,11 @@ AI-assisted patch-notes improvement may appear when **`aiAssistantEnabled`** and
 
 ## Related
 
+- [[03-modules/products]]
 - [[03-modules/projects-and-tasks]]
 - [[03-modules/customers-and-portal]]
 - [[03-modules/create-and-complete-task]]
 - [[04-workflows/release-readiness]]
+- [[07-companions/remote-mcp]]
 - [[08-ai-assistant/widget-usage]]
 - [[02-settings/task-form-visibility]]

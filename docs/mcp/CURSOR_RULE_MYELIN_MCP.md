@@ -1,6 +1,8 @@
 # Cursor — connect to Myelin MCP (self-hosted)
 
-Myelin is **self-hosted**: the MCP URL is **your** instance (`https://your-host/api/mcp`), not a fixed SaaS endpoint. Two different files matter:
+Myelin is **self-hosted**: the MCP URL is **your** instance (`https://your-host/api/mcp`), not a fixed SaaS endpoint. Use a **local** server entry (e.g. `myelin-local` → `http://localhost:3000/api/mcp`) when testing features that are not deployed to production yet.
+
+Two different files matter:
 
 | File | Purpose | Commit to git? |
 |---|---|---|

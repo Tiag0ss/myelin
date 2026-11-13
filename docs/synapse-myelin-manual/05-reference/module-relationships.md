@@ -17,6 +17,9 @@ flowchart TB
   Tasks --> Plan[Planning allocations]
   Tasks --> TS[Timesheet / Timers]
   Tasks --> Rel[Releases / Applications]
+  Apps[Applications] --> Prod[Products]
+  Proj --> MS[Milestones]
+  MS --> Dash[Dashboard alerts]
   Calls[Call Records] -->|optional| Tasks
   Calls --> TS
   Exp[Expenses] -->|optional| Tasks
@@ -26,7 +29,9 @@ flowchart TB
   Leave --> Plan
   Memos --> Cal[Calendar surfaces]
   Syn[Synapse notes] -.->|manual / checkbox push| Tasks
-  Dash[Dashboard] --> Tasks
+  MCP[Remote MCP] --> Tasks
+  MCP --> AgentDocs[Org / App agent docs]
+  Dash --> Tasks
   Dash --> Plan
   Rep[Reporting hub] --> Tasks
   Rep --> TS
@@ -61,7 +66,10 @@ flowchart LR
 | Task | Allocations, time entries, releases, timers | Leaves own hour totals |
 | Ticket | Optional task via convert | Keep statuses aligned after convert |
 | Application version | Linked tasks | Task leaves other versions’ pools |
+| Product | Application catalog + product versions | Multi-app release packaging |
+| Milestone | Optional assignee → Dashboard | Open + due ≤ today alerts daily until completed |
 | Approvals | Time / leave / expenses | Real auto-approve flags change create status |
+| Agent docs | MCP list/get/create/update/archive | Archived hidden from MCP; UI can unarchive/delete |
 
 ## 2 — Navigation vs permissions vs flags
 
