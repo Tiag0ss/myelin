@@ -23,6 +23,53 @@ const canManageProjectMilestones = async (userId: number, organizationId: number
   return member.Role === 'Owner' || member.Role === 'Admin' || Number(member.CanManageProjects || 0) === 1;
 };
 
+const parseAssignedTo = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const id = Number(value);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return id;
+};
+
+const todayKeyLocal = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/** Incomplete milestones assigned to the current user that are due today or overdue. */
+router.get('/mine/alerts', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = Number(req.user?.userId || 0);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const today = todayKeyLocal();
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT pm.Id, pm.ProjectId, pm.Name, pm.DueDate, pm.IsCompleted, pm.AssignedTo,
+              p.ProjectName, p.OrganizationId,
+              mtv.TypeName as MilestoneTypeName, mtv.ColorCode as MilestoneTypeColor
+       FROM ProjectMilestones pm
+       INNER JOIN Projects p ON p.Id = pm.ProjectId
+       INNER JOIN OrganizationMembers om ON om.OrganizationId = p.OrganizationId AND om.UserId = ?
+       LEFT JOIN MilestoneTypeValues mtv ON pm.MilestoneTypeId = mtv.Id
+       WHERE pm.AssignedTo = ?
+         AND pm.IsCompleted = 0
+         AND pm.DueDate IS NOT NULL
+         AND pm.DueDate <= ?
+       ORDER BY pm.DueDate ASC, pm.Id ASC`,
+      [userId, userId, today]
+    );
+
+    res.json({ success: true, data: { milestones: rows, today } });
+  } catch (error) {
+    logger.error('Get my milestone alerts error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch milestone alerts' });
+  }
+});
+
 router.get('/project/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -46,9 +93,11 @@ router.get('/project/:projectId', authenticateToken, async (req: AuthRequest, re
       ENTITY_TTL_SECONDS,
       async () => {
         const [rows] = await pool.execute<RowDataPacket[]>(
-          `SELECT pm.*, mtv.TypeName as MilestoneTypeName, mtv.IconSvg as MilestoneTypeIconSvg, mtv.ColorCode as MilestoneTypeColor
+          `SELECT pm.*, mtv.TypeName as MilestoneTypeName, mtv.IconSvg as MilestoneTypeIconSvg, mtv.ColorCode as MilestoneTypeColor,
+                  u.Username as AssigneeName
            FROM ProjectMilestones pm
            LEFT JOIN MilestoneTypeValues mtv ON pm.MilestoneTypeId = mtv.Id
+           LEFT JOIN Users u ON pm.AssignedTo = u.Id
            WHERE pm.ProjectId = ?
            ORDER BY pm.SortOrder ASC, pm.DueDate ASC, pm.Id ASC`,
           [projectId]
@@ -67,7 +116,8 @@ router.get('/project/:projectId', authenticateToken, async (req: AuthRequest, re
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { projectId, name, description, dueDate, milestoneTypeId, isCompleted, sortOrder } = req.body;
+    const { projectId, name, description, dueDate, milestoneTypeId, assignedTo, isCompleted, sortOrder } =
+      req.body;
 
     if (!projectId || !name) {
       return res.status(400).json({ success: false, message: 'Project and milestone name are required' });
@@ -91,14 +141,15 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     const completed = Number(isCompleted || 0) === 1;
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO ProjectMilestones
-        (ProjectId, MilestoneTypeId, Name, Description, DueDate, IsCompleted, CompletedAt, SortOrder, CreatedBy)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (ProjectId, MilestoneTypeId, Name, Description, DueDate, AssignedTo, IsCompleted, CompletedAt, SortOrder, CreatedBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(projectId),
         milestoneTypeId ? Number(milestoneTypeId) : null,
         String(name).trim(),
         description || null,
         dueDate || null,
+        parseAssignedTo(assignedTo),
         completed ? 1 : 0,
         completed ? new Date() : null,
         Number(sortOrder || 0),
@@ -119,10 +170,10 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
   try {
     const userId = req.user?.userId;
     const id = Number(req.params.id);
-    const { name, description, dueDate, milestoneTypeId, isCompleted, sortOrder } = req.body;
+    const { name, description, dueDate, milestoneTypeId, assignedTo, isCompleted, sortOrder } = req.body;
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT pm.Id, pm.IsCompleted, pm.CompletedAt, p.OrganizationId
+      `SELECT pm.Id, pm.IsCompleted, pm.CompletedAt, pm.ProjectId, p.OrganizationId
        FROM ProjectMilestones pm
        INNER JOIN Projects p ON p.Id = pm.ProjectId
        WHERE pm.Id = ?`,
@@ -145,17 +196,13 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
       ? (wasCompleted ? existing.CompletedAt : new Date())
       : null;
 
-    const [projectRows] = await pool.execute<RowDataPacket[]>(
-      'SELECT ProjectId FROM ProjectMilestones WHERE Id = ?',
-      [id]
-    );
-
     await pool.execute(
       `UPDATE ProjectMilestones
        SET Name = ?,
            Description = ?,
            DueDate = ?,
            MilestoneTypeId = ?,
+           AssignedTo = ?,
            IsCompleted = ?,
            CompletedAt = ?,
            SortOrder = ?
@@ -165,6 +212,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
         description || null,
         dueDate || null,
         milestoneTypeId ? Number(milestoneTypeId) : null,
+        parseAssignedTo(assignedTo),
         nextCompleted ? 1 : 0,
         nextCompletedAt,
         Number(sortOrder || 0),
@@ -174,7 +222,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
 
     await invalidateByEntity('milestone', {
       orgId: Number(existing.OrganizationId),
-      projectId: Number(projectRows[0]?.ProjectId),
+      projectId: Number(existing.ProjectId),
     });
 
     res.json({ success: true });

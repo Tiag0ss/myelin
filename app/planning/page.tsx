@@ -614,6 +614,7 @@ export default function PlanningPage() {
     name: string;
     description: string;
     dueDate: string;
+    assignedTo: number | '';
     isCompleted: boolean;
     milestoneTypeId: number | '';
     milestoneTypes: StatusValue[];
@@ -628,6 +629,7 @@ export default function PlanningPage() {
     name: '',
     description: '',
     dueDate: '',
+    assignedTo: '',
     isCompleted: false,
     milestoneTypeId: '',
     milestoneTypes: [],
@@ -774,6 +776,7 @@ export default function PlanningPage() {
     setMilestoneEditor({
       show: false,
       milestone: null,
+      assignedTo: '',
       projectName: '',
       customerName: '',
       name: '',
@@ -813,6 +816,7 @@ export default function PlanningPage() {
       name: milestone.Name || '',
       description: milestone.Description || '',
       dueDate: milestone.DueDate ? String(milestone.DueDate).split('T')[0] : '',
+      assignedTo: milestone.AssignedTo ? Number(milestone.AssignedTo) : '',
       isCompleted: Number(milestone.IsCompleted || 0) === 1,
       milestoneTypeId: milestone.MilestoneTypeId != null ? Number(milestone.MilestoneTypeId) : '',
       milestoneTypes,
@@ -837,6 +841,7 @@ export default function PlanningPage() {
           name: milestoneEditor.name.trim(),
           description: milestoneEditor.description.trim(),
           dueDate: milestoneEditor.dueDate || undefined,
+          assignedTo: milestoneEditor.assignedTo === '' ? null : Number(milestoneEditor.assignedTo),
           isCompleted: milestoneEditor.isCompleted,
           milestoneTypeId: milestoneEditor.milestoneTypeId === '' ? null : Number(milestoneEditor.milestoneTypeId),
         },
@@ -11047,6 +11052,28 @@ export default function PlanningPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.assignee')}</label>
+                  <select
+                    value={milestoneEditor.assignedTo}
+                    onChange={(e) =>
+                      setMilestoneEditor((prev) => ({
+                        ...prev,
+                        assignedTo: e.target.value ? Number(e.target.value) : '',
+                      }))
+                    }
+                    disabled={!permissions?.canManageProjects}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+                  >
+                    <option value="">{t('lit.unassigned')}</option>
+                    {(allUsersRef.current.length > 0 ? allUsersRef.current : users).map((entry) => (
+                      <option key={entry.Id} value={entry.Id}>
+                        {entry.Username || `${entry.FirstName || ''} ${entry.LastName || ''}`.trim() || `#${entry.Id}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

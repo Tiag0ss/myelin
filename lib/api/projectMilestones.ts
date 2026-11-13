@@ -5,6 +5,7 @@ const API_BASE_URL = getApiUrl();
 export interface ProjectMilestone {
   Id: number;
   ProjectId: number;
+  ProjectName?: string | null;
   MilestoneTypeId: number | null;
   MilestoneTypeName?: string | null;
   MilestoneTypeIconSvg?: string | null;
@@ -12,6 +13,8 @@ export interface ProjectMilestone {
   Name: string;
   Description?: string | null;
   DueDate?: string | null;
+  AssignedTo?: number | null;
+  AssigneeName?: string | null;
   IsCompleted: number;
   CompletedAt?: string | null;
   SortOrder: number;
@@ -26,6 +29,7 @@ export interface SaveProjectMilestoneData {
   name: string;
   description?: string;
   dueDate?: string;
+  assignedTo?: number | null;
   isCompleted?: boolean;
   sortOrder?: number;
 }
@@ -99,5 +103,24 @@ export const projectMilestonesApi = {
     }
 
     return result;
+  },
+
+  async getMyAlerts(
+    token: string
+  ): Promise<{ success: boolean; data: { milestones: ProjectMilestone[]; today: string } }> {
+    const response = await fetch(`${API_BASE_URL}/api/project-milestones/mine/alerts`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch milestone alerts');
+    }
+
+    return data;
   },
 };

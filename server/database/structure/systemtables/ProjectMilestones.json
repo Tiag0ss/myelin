@@ -39,6 +39,12 @@
       "Comment": "Target milestone date"
     },
     {
+      "FieldName": "AssignedTo",
+      "DataType": "int",
+      "NotNullable": false,
+      "Comment": "Optional assignee — Users.Id; when set, dashboard alerts on due/overdue while incomplete"
+    },
+    {
       "FieldName": "IsCompleted",
       "DataType": "tinyint(1)",
       "NotNullable": true,
@@ -91,6 +97,14 @@
       "Description": "Milestone may have a Milestone Type",
       "FromField": "MilestoneTypeId",
       "ToTable": "MilestoneTypeValues",
+      "ToField": "Id",
+      "Type": "ManyToOne"
+    },
+    {
+      "Name": "MilestoneAssignee",
+      "Description": "Milestone may be assigned to a User",
+      "FromField": "AssignedTo",
+      "ToTable": "Users",
       "ToField": "Id",
       "Type": "ManyToOne"
     }

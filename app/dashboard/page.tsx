@@ -17,6 +17,8 @@ import { tasksApi, Task } from '@/lib/api/tasks';
 import { projectsApi, Project } from '@/lib/api/projects';
 import { organizationsApi } from '@/lib/api/organizations';
 import { statusValuesApi, StatusValue } from '@/lib/api/statusValues';
+import { projectMilestonesApi, type ProjectMilestone } from '@/lib/api/projectMilestones';
+import { classifyMilestoneAlert } from '@/lib/milestoneAlerts';
 import {
   DashboardKpiDetailItem,
   DashboardKpiDetailResult,
@@ -1390,6 +1392,7 @@ function DashboardContent() {
     canApproveVacations: false,
     canApproveExpenses: false,
   });
+  const [milestoneAlerts, setMilestoneAlerts] = useState<ProjectMilestone[]>([]);
   const [kpiWidgets, setKpiWidgets] = useState<DashboardKpiWidget[]>([]);
   const [kpiValues, setKpiValues] = useState<Record<string, DashboardKpiMetricValue>>({});
   const [kpiDetailsByWidget, setKpiDetailsByWidget] = useState<Record<string, DashboardKpiDetailResult>>({});
@@ -2468,6 +2471,19 @@ function DashboardContent() {
     }
   };
 
+  const loadMilestoneAlerts = async () => {
+    if (!token || !user || isCustomerUser) {
+      setMilestoneAlerts([]);
+      return;
+    }
+    try {
+      const result = await projectMilestonesApi.getMyAlerts(token);
+      setMilestoneAlerts(result.data?.milestones || []);
+    } catch {
+      setMilestoneAlerts([]);
+    }
+  };
+
   const loadPendingApprovals = async () => {
     if (!token || !user || isCustomerUser) {
       setPendingApprovals({
@@ -2706,6 +2722,7 @@ function DashboardContent() {
     loadUserProfile();
     loadSummaryStats();
     loadPendingApprovals();
+    void loadMilestoneAlerts();
     loadKpiConfig();
   }, [user, token, featureFlagsLoaded, isCustomerUser, internalTicketsEnabled, loadKpiConfig]);
 
@@ -2911,6 +2928,45 @@ function DashboardContent() {
                     <div className="rounded-md border border-[var(--pm-danger)]/40 bg-[var(--pm-danger)]/15 px-2 py-1 text-xs font-medium text-[var(--pm-danger)]">
                       {summaryStats.overdueTasks} overdue task
                       {summaryStats.overdueTasks > 1 ? 's' : ''}
+                    </div>
+                  )}
+                  {milestoneAlerts.length > 0 && (
+                    <div className="rounded-md border border-[var(--pm-warn)]/40 bg-[var(--pm-warn)]/15 px-2 py-1.5 text-[var(--pm-text)]">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--pm-warn)]">
+                        {t('lit.milestones')}
+                      </div>
+                      <div className="mt-1 space-y-1">
+                        {milestoneAlerts.slice(0, 5).map((milestone) => {
+                          const kind = classifyMilestoneAlert(milestone);
+                          return (
+                            <button
+                              key={milestone.Id}
+                              type="button"
+                              onClick={() => router.push(`/projects/${milestone.ProjectId}?tab=milestones`)}
+                              className="block w-full rounded bg-[var(--pm-surface-2)] px-2 py-1 text-left text-[11px] font-medium transition-colors hover:bg-[var(--pm-accent)] hover:text-[var(--pm-bg)]"
+                              title={milestone.ProjectName || t('lit.milestones')}
+                            >
+                              <span
+                                className={
+                                  kind === 'overdue'
+                                    ? 'text-[var(--pm-danger)]'
+                                    : 'text-[var(--pm-warn)]'
+                                }
+                              >
+                                {kind === 'overdue' ? t('lit.overdue2') : t('lit.dueToday')}
+                              </span>
+                              {': '}
+                              {milestone.Name}
+                              {milestone.ProjectName ? ` · ${milestone.ProjectName}` : ''}
+                            </button>
+                          );
+                        })}
+                        {milestoneAlerts.length > 5 && (
+                          <div className="text-[10px] text-[var(--pm-muted)]">
+                            +{milestoneAlerts.length - 5} more
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

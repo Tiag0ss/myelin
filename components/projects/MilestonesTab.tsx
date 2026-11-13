@@ -5,6 +5,8 @@ import { useI18n } from '@/lib/i18n/provider';
 import React, { useEffect, useState } from 'react';
 import { ProjectMilestone, SaveProjectMilestoneData, projectMilestonesApi } from '@/lib/api/projectMilestones';
 import { statusValuesApi, StatusValue } from '@/lib/api/statusValues';
+import { usersApi, User } from '@/lib/api/users';
+import { SearchableSelect } from '@/components/projects/ProjectInlineFields';
 import { useColorVision } from '@/hooks/useColorVision';
 
 interface MilestoneFormData {
@@ -12,6 +14,7 @@ interface MilestoneFormData {
   description: string;
   dueDate: string;
   milestoneTypeId: number | null;
+  assignedTo: number | undefined;
   isCompleted: boolean;
   sortOrder: number;
 }
@@ -32,6 +35,7 @@ export function MilestonesTab({
   const { pillStyle } = useColorVision();
   const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
   const [milestoneTypes, setMilestoneTypes] = useState<StatusValue[]>([]);
+  const [orgUsers, setOrgUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -43,6 +47,7 @@ export function MilestonesTab({
     description: '',
     dueDate: '',
     milestoneTypeId: null,
+    assignedTo: undefined,
     isCompleted: false,
     sortOrder: 0,
   });
@@ -61,12 +66,14 @@ export function MilestonesTab({
     setIsLoading(true);
     setError('');
     try {
-      const [typesRes, milestonesRes] = await Promise.all([
+      const [typesRes, milestonesRes, usersRes] = await Promise.all([
         statusValuesApi.getMilestoneTypes(organizationId, token),
         projectMilestonesApi.getByProject(projectId, token),
+        usersApi.getByOrganization(organizationId, token),
       ]);
       setMilestoneTypes(typesRes.types || []);
       setMilestones(milestonesRes.milestones || []);
+      setOrgUsers(usersRes.users || []);
     } catch (err: any) {
       setError(err.message || t('lit.failedToLoadMilestones'));
     } finally {
@@ -81,6 +88,7 @@ export function MilestonesTab({
       description: '',
       dueDate: '',
       milestoneTypeId: getDefaultMilestoneTypeId(milestoneTypes),
+      assignedTo: undefined,
       isCompleted: false,
       sortOrder: milestones.length,
     });
@@ -94,6 +102,7 @@ export function MilestonesTab({
       description: String(milestone.Description || ''),
       dueDate: milestone.DueDate ? String(milestone.DueDate).split('T')[0] : '',
       milestoneTypeId: milestone.MilestoneTypeId ? Number(milestone.MilestoneTypeId) : null,
+      assignedTo: milestone.AssignedTo ? Number(milestone.AssignedTo) : undefined,
       isCompleted: Number(milestone.IsCompleted || 0) === 1,
       sortOrder: Number(milestone.SortOrder || 0),
     });
@@ -112,6 +121,7 @@ export function MilestonesTab({
       description: formData.description.trim(),
       dueDate: formData.dueDate || undefined,
       milestoneTypeId: formData.milestoneTypeId,
+      assignedTo: formData.assignedTo ?? null,
       isCompleted: formData.isCompleted,
       sortOrder: formData.sortOrder,
     };
@@ -175,6 +185,7 @@ export function MilestonesTab({
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.milestone')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.type')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.assignee')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('lit.dueDate')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
                 {canManage && (
@@ -187,7 +198,7 @@ export function MilestonesTab({
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {milestones.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 5 : 4} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <td colSpan={canManage ? 6 : 5} className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     {t('lit.noMilestonesDefinedForThisProject')}
                   </td>
                 </tr>
@@ -211,6 +222,9 @@ export function MilestonesTab({
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      {milestone.AssigneeName || t('lit.unassigned')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                       {milestone.DueDate ? new Date(milestone.DueDate).toLocaleDateString() : '-'}
@@ -302,6 +316,20 @@ export function MilestonesTab({
                     value={formData.dueDate}
                     onChange={(e) => setFormData((prev) => ({ ...prev, dueDate: e.target.value }))}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('lit.assignee')}</label>
+                  <SearchableSelect
+                    value={formData.assignedTo}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, assignedTo: value }))}
+                    options={orgUsers.map((user) => ({
+                      id: Number(user.Id),
+                      label: String(user.Username || '').trim() || `#${user.Id}`,
+                    }))}
+                    placeholder={t('lit.unassigned')}
+                    className="w-full"
                   />
                 </div>
 
