@@ -198,6 +198,19 @@
         "Fix grid column visibility and order after filter remounts in the global enhancer and the project Tasks local enhancer",
         "Handle null application StatusName values without breaking the application detail page"
       ]
+    },
+    {
+      "version": "1.2.8",
+      "date": "2026-11-13",
+      "title": "Milestone alerts, MCP agent docs, and filters",
+      "items": [
+        "Optional milestone assignee with dashboard alerts on the due day and every day while overdue (open milestones only; no notification table)",
+        "MCP create/update/archive for organization and application agent skills and rules; archived docs stay out of MCP list/get",
+        "Agent docs UI: archive, unarchive, and permanent delete, with archived badge in the list",
+        "Project Kanban and Reporting filters (including assignee/user searchable selects and collapsible reporting filter panels)",
+        "Release commit picker: filter by branch and show membership branches on commits",
+        "Refresh FEATURES, Synapse end-user manual (v1.4.0), Remote MCP guide and Products notes"
+      ]
     }
   ]
 }
