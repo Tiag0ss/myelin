@@ -4,6 +4,12 @@ import { invalidateByEntity } from '../../services/cacheInvalidation';
 import { logActivity } from '../admin/activityLogs';
 import { recordTaskHistory } from '../projects/taskHistory';
 import {
+  createAgentDoc,
+  setAgentDocArchived,
+  updateAgentDoc,
+  userCanManageAgentDocs,
+} from './agentDocsCrud';
+import {
   attachTasksToSprints,
   canWriteViaMcp,
   coerceAllowWrite,
@@ -13,10 +19,31 @@ import {
   coerceProjectIds,
   coerceSprintStatus,
   coerceStrict,
+  pickAgentDocForMutation,
+  resolveAgentDocWriteTarget,
   shapeTaskSprintRef,
   sprintAllowedForProject,
+  type AgentDocItem,
 } from './scopeHelpers';
 import { loadMergedAgentDocs, resolveMcpScope } from './scopeService';
+
+const MCP_WRITES_DENIED =
+  'MCP writes disabled. Enable Profile → Allow MCP task writes and set allowWrite true in myelin.mcp.json';
+
+function agentDocOwnerId(doc: AgentDocItem): number | null {
+  if (doc.scope === 'organization') {
+    return doc.organizationId != null ? Number(doc.organizationId) : null;
+  }
+  return doc.applicationId != null ? Number(doc.applicationId) : null;
+}
+
+function coerceOwnerKind(value: unknown): 'organization' | 'application' | null {
+  if (value == null || value === '') return null;
+  const s = String(value).trim().toLowerCase();
+  if (s === 'organization' || s === 'org') return 'organization';
+  if (s === 'application' || s === 'app') return 'application';
+  return null;
+}
 
 async function usernameForUserId(userId: number): Promise<string | null> {
   try {
@@ -157,6 +184,275 @@ export async function toolGetDoc(
     return textResult({ success: false, message: 'Document not found in scope' }, true);
   }
   return textResult({ success: true, data: found });
+}
+
+export async function toolCreateDoc(
+  ctx: McpToolContext,
+  args: Record<string, unknown>,
+  kind: 'skills' | 'rules'
+) {
+  await requireInternal(ctx);
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (
+    !canWriteViaMcp({
+      serverMcpWritesEnabled: scope.serverMcpWritesEnabled,
+      clientAllowWrite: scope.allowWrite,
+    })
+  ) {
+    logger.info('MCP create agent doc denied (writes off)', { userId: ctx.userId, kind });
+    return textResult({ success: false, message: MCP_WRITES_DENIED }, true);
+  }
+  if (scope.needsDisambiguation) {
+    return textResult(
+      { success: false, message: scope.error, candidates: scope.candidateApplications },
+      true
+    );
+  }
+  if (scope.error) {
+    return textResult({ success: false, message: scope.error }, true);
+  }
+
+  // organizationId wins when set so common applicationId (scope disambiguation) does not block org creates.
+  const organizationIdRaw =
+    args.organizationId != null ? parseInt(String(args.organizationId), 10) : NaN;
+  const organizationId = Number.isFinite(organizationIdRaw) ? organizationIdRaw : null;
+  const applicationIdRaw =
+    organizationId != null
+      ? NaN
+      : args.applicationId != null
+        ? parseInt(String(args.applicationId), 10)
+        : common.applicationId != null
+          ? Number(common.applicationId)
+          : NaN;
+  const applicationId = Number.isFinite(applicationIdRaw) ? applicationIdRaw : null;
+  const target = resolveAgentDocWriteTarget({
+    organizationId,
+    applicationId,
+    scopeOrganizationIds: scope.organizationIds,
+    scopeApplicationIds: scope.matchedApplications.map((a) => a.id),
+  });
+  if (!target.ok) {
+    return textResult({ success: false, message: target.error }, true);
+  }
+
+  if (!(await userCanManageAgentDocs(ctx.userId, target.owner, target.ownerId))) {
+    return textResult(
+      {
+        success: false,
+        message:
+          target.owner === 'organization'
+            ? 'Permission denied (CanManageOrganizations required)'
+            : 'Permission denied (CanManageApplications required)',
+      },
+      true
+    );
+  }
+
+  const name = String(args.name ?? '').trim();
+  if (!name) {
+    return textResult({ success: false, message: 'name is required' }, true);
+  }
+
+  try {
+    const created = await createAgentDoc(target.owner, target.ownerId, kind, {
+      name,
+      slug: args.slug != null ? String(args.slug) : undefined,
+      content: args.content != null ? String(args.content) : '',
+      sortOrder: args.sortOrder != null ? Number(args.sortOrder) : undefined,
+    });
+    logger.info('MCP create agent doc', {
+      userId: ctx.userId,
+      kind,
+      owner: target.owner,
+      ownerId: target.ownerId,
+      id: created.id,
+    });
+    return textResult({
+      success: true,
+      data: {
+        id: created.id,
+        name: created.name,
+        slug: created.slug,
+        content: created.content,
+        sortOrder: created.sortOrder,
+        scope: created.owner,
+        organizationId: created.owner === 'organization' ? created.ownerId : undefined,
+        applicationId: created.owner === 'application' ? created.ownerId : undefined,
+      },
+    });
+  } catch (error) {
+    logger.error('MCP create agent doc failed', error);
+    return textResult(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create agent document',
+      },
+      true
+    );
+  }
+}
+
+export async function toolUpdateDoc(
+  ctx: McpToolContext,
+  args: Record<string, unknown>,
+  kind: 'skills' | 'rules'
+) {
+  await requireInternal(ctx);
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (
+    !canWriteViaMcp({
+      serverMcpWritesEnabled: scope.serverMcpWritesEnabled,
+      clientAllowWrite: scope.allowWrite,
+    })
+  ) {
+    logger.info('MCP update agent doc denied (writes off)', { userId: ctx.userId, kind });
+    return textResult({ success: false, message: MCP_WRITES_DENIED }, true);
+  }
+  if (scope.needsDisambiguation) {
+    return textResult(
+      { success: false, message: scope.error, candidates: scope.candidateApplications },
+      true
+    );
+  }
+  if (scope.error) {
+    return textResult({ success: false, message: scope.error }, true);
+  }
+
+  const id = parseInt(String(args.id ?? ''), 10);
+  if (!Number.isFinite(id)) {
+    return textResult({ success: false, message: 'id is required' }, true);
+  }
+  const ownerHint = coerceOwnerKind(args.owner);
+  if (args.owner != null && args.owner !== '' && ownerHint == null) {
+    return textResult(
+      { success: false, message: 'owner must be organization or application' },
+      true
+    );
+  }
+
+  const docs = await loadMergedAgentDocs(
+    scope.organizationIds,
+    scope.matchedApplications.map((a) => a.id),
+    kind
+  );
+  const picked = pickAgentDocForMutation(docs, { id, owner: ownerHint });
+  if (!picked.ok) {
+    return textResult({ success: false, message: picked.error }, true);
+  }
+
+  const ownerId = agentDocOwnerId(picked.doc);
+  if (ownerId == null) {
+    return textResult({ success: false, message: 'Document owner id missing' }, true);
+  }
+  if (!(await userCanManageAgentDocs(ctx.userId, picked.doc.scope, ownerId))) {
+    return textResult({ success: false, message: 'Permission denied' }, true);
+  }
+
+  try {
+    const updated = await updateAgentDoc(picked.doc.scope, ownerId, kind, id, {
+      name: args.name != null ? String(args.name) : undefined,
+      slug: args.slug != null ? String(args.slug) : undefined,
+      content: args.content !== undefined ? (args.content == null ? null : String(args.content)) : undefined,
+      sortOrder: args.sortOrder != null ? Number(args.sortOrder) : undefined,
+    });
+    if (!updated) {
+      return textResult({ success: false, message: 'Document not found' }, true);
+    }
+    logger.info('MCP update agent doc', {
+      userId: ctx.userId,
+      kind,
+      owner: picked.doc.scope,
+      ownerId,
+      id,
+    });
+    return textResult({ success: true, data: { id, updated: true, scope: picked.doc.scope } });
+  } catch (error) {
+    logger.error('MCP update agent doc failed', error);
+    return textResult(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update agent document',
+      },
+      true
+    );
+  }
+}
+
+/** Soft-archive via MCP (no hard delete). Archived docs are excluded from list/get. */
+export async function toolArchiveDoc(
+  ctx: McpToolContext,
+  args: Record<string, unknown>,
+  kind: 'skills' | 'rules'
+) {
+  await requireInternal(ctx);
+  const common = parseCommonArgs(args);
+  const scope = await resolveMcpScope(ctx.userId, common);
+  if (
+    !canWriteViaMcp({
+      serverMcpWritesEnabled: scope.serverMcpWritesEnabled,
+      clientAllowWrite: scope.allowWrite,
+    })
+  ) {
+    logger.info('MCP archive agent doc denied (writes off)', { userId: ctx.userId, kind });
+    return textResult({ success: false, message: MCP_WRITES_DENIED }, true);
+  }
+  if (scope.needsDisambiguation) {
+    return textResult(
+      { success: false, message: scope.error, candidates: scope.candidateApplications },
+      true
+    );
+  }
+  if (scope.error) {
+    return textResult({ success: false, message: scope.error }, true);
+  }
+
+  const id = parseInt(String(args.id ?? ''), 10);
+  if (!Number.isFinite(id)) {
+    return textResult({ success: false, message: 'id is required' }, true);
+  }
+  const ownerHint = coerceOwnerKind(args.owner);
+  if (args.owner != null && args.owner !== '' && ownerHint == null) {
+    return textResult(
+      { success: false, message: 'owner must be organization or application' },
+      true
+    );
+  }
+
+  const docs = await loadMergedAgentDocs(
+    scope.organizationIds,
+    scope.matchedApplications.map((a) => a.id),
+    kind
+  );
+  const picked = pickAgentDocForMutation(docs, { id, owner: ownerHint });
+  if (!picked.ok) {
+    return textResult({ success: false, message: picked.error }, true);
+  }
+
+  const ownerId = agentDocOwnerId(picked.doc);
+  if (ownerId == null) {
+    return textResult({ success: false, message: 'Document owner id missing' }, true);
+  }
+  if (!(await userCanManageAgentDocs(ctx.userId, picked.doc.scope, ownerId))) {
+    return textResult({ success: false, message: 'Permission denied' }, true);
+  }
+
+  const archived = await setAgentDocArchived(picked.doc.scope, ownerId, kind, id, true);
+  if (!archived) {
+    return textResult({ success: false, message: 'Document not found' }, true);
+  }
+  logger.info('MCP archive agent doc', {
+    userId: ctx.userId,
+    kind,
+    owner: picked.doc.scope,
+    ownerId,
+    id,
+  });
+  return textResult({
+    success: true,
+    data: { id, archived: true, scope: picked.doc.scope },
+  });
 }
 
 function myTaskAssignmentClause(userId: number): { sql: string; params: number[] } {

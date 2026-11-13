@@ -1156,7 +1156,7 @@ Near API Tokens on **My Profile**, the **Myelin MCP** panel toggles **Allow MCP 
 
 ## 21c. Remote MCP (Cursor / agents)
 
-Streamable HTTP MCP endpoint so Cursor (or other MCP clients) can resolve repo context, read org/app agent skills & rules, list/get the token owner’s tasks in scope, and optionally create/update those tasks.
+Streamable HTTP MCP endpoint so Cursor (or other MCP clients) can resolve repo context, read and mutate org/app agent skills & rules (archive instead of hard-delete), list/get the token owner’s tasks in scope, and optionally create/update those tasks.
 
 ### Connect (Cursor MCP client — self-hosted URL)
 
@@ -1233,14 +1233,20 @@ Then: target `projectId` ∈ effective scope; create assigns to self; update onl
 - Stored in Myelin only (Organization + Application). No git import/export in v1.
 - UI: Organization → **Agent docs**; Application → **Agent docs**
 - MCP merge order: organization docs first, then application docs
-- Tools: list/get skills and rules (no mutation via MCP in v1)
+- Tools: list/get plus dual-gated create/update/**archive** for skills and rules (no hard delete via MCP)
+- Archived docs (`IsArchived = 1`) are omitted from MCP list/get; UI can archive, unarchive, or permanently delete
+- Mutations also require `CanManageOrganizations` (org docs) or `CanManageApplications` (app docs), same as the UI
+- Create: pass exactly one of `organizationId` or `applicationId` (must be in MCP scope). If both appear on the call, `organizationId` wins so common `applicationId` disambiguation does not block org creates
+- Update/archive: by `id` in active merged scope; pass `owner=organization|application` when the same numeric id exists on both tables
 
 ### MCP tools (summary)
 
 | Tool | Role |
 |---|---|
 | `resolve_context` | Scope, matched apps, write capability, ambiguity |
-| `list_*` / `get_*` skills & rules | Merged agent docs |
+| `list_*` / `get_*` skills & rules | Merged **active** agent docs (archived excluded) |
+| `create_skill` / `update_skill` / `archive_skill` | Dual-gated + manage-permission writes; archive is soft |
+| `create_rule` / `update_rule` / `archive_rule` | Dual-gated + manage-permission writes; archive is soft |
 | `list_project_meta` | Status / priority / task-type catalogs per effective project |
 | `list_sprints` / `get_sprint` | Sprints for effective projects (optional `status` / `projectId`); each sprint embeds `tasks[]` (with Description). Empty list if none exist |
 | `sprint_update` | Dual-gated write: name/goal/dates/status/velocity (same active-sprint rule as the UI API) |

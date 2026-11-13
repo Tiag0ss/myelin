@@ -234,6 +234,65 @@ export function mergeAgentDocs(orgDocs: AgentDocItem[], appDocs: AgentDocItem[])
   return [...orgSorted, ...appSorted];
 }
 
+/**
+ * Create target for MCP agent-doc writes: exactly one of organizationId / applicationId.
+ * Target must already be inside the resolved MCP scope.
+ */
+export function resolveAgentDocWriteTarget(options: {
+  organizationId: number | null;
+  applicationId: number | null;
+  scopeOrganizationIds: number[];
+  scopeApplicationIds: number[];
+}):
+  | { ok: true; owner: 'organization' | 'application'; ownerId: number }
+  | { ok: false; error: string } {
+  const hasOrg = options.organizationId != null && Number.isFinite(options.organizationId);
+  const hasApp = options.applicationId != null && Number.isFinite(options.applicationId);
+  if (hasOrg === hasApp) {
+    return {
+      ok: false,
+      error: 'Pass exactly one of organizationId or applicationId as the write target',
+    };
+  }
+  if (hasOrg) {
+    const ownerId = options.organizationId as number;
+    if (!options.scopeOrganizationIds.includes(ownerId)) {
+      return { ok: false, error: 'organizationId not in effective MCP scope' };
+    }
+    return { ok: true, owner: 'organization', ownerId };
+  }
+  const ownerId = options.applicationId as number;
+  if (!options.scopeApplicationIds.includes(ownerId)) {
+    return { ok: false, error: 'applicationId not in effective MCP scope' };
+  }
+  return { ok: true, owner: 'application', ownerId };
+}
+
+/**
+ * Resolve a merged agent doc for update/delete. Optional owner disambiguates when
+ * the same numeric Id exists on both org and application tables.
+ */
+export function pickAgentDocForMutation(
+  docs: AgentDocItem[],
+  options: { id: number; owner?: 'organization' | 'application' | null }
+): { ok: true; doc: AgentDocItem } | { ok: false; error: string } {
+  const matches = docs.filter((d) => d.id === options.id);
+  const filtered =
+    options.owner === 'organization' || options.owner === 'application'
+      ? matches.filter((d) => d.scope === options.owner)
+      : matches;
+  if (filtered.length === 0) {
+    return { ok: false, error: 'Document not found in scope' };
+  }
+  if (filtered.length > 1) {
+    return {
+      ok: false,
+      error: 'Ambiguous document id; pass owner as organization or application',
+    };
+  }
+  return { ok: true, doc: filtered[0] };
+}
+
 export function canWriteViaMcp(options: {
   serverMcpWritesEnabled: boolean;
   clientAllowWrite: boolean;

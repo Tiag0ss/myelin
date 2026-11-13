@@ -12,9 +12,14 @@ type AgentDoc = {
   Slug: string;
   Content?: string | null;
   SortOrder?: number;
+  IsArchived?: number | boolean;
 };
 
 type Kind = 'skills' | 'rules';
+
+function isDocArchived(doc: AgentDoc): boolean {
+  return Number(doc.IsArchived) === 1 || doc.IsArchived === true;
+}
 
 export default function AgentDocsPanel({
   token,
@@ -39,6 +44,7 @@ export default function AgentDocsPanel({
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [archiveBusyId, setArchiveBusyId] = useState<number | null>(null);
 
   const formOpen = creating || !!editing;
 
@@ -124,6 +130,27 @@ export default function AgentDocsPanel({
     }
   };
 
+  const setArchived = async (docId: number, archived: boolean) => {
+    setArchiveBusyId(docId);
+    setError('');
+    try {
+      const action = archived ? 'archive' : 'unarchive';
+      const res = await fetch(`${getApiUrl()}${basePath}/agent-${kind}/${docId}/${action}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || t('chrome.requestFailed'));
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('chrome.requestFailed'));
+    } finally {
+      setArchiveBusyId(null);
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleteId == null) return;
     try {
@@ -190,32 +217,67 @@ export default function AgentDocsPanel({
         <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.mcpNoAgentDocs')}</p>
       ) : (
         <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
-          {docs.map((doc) => (
-            <li key={doc.Id} className="flex items-start justify-between gap-3 p-3">
-              <div className="min-w-0">
-                <p className="font-medium text-gray-900 dark:text-white">{doc.Name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{doc.Slug}</p>
-              </div>
-              {canManage ? (
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-                    onClick={() => openEdit(doc)}
-                  >
-                    {t('common.edit')}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-sm text-red-600 hover:underline dark:text-red-400"
-                    onClick={() => setDeleteId(doc.Id)}
-                  >
-                    {t('common.delete')}
-                  </button>
+          {docs.map((doc) => {
+            const archived = isDocArchived(doc);
+            const busy = archiveBusyId === doc.Id;
+            return (
+              <li
+                key={doc.Id}
+                className={`flex items-start justify-between gap-3 p-3 ${
+                  archived ? 'bg-gray-50/80 opacity-80 dark:bg-gray-900/40' : ''
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-gray-900 dark:text-white">{doc.Name}</p>
+                    {archived ? (
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                        {t('lit.archived')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{doc.Slug}</p>
                 </div>
-              ) : null}
-            </li>
-          ))}
+                {canManage ? (
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                      onClick={() => openEdit(doc)}
+                    >
+                      {t('common.edit')}
+                    </button>
+                    {archived ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="text-sm text-emerald-700 hover:underline disabled:opacity-50 dark:text-emerald-400"
+                        onClick={() => void setArchived(doc.Id, false)}
+                      >
+                        {t('lit.mcpUnarchiveAgentDoc')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="text-sm text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400"
+                        onClick={() => void setArchived(doc.Id, true)}
+                      >
+                        {t('lit.mcpArchiveAgentDoc')}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="text-sm text-red-600 hover:underline dark:text-red-400"
+                      onClick={() => setDeleteId(doc.Id)}
+                    >
+                      {t('common.delete')}
+                    </button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 

@@ -4,6 +4,7 @@ import { validateRequest } from '../../utils/validation';
 import {
   agentDocBodySchema,
   agentDocUpdateSchema,
+  archiveAgentDocHandler,
   createAgentDocHandler,
   deleteAgentDocHandler,
   listAgentDocsHandler,
@@ -27,6 +28,12 @@ router.put(
   validateRequest(agentDocUpdateSchema),
   (req, res) => updateAgentDocHandler(req, res, 'application', 'skills')
 );
+router.post('/:id/agent-skills/:docId/archive', authenticateToken, (req, res) =>
+  archiveAgentDocHandler(req, res, 'application', 'skills', true)
+);
+router.post('/:id/agent-skills/:docId/unarchive', authenticateToken, (req, res) =>
+  archiveAgentDocHandler(req, res, 'application', 'skills', false)
+);
 router.delete('/:id/agent-skills/:docId', authenticateToken, (req, res) =>
   deleteAgentDocHandler(req, res, 'application', 'skills')
 );
@@ -45,6 +52,12 @@ router.put(
   authenticateToken,
   validateRequest(agentDocUpdateSchema),
   (req, res) => updateAgentDocHandler(req, res, 'application', 'rules')
+);
+router.post('/:id/agent-rules/:docId/archive', authenticateToken, (req, res) =>
+  archiveAgentDocHandler(req, res, 'application', 'rules', true)
+);
+router.post('/:id/agent-rules/:docId/unarchive', authenticateToken, (req, res) =>
+  archiveAgentDocHandler(req, res, 'application', 'rules', false)
 );
 router.delete('/:id/agent-rules/:docId', authenticateToken, (req, res) =>
   deleteAgentDocHandler(req, res, 'application', 'rules')

@@ -189,7 +189,7 @@ export async function loadMergedAgentDocs(
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT Id, OrganizationId, Name, Slug, Content, SortOrder
        FROM ${orgTable}
-       WHERE OrganizationId IN (${ph})
+       WHERE OrganizationId IN (${ph}) AND IsArchived = 0
        ORDER BY SortOrder ASC, Id ASC`,
       organizationIds
     );
@@ -211,7 +211,7 @@ export async function loadMergedAgentDocs(
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT Id, ApplicationId, Name, Slug, Content, SortOrder
        FROM ${appTable}
-       WHERE ApplicationId IN (${ph})
+       WHERE ApplicationId IN (${ph}) AND IsArchived = 0
        ORDER BY SortOrder ASC, Id ASC`,
       applicationIds
     );

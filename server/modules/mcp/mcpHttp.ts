@@ -5,6 +5,8 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { authenticateToken, AuthRequest } from '../../middleware/auth';
 import logger from '../../utils/logger';
 import {
+  toolArchiveDoc,
+  toolCreateDoc,
   toolCreateTask,
   toolGetDoc,
   toolGetSprint,
@@ -14,6 +16,7 @@ import {
   toolListProjectMeta,
   toolListSprints,
   toolResolveContext,
+  toolUpdateDoc,
   toolUpdateSprint,
   toolUpdateTask,
   type McpToolContext,
@@ -40,7 +43,7 @@ function createServerForRequest(req: AuthRequest): McpServer {
   const server = new McpServer({
     name: 'myelin',
     // Bump when tools change so clients that cache tools/list pick up new tools.
-    version: '1.2.1',
+    version: '1.3.1',
   });
 
   const run = async (
@@ -125,6 +128,90 @@ function createServerForRequest(req: AuthRequest): McpServer {
     },
     async (args) =>
       run('get_rule', () => toolGetDoc(ctxFromReq(req), args as Record<string, unknown>, 'rules'))
+  );
+
+  const createDocShape = {
+    ...commonShape,
+    organizationId: z.union([z.number(), z.string()]).optional(),
+    name: z.string(),
+    content: z.string().optional(),
+    slug: z.string().optional(),
+    sortOrder: z.union([z.number(), z.string()]).optional(),
+  };
+  const updateDocShape = {
+    ...commonShape,
+    id: z.union([z.number(), z.string()]),
+    owner: z.string().optional(),
+    name: z.string().optional(),
+    content: z.string().nullable().optional(),
+    slug: z.string().optional(),
+    sortOrder: z.union([z.number(), z.string()]).optional(),
+  };
+  const archiveDocShape = {
+    ...commonShape,
+    id: z.union([z.number(), z.string()]),
+    owner: z.string().optional(),
+  };
+
+  server.registerTool(
+    'create_skill',
+    {
+      description:
+        'Create an organization or application agent skill in MCP scope (dual-gated writes + CanManageOrganizations/Applications). Pass exactly one of organizationId or applicationId.',
+      inputSchema: createDocShape,
+    },
+    async (args) =>
+      run('create_skill', () => toolCreateDoc(ctxFromReq(req), args as Record<string, unknown>, 'skills'))
+  );
+  server.registerTool(
+    'update_skill',
+    {
+      description:
+        'Update an active (non-archived) agent skill in MCP scope by id (dual-gated writes + manage permission). Pass owner=organization|application if id is ambiguous.',
+      inputSchema: updateDocShape,
+    },
+    async (args) =>
+      run('update_skill', () => toolUpdateDoc(ctxFromReq(req), args as Record<string, unknown>, 'skills'))
+  );
+  server.registerTool(
+    'archive_skill',
+    {
+      description:
+        'Archive an agent skill in MCP scope by id (soft; hidden from MCP list/get). Hard delete only via UI. Dual-gated writes + manage permission. Pass owner=organization|application if id is ambiguous.',
+      inputSchema: archiveDocShape,
+    },
+    async (args) =>
+      run('archive_skill', () => toolArchiveDoc(ctxFromReq(req), args as Record<string, unknown>, 'skills'))
+  );
+  server.registerTool(
+    'create_rule',
+    {
+      description:
+        'Create an organization or application agent rule in MCP scope (dual-gated writes + CanManageOrganizations/Applications). Pass exactly one of organizationId or applicationId.',
+      inputSchema: createDocShape,
+    },
+    async (args) =>
+      run('create_rule', () => toolCreateDoc(ctxFromReq(req), args as Record<string, unknown>, 'rules'))
+  );
+  server.registerTool(
+    'update_rule',
+    {
+      description:
+        'Update an active (non-archived) agent rule in MCP scope by id (dual-gated writes + manage permission). Pass owner=organization|application if id is ambiguous.',
+      inputSchema: updateDocShape,
+    },
+    async (args) =>
+      run('update_rule', () => toolUpdateDoc(ctxFromReq(req), args as Record<string, unknown>, 'rules'))
+  );
+  server.registerTool(
+    'archive_rule',
+    {
+      description:
+        'Archive an agent rule in MCP scope by id (soft; hidden from MCP list/get). Hard delete only via UI. Dual-gated writes + manage permission. Pass owner=organization|application if id is ambiguous.',
+      inputSchema: archiveDocShape,
+    },
+    async (args) =>
+      run('archive_rule', () => toolArchiveDoc(ctxFromReq(req), args as Record<string, unknown>, 'rules'))
   );
 
   server.registerTool(

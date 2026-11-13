@@ -8,6 +8,8 @@ export {
   repositoryUrlsMatch,
   buildEffectiveProjectIds,
   mergeAgentDocs,
+  resolveAgentDocWriteTarget,
+  pickAgentDocForMutation,
   canWriteViaMcp,
   coerceStrict,
   coerceAllowWrite,

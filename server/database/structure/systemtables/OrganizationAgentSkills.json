@@ -41,6 +41,13 @@
       "Comment": "Display and merge order (lower first)"
     },
     {
+      "FieldName": "IsArchived",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "1 = archived (hidden from MCP); UI can unarchive or hard-delete"
+    },
+    {
       "FieldName": "UpdatedAt",
       "DataType": "timestamp",
       "NotNullable": true,

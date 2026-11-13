@@ -17,8 +17,11 @@ export const agentDocUpdateSchema = agentDocBodySchema.partial().refine(
   { message: 'At least one field is required' }
 );
 
-type DocKind = 'skills' | 'rules';
-type OwnerKind = 'organization' | 'application';
+export type AgentDocKind = 'skills' | 'rules';
+export type AgentDocOwnerKind = 'organization' | 'application';
+
+type DocKind = AgentDocKind;
+type OwnerKind = AgentDocOwnerKind;
 
 function tableName(owner: OwnerKind, kind: DocKind): string {
   if (owner === 'organization') {
@@ -29,6 +32,140 @@ function tableName(owner: OwnerKind, kind: DocKind): string {
 
 function ownerColumn(owner: OwnerKind): string {
   return owner === 'organization' ? 'OrganizationId' : 'ApplicationId';
+}
+
+export type AgentDocCreateInput = {
+  name: string;
+  slug?: string;
+  content?: string | null;
+  sortOrder?: number;
+};
+
+export type AgentDocUpdateInput = {
+  name?: string;
+  slug?: string;
+  content?: string | null;
+  sortOrder?: number;
+};
+
+export type AgentDocRecord = {
+  id: number;
+  ownerId: number;
+  owner: OwnerKind;
+  name: string;
+  slug: string;
+  content: string;
+  sortOrder: number;
+  isArchived: boolean;
+};
+
+export async function createAgentDoc(
+  owner: OwnerKind,
+  ownerId: number,
+  kind: DocKind,
+  input: AgentDocCreateInput
+): Promise<AgentDocRecord> {
+  const name = String(input.name || '').trim();
+  if (!name) {
+    throw new Error('name is required');
+  }
+  const slug = String(input.slug || slugifyAgentDoc(name)).trim().slice(0, 128);
+  const content = input.content != null ? String(input.content) : '';
+  const sortOrder = Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 0;
+
+  const table = tableName(owner, kind);
+  const col = ownerColumn(owner);
+  const [result] = await pool.execute<ResultSetHeader>(
+    `INSERT INTO ${table} (${col}, Name, Slug, Content, SortOrder, IsArchived) VALUES (?, ?, ?, ?, ?, 0)`,
+    [ownerId, name, slug, content, sortOrder]
+  );
+
+  return {
+    id: Number(result.insertId),
+    ownerId,
+    owner,
+    name,
+    slug,
+    content,
+    sortOrder,
+    isArchived: false,
+  };
+}
+
+export async function updateAgentDoc(
+  owner: OwnerKind,
+  ownerId: number,
+  kind: DocKind,
+  docId: number,
+  input: AgentDocUpdateInput
+): Promise<boolean> {
+  const table = tableName(owner, kind);
+  const col = ownerColumn(owner);
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    `SELECT Id FROM ${table} WHERE Id = ? AND ${col} = ?`,
+    [docId, ownerId]
+  );
+  if (!existing.length) return false;
+
+  const updates: string[] = [];
+  const params: unknown[] = [];
+  if (input.name != null) {
+    updates.push('Name = ?');
+    params.push(String(input.name).trim());
+  }
+  if (input.slug != null) {
+    updates.push('Slug = ?');
+    params.push(String(input.slug).trim().slice(0, 128));
+  }
+  if (input.content !== undefined) {
+    updates.push('Content = ?');
+    params.push(input.content == null ? '' : String(input.content));
+  }
+  if (input.sortOrder !== undefined) {
+    updates.push('SortOrder = ?');
+    params.push(Number(input.sortOrder) || 0);
+  }
+  if (updates.length === 0) {
+    throw new Error('No fields to update');
+  }
+  params.push(docId, ownerId);
+  await pool.execute(
+    `UPDATE ${table} SET ${updates.join(', ')} WHERE Id = ? AND ${col} = ?`,
+    params
+  );
+  return true;
+}
+
+export async function deleteAgentDoc(
+  owner: OwnerKind,
+  ownerId: number,
+  kind: DocKind,
+  docId: number
+): Promise<boolean> {
+  const table = tableName(owner, kind);
+  const col = ownerColumn(owner);
+  const [result] = await pool.execute<ResultSetHeader>(
+    `DELETE FROM ${table} WHERE Id = ? AND ${col} = ?`,
+    [docId, ownerId]
+  );
+  return result.affectedRows > 0;
+}
+
+/** Soft-archive / unarchive. Returns false when the row is missing. */
+export async function setAgentDocArchived(
+  owner: OwnerKind,
+  ownerId: number,
+  kind: DocKind,
+  docId: number,
+  archived: boolean
+): Promise<boolean> {
+  const table = tableName(owner, kind);
+  const col = ownerColumn(owner);
+  const [result] = await pool.execute<ResultSetHeader>(
+    `UPDATE ${table} SET IsArchived = ? WHERE Id = ? AND ${col} = ?`,
+    [archived ? 1 : 0, docId, ownerId]
+  );
+  return result.affectedRows > 0;
 }
 
 async function userIsOrgMember(userId: number, organizationId: number): Promise<boolean> {
@@ -102,10 +239,10 @@ export async function listAgentDocs(
   const table = tableName(owner, kind);
   const col = ownerColumn(owner);
   const [rows] = await pool.execute<RowDataPacket[]>(
-    `SELECT Id, ${col} AS OwnerId, Name, Slug, Content, SortOrder, CreatedAt, UpdatedAt
+    `SELECT Id, ${col} AS OwnerId, Name, Slug, Content, SortOrder, IsArchived, CreatedAt, UpdatedAt
      FROM ${table}
      WHERE ${col} = ?
-     ORDER BY SortOrder ASC, Id ASC`,
+     ORDER BY IsArchived ASC, SortOrder ASC, Id ASC`,
     [ownerId]
   );
   return rows;
@@ -133,32 +270,33 @@ export async function createAgentDocHandler(
       return;
     }
 
-    const name = String(req.body.name || '').trim();
-    const slug = String(req.body.slug || slugifyAgentDoc(name)).trim().slice(0, 128);
-    const content = req.body.content != null ? String(req.body.content) : '';
-    const sortOrder = Number.isFinite(Number(req.body.sortOrder)) ? Number(req.body.sortOrder) : 0;
-
-    const table = tableName(owner, kind);
-    const col = ownerColumn(owner);
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO ${table} (${col}, Name, Slug, Content, SortOrder) VALUES (?, ?, ?, ?, ?)`,
-      [ownerId, name, slug, content, sortOrder]
-    );
+    const created = await createAgentDoc(owner, ownerId, kind, {
+      name: String(req.body.name || ''),
+      slug: req.body.slug != null ? String(req.body.slug) : undefined,
+      content: req.body.content,
+      sortOrder: req.body.sortOrder,
+    });
 
     res.status(201).json({
       success: true,
       data: {
-        id: result.insertId,
-        ownerId,
-        name,
-        slug,
-        content,
-        sortOrder,
+        id: created.id,
+        ownerId: created.ownerId,
+        name: created.name,
+        slug: created.slug,
+        content: created.content,
+        sortOrder: created.sortOrder,
       },
     });
   } catch (error) {
     logger.error('Failed to create agent doc', error);
-    res.status(500).json({ success: false, message: 'Failed to create agent document' });
+    const message = error instanceof Error && error.message === 'name is required'
+      ? 'name is required'
+      : 'Failed to create agent document';
+    res.status(error instanceof Error && error.message === 'name is required' ? 400 : 500).json({
+      success: false,
+      message,
+    });
   }
 }
 
@@ -185,45 +323,25 @@ export async function updateAgentDocHandler(
       return;
     }
 
-    const table = tableName(owner, kind);
-    const col = ownerColumn(owner);
-    const [existing] = await pool.execute<RowDataPacket[]>(
-      `SELECT Id FROM ${table} WHERE Id = ? AND ${col} = ?`,
-      [docId, ownerId]
-    );
-    if (!existing.length) {
-      res.status(404).json({ success: false, message: 'Not found' });
-      return;
+    try {
+      const updated = await updateAgentDoc(owner, ownerId, kind, docId, {
+        name: req.body.name != null ? String(req.body.name) : undefined,
+        slug: req.body.slug != null ? String(req.body.slug) : undefined,
+        content: req.body.content,
+        sortOrder: req.body.sortOrder,
+      });
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'Not found' });
+        return;
+      }
+      res.json({ success: true, message: 'Updated' });
+    } catch (inner) {
+      if (inner instanceof Error && inner.message === 'No fields to update') {
+        res.status(400).json({ success: false, message: 'No fields to update' });
+        return;
+      }
+      throw inner;
     }
-
-    const updates: string[] = [];
-    const params: unknown[] = [];
-    if (req.body.name != null) {
-      updates.push('Name = ?');
-      params.push(String(req.body.name).trim());
-    }
-    if (req.body.slug != null) {
-      updates.push('Slug = ?');
-      params.push(String(req.body.slug).trim().slice(0, 128));
-    }
-    if (req.body.content !== undefined) {
-      updates.push('Content = ?');
-      params.push(req.body.content == null ? '' : String(req.body.content));
-    }
-    if (req.body.sortOrder !== undefined) {
-      updates.push('SortOrder = ?');
-      params.push(Number(req.body.sortOrder) || 0);
-    }
-    if (updates.length === 0) {
-      res.status(400).json({ success: false, message: 'No fields to update' });
-      return;
-    }
-    params.push(docId, ownerId);
-    await pool.execute(
-      `UPDATE ${table} SET ${updates.join(', ')} WHERE Id = ? AND ${col} = ?`,
-      params
-    );
-    res.json({ success: true, message: 'Updated' });
   } catch (error) {
     logger.error('Failed to update agent doc', error);
     res.status(500).json({ success: false, message: 'Failed to update agent document' });
@@ -252,13 +370,8 @@ export async function deleteAgentDocHandler(
       res.status(403).json({ success: false, message: 'Permission denied' });
       return;
     }
-    const table = tableName(owner, kind);
-    const col = ownerColumn(owner);
-    const [result] = await pool.execute<ResultSetHeader>(
-      `DELETE FROM ${table} WHERE Id = ? AND ${col} = ?`,
-      [docId, ownerId]
-    );
-    if (result.affectedRows === 0) {
+    const deleted = await deleteAgentDoc(owner, ownerId, kind, docId);
+    if (!deleted) {
       res.status(404).json({ success: false, message: 'Not found' });
       return;
     }
@@ -266,6 +379,48 @@ export async function deleteAgentDocHandler(
   } catch (error) {
     logger.error('Failed to delete agent doc', error);
     res.status(500).json({ success: false, message: 'Failed to delete agent document' });
+  }
+}
+
+export async function archiveAgentDocHandler(
+  req: AuthRequest,
+  res: Response,
+  owner: OwnerKind,
+  kind: DocKind,
+  archived: boolean
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+    const ownerId = parseInt(String(req.params.id), 10);
+    const docId = parseInt(String(req.params.docId), 10);
+    if (!Number.isFinite(ownerId) || !Number.isFinite(docId)) {
+      res.status(400).json({ success: false, message: 'Invalid id' });
+      return;
+    }
+    if (!(await userCanManageAgentDocs(userId, owner, ownerId))) {
+      res.status(403).json({ success: false, message: 'Permission denied' });
+      return;
+    }
+    const ok = await setAgentDocArchived(owner, ownerId, kind, docId, archived);
+    if (!ok) {
+      res.status(404).json({ success: false, message: 'Not found' });
+      return;
+    }
+    res.json({
+      success: true,
+      message: archived ? 'Archived' : 'Unarchived',
+      data: { id: docId, isArchived: archived },
+    });
+  } catch (error) {
+    logger.error('Failed to archive agent doc', error);
+    res.status(500).json({
+      success: false,
+      message: archived ? 'Failed to archive agent document' : 'Failed to unarchive agent document',
+    });
   }
 }
 

@@ -12,6 +12,8 @@ import {
   coerceStrict,
   matchApplicationsByRepositoryUrl,
   mergeAgentDocs,
+  pickAgentDocForMutation,
+  resolveAgentDocWriteTarget,
   resolveMatchedApplications,
   shapeTaskSprintRef,
   sprintAllowedForProject,
@@ -305,5 +307,75 @@ describe('coerceOptionalNullableId / sprintAllowedForProject', () => {
     expect(coerceBooleanFlag(false)).toBe(0);
     expect(coerceOptionalBooleanFlag(undefined)).toEqual({ ok: true, value: undefined });
     expect(coerceOptionalBooleanFlag('1')).toEqual({ ok: true, value: 1 });
+  });
+});
+
+describe('resolveAgentDocWriteTarget / pickAgentDocForMutation', () => {
+  it('requires exactly one create target in scope', () => {
+    expect(
+      resolveAgentDocWriteTarget({
+        organizationId: 10,
+        applicationId: null,
+        scopeOrganizationIds: [10],
+        scopeApplicationIds: [1],
+      })
+    ).toEqual({ ok: true, owner: 'organization', ownerId: 10 });
+
+    expect(
+      resolveAgentDocWriteTarget({
+        organizationId: null,
+        applicationId: 3,
+        scopeOrganizationIds: [10],
+        scopeApplicationIds: [3],
+      })
+    ).toEqual({ ok: true, owner: 'application', ownerId: 3 });
+
+    expect(
+      resolveAgentDocWriteTarget({
+        organizationId: 10,
+        applicationId: 3,
+        scopeOrganizationIds: [10],
+        scopeApplicationIds: [3],
+      }).ok
+    ).toBe(false);
+
+    expect(
+      resolveAgentDocWriteTarget({
+        organizationId: 99,
+        applicationId: null,
+        scopeOrganizationIds: [10],
+        scopeApplicationIds: [3],
+      }).ok
+    ).toBe(false);
+  });
+
+  it('picks a merged doc and disambiguates by owner', () => {
+    const docs: AgentDocItem[] = [
+      {
+        id: 1,
+        name: 'Org',
+        slug: 'org',
+        content: '',
+        sortOrder: 0,
+        scope: 'organization',
+        organizationId: 10,
+      },
+      {
+        id: 1,
+        name: 'App',
+        slug: 'app',
+        content: '',
+        sortOrder: 0,
+        scope: 'application',
+        applicationId: 3,
+      },
+    ];
+
+    expect(pickAgentDocForMutation(docs, { id: 1 }).ok).toBe(false);
+    expect(pickAgentDocForMutation(docs, { id: 1, owner: 'application' })).toEqual({
+      ok: true,
+      doc: docs[1],
+    });
+    expect(pickAgentDocForMutation(docs, { id: 99 }).ok).toBe(false);
   });
 });
