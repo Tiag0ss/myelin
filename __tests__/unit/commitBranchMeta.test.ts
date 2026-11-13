@@ -53,10 +53,12 @@ describe('annotateCommitBranchMeta', () => {
     expect(rows[0]).toEqual({
       sha: 'merge',
       branches: ['main'],
+      memberBranches: ['main'],
       mergedFrom: ['feature/login'],
       mergeInto: 'main',
     });
     expect(rows[1].branches).toEqual(['feature/login']);
+    expect(rows[1].memberBranches).toEqual(['feature/login']);
   });
 
   it('labels the newest loaded commit of a branch even without a matching tip SHA', () => {
@@ -79,6 +81,9 @@ describe('annotateCommitBranchMeta', () => {
     expect(rows[1].branches).toEqual(['feature/ui']);
     expect(rows[2].branches).toEqual([]);
     expect(rows[3].branches).toEqual([]);
+    expect(rows[2].memberBranches).toEqual(['main']);
+    expect(rows[3].memberBranches).toEqual(['feature/ui']);
+    expect(rows[4].memberBranches).toEqual(['main']);
   });
 
   it('matches branch tips when SHA casing or abbreviation differs', () => {
@@ -88,6 +93,7 @@ describe('annotateCommitBranchMeta', () => {
       new Map()
     );
     expect(rows[0].branches).toEqual(['release/1.4']);
+    expect(rows[0].memberBranches).toEqual([]);
   });
 
   it('falls back to the merge message when parents are not in the loaded window', () => {
@@ -99,6 +105,7 @@ describe('annotateCommitBranchMeta', () => {
     expect(rows[0].mergedFrom).toEqual(['release/1.2']);
     expect(rows[0].mergeInto).toBe('develop');
     expect(rows[0].branches).toEqual([]);
+    expect(rows[0].memberBranches).toEqual([]);
   });
 });
 

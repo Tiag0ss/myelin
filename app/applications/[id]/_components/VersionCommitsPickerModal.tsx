@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import CommitMessage from '@/components/CommitMessage';
+import SearchableSelect from '@/components/SearchableSelect';
 import { getApiUrl } from '@/lib/api/config';
+import {
+  ALL_BRANCHES_VALUE,
+  buildBranchSelectOptions,
+  commitMatchesTextSearch,
+  commitPickerBranchLabels,
+  isAllBranchesFilter,
+  type RemoteBranchOption,
+} from '@/lib/applicationCommitBranches';
+import { useI18n } from '@/lib/i18n/provider';
 import { suggestCommitShasFromTasks } from '@/lib/releasePatchNotes';
 
 export type VersionPickerCommit = {
@@ -13,6 +23,7 @@ export type VersionPickerCommit = {
   url: string;
   parents?: string[];
   branches?: string[];
+  memberBranches?: string[];
 };
 
 const PAGE_SIZE = 25;
@@ -38,15 +49,24 @@ export default function VersionCommitsPickerModal({
   onClose,
   onConfirm,
 }: VersionCommitsPickerModalProps) {
+  const { t } = useI18n();
   const [pool, setPool] = useState<VersionPickerCommit[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [branchFilter, setBranchFilter] = useState(ALL_BRANCHES_VALUE);
+  const [branches, setBranches] = useState<RemoteBranchOption[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
   const [draftBySha, setDraftBySha] = useState<Map<string, VersionPickerCommit>>(new Map());
 
   const selectedCount = draftBySha.size;
+
+  const branchOptions = useMemo(
+    () => buildBranchSelectOptions(branches, t('lit.allBranches')),
+    [branches, t]
+  );
 
   const suggestedShas = useMemo(
     () =>
@@ -59,18 +79,38 @@ export default function VersionCommitsPickerModal({
   );
 
   const filteredPool = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return pool;
-    return pool.filter((commit) => {
-      return (
-        commit.sha.toLowerCase().includes(q) ||
-        commit.message.toLowerCase().includes(q) ||
-        (commit.author || '').toLowerCase().includes(q)
-      );
-    });
-  }, [pool, search]);
+    return pool.filter((commit) => commitMatchesTextSearch(commit, search, branchFilter));
+  }, [pool, search, branchFilter]);
 
-  const loadPage = async (nextPage: number, append: boolean) => {
+  const loadBranches = async (): Promise<RemoteBranchOption[]> => {
+    if (!token || !applicationId || !hasRepositoryUrl) {
+      setBranches([]);
+      return [];
+    }
+    setBranchesLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/applications/${applicationId}/branches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || t('lit.failedToLoadBranches'));
+      }
+      const next = ((data.data?.branches || []) as RemoteBranchOption[]).filter(
+        (branch) => typeof branch?.name === 'string' && branch.name.trim()
+      );
+      setBranches(next);
+      return next;
+    } catch (err: unknown) {
+      setBranches([]);
+      setError(err instanceof Error ? err.message : t('lit.failedToLoadBranches'));
+      return [];
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
+
+  const loadPage = async (nextPage: number, append: boolean, branchOverride?: string) => {
     if (!token || !applicationId || !hasRepositoryUrl) {
       setPool([]);
       setHasMore(false);
@@ -79,12 +119,16 @@ export default function VersionCommitsPickerModal({
     setLoading(true);
     setError('');
     try {
-      // Match the Commits tab: omit `branch` to load all-branch history.
+      const selected = (branchOverride ?? branchFilter).trim() || ALL_BRANCHES_VALUE;
+      const allBranches = isAllBranchesFilter(selected);
+      // Match the Commits tab: omit `branch` for all-branch history.
       // Sending branch=__all__ is treated as a literal branch name and 404s.
       const params = new URLSearchParams({
         page: String(nextPage),
         per_page: String(PAGE_SIZE),
       });
+      if (!allBranches) params.set('branch', selected);
+
       const res = await fetch(`${getApiUrl()}/api/applications/${applicationId}/commits?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -108,6 +152,9 @@ export default function VersionCommitsPickerModal({
       });
       setPage(nextPage);
       setHasMore(Boolean(data.data?.hasMore));
+      if (!allBranches && typeof data.data?.branch === 'string' && data.data.branch) {
+        setBranchFilter(data.data.branch);
+      }
     } catch (err: unknown) {
       if (!append) setPool([]);
       setHasMore(false);
@@ -125,15 +172,29 @@ export default function VersionCommitsPickerModal({
     }
     setDraftBySha(initial);
     setSearch('');
+    setBranchFilter(ALL_BRANCHES_VALUE);
     setPool([]);
     setPage(1);
     setHasMore(false);
     setError('');
-    void loadPage(1, false);
+    void (async () => {
+      await loadBranches();
+      await loadPage(1, false, ALL_BRANCHES_VALUE);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when modal opens
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleBranchChange = (value: string) => {
+    const next = value || ALL_BRANCHES_VALUE;
+    setBranchFilter(next);
+    setSearch('');
+    setPool([]);
+    setPage(1);
+    setHasMore(false);
+    void loadPage(1, false, next);
+  };
 
   const toggleCommit = (commit: VersionPickerCommit) => {
     setDraftBySha((prev) => {
@@ -169,7 +230,7 @@ export default function VersionCommitsPickerModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="version-commits-picker-title"
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl dark:bg-gray-800"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl dark:bg-gray-800"
       >
         <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div>
@@ -181,6 +242,7 @@ export default function VersionCommitsPickerModal({
             </h3>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               Latest {PAGE_SIZE} commits per page · {selectedCount} selected
+              {isAllBranchesFilter(branchFilter) ? '' : ` · ${branchFilter}`}
             </p>
           </div>
           <button
@@ -196,13 +258,38 @@ export default function VersionCommitsPickerModal({
         </div>
 
         {hasRepositoryUrl && (
-          <div className="border-b border-gray-200 px-5 py-3 dark:border-gray-700">
+          <div className="space-y-3 border-b border-gray-200 px-5 py-3 dark:border-gray-700">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-[12rem] w-56">
+                <SearchableSelect
+                  value={branchFilter || ALL_BRANCHES_VALUE}
+                  onChange={handleBranchChange}
+                  options={branchOptions}
+                  placeholder={branchesLoading ? 'Loading branches…' : t('lit.allBranches')}
+                  emptyText={t('lit.allBranches')}
+                  disabled={branchesLoading || loading}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void (async () => {
+                    await loadBranches();
+                    await loadPage(1, false, branchFilter);
+                  })();
+                }}
+                disabled={loading || branchesLoading}
+                className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {loading || branchesLoading ? 'Loading…' : t('lit.refresh')}
+              </button>
+            </div>
             <div className="relative">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search commits by message, author, or sha…"
+                placeholder="Search commits by message, author, sha, or branch…"
                 className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
               <svg
@@ -251,7 +338,7 @@ export default function VersionCommitsPickerModal({
                 </p>
               )}
 
-              {loading && pool.length === 0 ? (
+              {(loading || branchesLoading) && pool.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500 dark:text-gray-400">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                   Loading commits…
@@ -264,6 +351,7 @@ export default function VersionCommitsPickerModal({
                 <div className="space-y-1">
                   {filteredPool.map((commit) => {
                     const checked = draftBySha.has(commit.sha.toLowerCase());
+                    const branchLabels = commitPickerBranchLabels(commit, branchFilter);
                     return (
                       <label
                         key={commit.sha}
@@ -280,6 +368,15 @@ export default function VersionCommitsPickerModal({
                             <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
                               {commit.sha.slice(0, 7)}
                             </span>
+                            {branchLabels.map((branchName) => (
+                              <span
+                                key={`${commit.sha}-${branchName}`}
+                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                title={`Branch ${branchName}`}
+                              >
+                                {branchName}
+                              </span>
+                            ))}
                             {commit.author && (
                               <span className="truncate text-xs text-gray-400 dark:text-gray-500">
                                 {commit.author}

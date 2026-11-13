@@ -27,8 +27,10 @@ export interface NormalizedCommit {
   url: string;
   /** Parent commit SHAs (first parent is the mainline; 2+ means merge). */
   parents: string[];
-  /** Branch tips that currently point at this commit. */
+  /** Branch tips / newest visible heads that decorate this commit. */
   branches?: string[];
+  /** Branches that contained this SHA in the loaded membership window. */
+  memberBranches?: string[];
   /** Incoming branch names for merge commits. */
   mergedFrom?: string[];
   /** Destination branch name for merge commits, when known. */
@@ -571,6 +573,7 @@ function applyCommitBranchMeta(
     return {
       ...commit,
       branches: meta?.branches || [],
+      memberBranches: meta?.memberBranches || [],
       mergedFrom: meta?.mergedFrom || [],
       mergeInto: meta?.mergeInto ?? null,
     };

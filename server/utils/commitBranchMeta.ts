@@ -5,7 +5,10 @@ export type BranchTip = {
 
 export type CommitBranchAnnotation = {
   sha: string;
+  /** Tip / newest-visible-head decorations (sparse). */
   branches: string[];
+  /** Every branch that contained this SHA in the loaded membership set. */
+  memberBranches: string[];
   mergedFrom: string[];
   mergeInto: string | null;
 };
@@ -202,6 +205,7 @@ export function annotateCommitBranchMeta(
     return {
       sha,
       branches,
+      memberBranches: uniqueStrings([...(getBySha(membership || new Map(), sha) || [])]),
       mergedFrom: parents.length > 1 ? mergedFrom : [],
       mergeInto: parents.length > 1 ? mergeInto : null,
     };
