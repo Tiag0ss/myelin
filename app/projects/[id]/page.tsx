@@ -2748,18 +2748,16 @@ function ProjectDetailPageContent({ params }: { params: Promise<{ id: string }> 
           )}
 
           {activeTab === 'reporting' && (
-            <div data-grid-enhancer-ignore="true">
-              <ReportingTab
-                projectId={parseInt(projectId)}
-                organizationId={project.OrganizationId}
-                token={token!}
-                onOpenTask={(task) => {
-                  const fullTask = tasks.find((entry) => Number(entry.Id) === Number(task.Id)) || task;
-                  setEditingTask(fullTask as Task);
-                  setShowTaskModal(true);
-                }}
-              />
-            </div>
+            <ReportingTab
+              projectId={parseInt(projectId)}
+              organizationId={project.OrganizationId}
+              token={token!}
+              onOpenTask={(task) => {
+                const fullTask = tasks.find((entry) => Number(entry.Id) === Number(task.Id)) || task;
+                setEditingTask(fullTask as Task);
+                setShowTaskModal(true);
+              }}
+            />
           )}
 
           {activeTab === 'utilities' && (

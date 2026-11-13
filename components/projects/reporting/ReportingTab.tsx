@@ -525,6 +525,7 @@ export function ReportingTab({
 
       {reportTab === 'summary' && (
         <ReportingSummaryPanel
+          projectId={projectId}
           tasks={tasks}
           isLoading={isLoading}
           decimalHoursToHMS={decimalHoursToHMS}
@@ -535,6 +536,7 @@ export function ReportingTab({
 
       {reportTab === 'byUser' && (
         <ReportingByUserPanel
+          projectId={projectId}
           userStats={userStats}
           isLoading={isLoading}
           decimalHoursToHMS={decimalHoursToHMS}
@@ -543,6 +545,7 @@ export function ReportingTab({
 
       {reportTab === 'allocations' && (
         <ReportingAllocationsPanel
+          projectId={projectId}
           allocations={allocations}
           isLoading={isLoading}
           totalAllocatedHours={totalAllocatedHours}
@@ -552,6 +555,7 @@ export function ReportingTab({
 
       {reportTab === 'timeEntries' && (
         <ReportingTimeEntriesPanel
+          projectId={projectId}
           timeEntries={timeEntries}
           isLoading={isLoading}
           totalWorkedHours={totalWorkedHours}

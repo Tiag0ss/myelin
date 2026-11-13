@@ -1316,7 +1316,6 @@ function DashboardContent() {
   });
   const [pendingTasks, setPendingTasks] = useState<TaskWithProject[]>([]);
   const [isPrintMode, setIsPrintMode] = useState(false);
-  const [showAllPendingTasks, setShowAllPendingTasks] = useState(false);
   const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
   const [detailsTask, setDetailsTask] = useState<Task | null>(null);
   const [detailsProject, setDetailsProject] = useState<Project | null>(null);
@@ -3320,7 +3319,6 @@ function DashboardContent() {
                         type="button"
                         onClick={() => {
                           setPendingWorkFilter(option.key);
-                          setShowAllPendingTasks(false);
                         }}
                         className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors ${
                           isActive
@@ -3352,9 +3350,14 @@ function DashboardContent() {
                     </p>
                   </div>
                 ) : (
-                  <>
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    {sortedPendingTasks.slice(0, (isPrintMode || showAllPendingTasks) ? sortedPendingTasks.length : 5).map((task) => {
+                  <div
+                    className={`divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 ${
+                      isPrintMode
+                        ? 'overflow-visible'
+                        : 'max-h-[28rem] overflow-y-auto overscroll-contain'
+                    }`}
+                  >
+                    {sortedPendingTasks.map((task) => {
                       const isOverdue = isTaskOverdue(task.DueDate ? String(task.DueDate) : null);
                       const isUnscheduled = Number(task.UnscheduledWork || 0) === 1;
 
@@ -3477,19 +3480,6 @@ function DashboardContent() {
                       );
                     })}
                   </div>
-                  {!isPrintMode && sortedPendingTasks.length > 5 && (
-                    <div className="text-center pt-2">
-                      <button
-                        onClick={() => setShowAllPendingTasks((previous) => !previous)}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                      >
-                        {showAllPendingTasks
-                          ? t('lit.showLessTasks')
-                          : `View all ${sortedPendingTasks.length} tasks →`}
-                      </button>
-                    </div>
-                  )}
-                  </>
                 )}
               </div>
 

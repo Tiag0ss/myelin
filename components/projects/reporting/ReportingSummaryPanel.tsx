@@ -1,7 +1,8 @@
 'use client';
 import { useI18n } from '@/lib/i18n/provider';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import CollapsibleFilterPanel from '@/components/CollapsibleFilterPanel';
 import {
   calculateRecursiveWorked,
   getParentTasks,
@@ -10,6 +11,13 @@ import {
   sumLeafWorkedHours,
   sumParentAllocatedHours,
 } from '@/components/projects/reporting/reportingHours';
+import { SearchableSelect } from '@/components/projects/ProjectInlineFields';
+import { buildKanbanAssigneeOptions, KANBAN_UNASSIGNED_ASSIGNEE_ID } from '@/lib/projectKanbanFilters';
+import {
+  buildUniqueStatusOptions,
+  countActiveReportFilters,
+  taskMatchesSummaryFilters,
+} from '@/lib/projectReportingFilters';
 
 type HoursFmt = (hours: number) => string;
 type PillStyle = (
@@ -18,12 +26,14 @@ type PillStyle = (
 ) => React.CSSProperties | undefined;
 
 export function ReportingSummaryPanel({
+  projectId,
   tasks,
   isLoading,
   decimalHoursToHMS,
   pillStyle,
   onShowTaskDetail,
 }: {
+  projectId: number;
   tasks: any[];
   isLoading: boolean;
   decimalHoursToHMS: HoursFmt;
@@ -33,6 +43,33 @@ export function ReportingSummaryPanel({
   const { t } = useI18n();
 
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState('');
+  const [statusId, setStatusId] = useState<number | undefined>(undefined);
+  const [assigneeId, setAssigneeId] = useState<number | undefined>(undefined);
+
+  const statusOptions = useMemo(() => buildUniqueStatusOptions(tasks), [tasks]);
+  const assigneeOptions = useMemo(() => buildKanbanAssigneeOptions(tasks), [tasks]);
+
+  const activeFilterCount = countActiveReportFilters([
+    Boolean(search.trim()),
+    statusId !== undefined,
+    assigneeId !== undefined,
+  ]);
+  const filtersActive = activeFilterCount > 0;
+
+  const taskMatches = (task: any) =>
+    taskMatchesSummaryFilters(task, { search, statusId, assigneeId });
+
+  const hasMatchingDescendant = (taskId: number): boolean => {
+    const children = getSubtasks(tasks, taskId);
+    return children.some((child) => taskMatches(child) || hasMatchingDescendant(child.Id));
+  };
+
+  const visibleTasks = useMemo(() => {
+    if (!filtersActive) return tasks;
+    return tasks.filter((task) => taskMatches(task) || hasMatchingDescendant(task.Id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers close over current filter state
+  }, [tasks, search, statusId, assigneeId, filtersActive]);
 
   const toggleExpand = (taskId: number) => {
     setExpandedTasks((prev) => {
@@ -43,19 +80,27 @@ export function ReportingSummaryPanel({
     });
   };
 
-  const parentTasks = getParentTasks(tasks);
-  const totalEstimatedHours = sumLeafEstimatedHours(tasks);
-  const totalTaskAllocatedHours = sumParentAllocatedHours(tasks);
-  const totalTaskWorkedHours = sumLeafWorkedHours(tasks);
+  const parentTasks = getParentTasks(visibleTasks);
+  const totalEstimatedHours = sumLeafEstimatedHours(visibleTasks);
+  const totalTaskAllocatedHours = sumParentAllocatedHours(visibleTasks);
+  const totalTaskWorkedHours = sumLeafWorkedHours(visibleTasks);
   const totalToAllocateHours = totalEstimatedHours - totalTaskAllocatedHours;
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusId(undefined);
+    setAssigneeId(undefined);
+  };
 
   const renderReportTaskRow = (task: any, level: number = 0): React.JSX.Element[] => {
     const allocated = parseFloat(task.TotalAllocated || 0);
     const worked = calculateRecursiveWorked(tasks, task.Id);
     const toAllocate = parseFloat(task.EstimatedHours || 0) - allocated;
-    const subtasks = getSubtasks(tasks, task.Id);
+    const subtasks = getSubtasks(tasks, task.Id).filter(
+      (child) => !filtersActive || taskMatches(child) || hasMatchingDescendant(child.Id)
+    );
     const taskHasSubtasks = subtasks.length > 0;
-    const isExpanded = expandedTasks.has(task.Id);
+    const isExpanded = expandedTasks.has(task.Id) || (filtersActive && taskHasSubtasks);
     const indentPixels = level * 24;
 
     const rows: React.JSX.Element[] = [];
@@ -152,17 +197,60 @@ export function ReportingSummaryPanel({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700">
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('lit.tasksSummary')}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="p-6 space-y-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('lit.tasksSummary')}</h2>
+
+          <CollapsibleFilterPanel
+            activeCount={activeFilterCount}
+            onClear={filtersActive ? clearFilters : undefined}
+            headerExtra={
+              <span className="text-xs text-gray-400">
+                {parentTasks.length} / {getParentTasks(tasks).length}
+              </span>
+            }
+            className="mb-0"
+          >
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('lit.searchTasks2')}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+              <SearchableSelect
+                value={statusId}
+                onChange={setStatusId}
+                options={statusOptions.map((status) => ({ id: status.id, label: status.name }))}
+                placeholder={t('lit.allStatuses')}
+                className="w-full"
+              />
+              <SearchableSelect
+                value={assigneeId}
+                onChange={setAssigneeId}
+                options={[
+                  { id: KANBAN_UNASSIGNED_ASSIGNEE_ID, label: t('lit.unassigned') },
+                  ...assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name })),
+                ]}
+                placeholder={t('lit.allAssignees')}
+                className="w-full"
+              />
+            </div>
+          </CollapsibleFilterPanel>
 
           {isLoading ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.loadingTasks')}</div>
           ) : tasks.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.noTasksFound')}</div>
+          ) : parentTasks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('lit.noTasksMatchTheCurrentFilters')}</div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <table
+                data-grid-key={`project-reporting-summary-${projectId}`}
+                className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+              >
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">

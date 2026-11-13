@@ -1,7 +1,7 @@
 'use client';
 import { useI18n } from '@/lib/i18n/provider';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Task } from '@/lib/api/tasks';
 import { Project } from '@/lib/api/projects';
 import { statusValuesApi, StatusValue } from '@/lib/api/statusValues';
@@ -15,6 +15,12 @@ import {
   withHiddenStatusToggled,
   type HiddenStatusesByOrg,
 } from '@/lib/dashboardKanbanPrefs';
+import {
+  buildKanbanAssigneeOptions,
+  KANBAN_UNASSIGNED_ASSIGNEE_ID,
+  taskMatchesKanbanAssignee,
+} from '@/lib/projectKanbanFilters';
+import { SearchableSelect } from '@/components/projects/ProjectInlineFields';
 import { useColorVision } from '@/hooks/useColorVision';
 
 export function KanbanTab({
@@ -50,6 +56,9 @@ tasks,
   const [hiddenStatusesByOrg, setHiddenStatusesByOrg] = useState<HiddenStatusesByOrg>({});
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const statusPickerRef = useRef<HTMLDivElement | null>(null);
+  const [filterAssignee, setFilterAssignee] = useState<number | undefined>(undefined);
+
+  const assigneeOptions = useMemo(() => buildKanbanAssigneeOptions(localTasks), [localTasks]);
 
   // Sync when parent refreshes tasks
   useEffect(() => {
@@ -96,7 +105,9 @@ tasks,
   };
 
   const getTasksByStatus = (statusId: number) => {
-    return localTasks.filter(t => t.Status === statusId).sort((a, b) => a.DisplayOrder - b.DisplayOrder);
+    return localTasks
+      .filter((task) => task.Status === statusId && taskMatchesKanbanAssignee(task, filterAssignee))
+      .sort((a, b) => a.DisplayOrder - b.DisplayOrder);
   };
 
   const handleDragStart = (e: React.DragEvent, taskId: number) => {
@@ -219,51 +230,69 @@ tasks,
   return (
     <div className="h-[calc(100vh-220px)] min-h-[560px] flex flex-col">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div ref={statusPickerRef} className="relative min-w-[160px]">
-          <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {t('lit.statuses')}
-          </span>
-          <button
-            type="button"
-            onClick={() => setStatusPickerOpen((open) => !open)}
-            className="w-full min-w-[10rem] h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-left"
-            aria-expanded={statusPickerOpen}
-            aria-haspopup="dialog"
-          >
-            {hiddenCount === 0 ? t('lit.allStatuses') : `${statuses.length}/${allStatuses.length} visible`}
-          </button>
-          {statusPickerOpen && (
-            <div
-              role="dialog"
-              aria-label={t('lit.kanbanStatusVisibility')}
-              className="absolute z-30 mt-1 w-72 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-2"
+        <div className="flex flex-wrap items-end gap-3">
+          <div ref={statusPickerRef} className="relative min-w-[160px]">
+            <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              {t('lit.statuses')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setStatusPickerOpen((open) => !open)}
+              className="w-full min-w-[10rem] h-9 px-3 rounded-lg text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-left"
+              aria-expanded={statusPickerOpen}
+              aria-haspopup="dialog"
             >
-              <p className="px-1 pb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                {t('lit.chooseWhichStatusColumnsToShow')}
-              </p>
-              {allStatuses.map((status) => {
-                const visible = !hiddenIds.includes(Number(status.Id));
-                return (
-                  <label
-                    key={`project-kanban-status-toggle-${status.Id}`}
-                    className="flex items-center gap-2 px-1 py-1.5 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={visible}
-                      onChange={(e) => toggleStatusVisibility(Number(status.Id), e.target.checked)}
-                    />
-                    <span
-                      className="truncate"
-                      style={status.ColorCode ? { color: status.ColorCode } : undefined}
+              {hiddenCount === 0 ? t('lit.allStatuses') : `${statuses.length}/${allStatuses.length} visible`}
+            </button>
+            {statusPickerOpen && (
+              <div
+                role="dialog"
+                aria-label={t('lit.kanbanStatusVisibility')}
+                className="absolute z-30 mt-1 w-72 max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg p-2"
+              >
+                <p className="px-1 pb-2 text-[11px] text-gray-500 dark:text-gray-400">
+                  {t('lit.chooseWhichStatusColumnsToShow')}
+                </p>
+                {allStatuses.map((status) => {
+                  const visible = !hiddenIds.includes(Number(status.Id));
+                  return (
+                    <label
+                      key={`project-kanban-status-toggle-${status.Id}`}
+                      className="flex items-center gap-2 px-1 py-1.5 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded cursor-pointer"
                     >
-                      {status.StatusName}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
+                      <input
+                        type="checkbox"
+                        checked={visible}
+                        onChange={(e) => toggleStatusVisibility(Number(status.Id), e.target.checked)}
+                      />
+                      <span
+                        className="truncate"
+                        style={status.ColorCode ? { color: status.ColorCode } : undefined}
+                      >
+                        {status.StatusName}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-[12rem] w-56">
+            <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              {t('lit.assignee')}
+            </span>
+            <SearchableSelect
+              value={filterAssignee}
+              onChange={setFilterAssignee}
+              options={[
+                { id: KANBAN_UNASSIGNED_ASSIGNEE_ID, label: t('lit.unassigned') },
+                ...assigneeOptions.map((assignee) => ({ id: assignee.id, label: assignee.name })),
+              ]}
+              placeholder={t('lit.allAssignees')}
+              className="w-full"
+            />
+          </div>
         </div>
 
         {canCreate && (
