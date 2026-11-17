@@ -82,6 +82,42 @@ describe('parsePatchBlocks', () => {
     ]);
   });
 
+  it('preserves anchor href on inline runs', () => {
+    const blocks = parsePatchBlocks(
+      '<ul><li><a href="https://jira.example/browse/PROJ-12" target="_blank">[PROJ-12]</a> Fix login</li></ul>'
+    );
+    expect(blocks).toEqual([
+      {
+        type: 'listItem',
+        runs: [
+          { text: '[PROJ-12]', href: 'https://jira.example/browse/PROJ-12' },
+          { text: ' Fix login' },
+        ],
+        ordered: false,
+        index: 1,
+        depth: 0,
+      },
+    ]);
+  });
+
+  it('preserves anchor href on inline runs', () => {
+    const blocks = parsePatchBlocks(
+      '<ul><li><a href="https://jira.example/browse/PROJ-12" target="_blank">[PROJ-12]</a> Fix login</li></ul>'
+    );
+    expect(blocks).toEqual([
+      {
+        type: 'listItem',
+        runs: [
+          { text: '[PROJ-12]', href: 'https://jira.example/browse/PROJ-12' },
+          { text: ' Fix login' },
+        ],
+        ordered: false,
+        index: 1,
+        depth: 0,
+      },
+    ]);
+  });
+
   it('keeps images between text blocks', () => {
     const blocks = parsePatchBlocks(
       '<p>Before</p><img src="/uploads/a.png" alt="Shot" /><p>After</p>'

@@ -58,11 +58,11 @@ export default function SearchableMultiSelect({
     && normalizedSearch.length > 0
     && !options.some((option) => option.label.trim().toLowerCase() === normalizedSearch.toLowerCase());
 
-  // Get selected options
-  const selectedOptions = options.filter(opt => values.includes(opt.value));
-  const displayValue = selectedOptions.length > 0
-    ? `${selectedOptions.length} selected`
-    : placeholderResolved;
+  // Get selected options (coerce for number/string id mismatches)
+  const selectedOptions = options.filter((opt) =>
+    values.some((value) => String(value) === String(opt.value))
+  );
+  const unmatchedSelectedCount = Math.max(0, values.length - selectedOptions.length);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -119,11 +119,19 @@ export default function SearchableMultiSelect({
     }
   }, [isOpen]);
 
+  const isValueSelected = (optionValue: string | number) =>
+    values.some((value) => String(value) === String(optionValue));
+
   const handleToggle = (optionValue: string | number) => {
-    const newValues = values.includes(optionValue)
-      ? values.filter(v => v !== optionValue)
+    const newValues = isValueSelected(optionValue)
+      ? values.filter((v) => String(v) !== String(optionValue))
       : [...values, optionValue];
     onChange(newValues);
+  };
+
+  const handleRemoveChip = (e: React.MouseEvent, optionValue: string | number) => {
+    e.stopPropagation();
+    onChange(values.filter((v) => String(v) !== String(optionValue)));
   };
 
   const handleClearAll = (e: React.MouseEvent) => {
@@ -147,14 +155,43 @@ export default function SearchableMultiSelect({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex items-center justify-between ${
+        className={`w-full min-h-[42px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex items-center justify-between gap-2 ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'
         }`}
       >
-        <span className={values.length > 0 ? '' : 'text-gray-400 dark:text-gray-500'}>
-          {displayValue}
-        </span>
-        <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
+          {selectedOptions.length === 0 && unmatchedSelectedCount === 0 ? (
+            <span className="text-gray-400 dark:text-gray-500">{placeholderResolved}</span>
+          ) : (
+            <>
+              {selectedOptions.map((option) => (
+                <span
+                  key={String(option.value)}
+                  className="inline-flex max-w-full items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200"
+                >
+                  <span className="truncate">{option.label}</span>
+                  {!disabled && (
+                    <span
+                      role="button"
+                      tabIndex={-1}
+                      onClick={(e) => handleRemoveChip(e, option.value)}
+                      className="shrink-0 text-indigo-500 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-100"
+                      title={t('common.clear')}
+                    >
+                      ✕
+                    </span>
+                  )}
+                </span>
+              ))}
+              {unmatchedSelectedCount > 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  +{unmatchedSelectedCount}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
           {values.length > 0 && !disabled && (
             <span
               onClick={handleClearAll}
@@ -210,7 +247,7 @@ export default function SearchableMultiSelect({
               </div>
             ) : (
               filteredOptions.map((option) => {
-                const isSelected = values.includes(option.value);
+                const isSelected = isValueSelected(option.value);
                 return (
                   <div
                     key={option.value}
@@ -279,7 +316,7 @@ export default function SearchableMultiSelect({
               </div>
             ) : (
               filteredOptions.map((option) => {
-                const isSelected = values.includes(option.value);
+                const isSelected = isValueSelected(option.value);
                 return (
                   <div
                     key={option.value}

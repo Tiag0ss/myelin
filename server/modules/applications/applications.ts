@@ -24,14 +24,20 @@ import {
   uploadErrorMessage,
   writePublicUpload,
 } from '../../utils/publicUploads';
-import { renderPatchNotesToPdf } from '../../utils/releaseNotesPdf';
+import { renderPatchNotesToPdf, resolvePdfLinkBaseUrl } from '../../utils/releaseNotesPdf';
 import {
   chatCompletion,
   getLlmConfig,
   llmNotConfiguredMessage,
   prepareHtmlForLlm,
 } from '../../utils/llmProvider';
-import { normalizeCommitSha } from '../../utils/releasePatchNotes';
+import {
+  normalizeCommitSha,
+  reapplyPatchNoteIssueLinks,
+  resolvePatchNoteIssueKey,
+  resolvePatchNoteIssueUrl,
+} from '../../utils/releasePatchNotes';
+import { ensureTaskApplications } from '../../utils/taskApplicationsDb';
 import {
   buildReleaseTaskSearchClause,
   normalizeReleaseTaskSearch,
@@ -91,7 +97,32 @@ function normalizeDateOnly(value: unknown): string | null {
   return parsed.toISOString().split('T')[0];
 }
 
-async function syncReleasedVersionTasks(versionId: string | number, applicationId: string | number): Promise<void> {
+async function isSyncTaskStatusOnVersionChangeEnabled(): Promise<boolean> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT SettingValue FROM SystemSettings WHERE SettingKey = ?`,
+    ['syncTaskStatusOnVersionChange']
+  );
+  return String(rows[0]?.SettingValue || '').toLowerCase() === 'true';
+}
+
+/**
+ * When admin flag is on and client opted in, set linked tasks' Status to the
+ * TaskStatusId mapped on the version's ApplicationVersionStatusValues row.
+ */
+async function syncVersionLinkedTaskStatuses(
+  versionId: string | number,
+  applicationId: string | number,
+  options: { updateTaskStatuses?: boolean } = {}
+): Promise<void> {
+  if (!options.updateTaskStatuses) {
+    return;
+  }
+
+  const enabled = await isSyncTaskStatusOnVersionChangeEnabled();
+  if (!enabled) {
+    return;
+  }
+
   const [versionRows] = await pool.execute<RowDataPacket[]>(
     `SELECT av.Status, a.OrganizationId
      FROM ApplicationVersions av
@@ -101,45 +132,115 @@ async function syncReleasedVersionTasks(versionId: string | number, applicationI
     [versionId, applicationId]
   );
 
-  if (!versionRows.length || versionRows[0].Status !== 'Released') {
+  if (!versionRows.length) {
     return;
   }
 
   const organizationId = versionRows[0].OrganizationId;
-
-  const [closedStatuses] = await pool.execute<RowDataPacket[]>(
-    `SELECT Id
-     FROM TaskStatusValues
-     WHERE OrganizationId = ? AND IsClosed = 1
-     ORDER BY SortOrder ASC
-     LIMIT 1`,
-    [organizationId]
-  );
-
-  if (!closedStatuses.length) {
+  const statusName = String(versionRows[0].Status || '').trim();
+  if (!statusName) {
     return;
   }
 
-  const closedStatusId = closedStatuses[0].Id;
+  const [mapped] = await pool.execute<RowDataPacket[]>(
+    `SELECT TaskStatusId
+     FROM ApplicationVersionStatusValues
+     WHERE OrganizationId = ? AND StatusName = ? AND TaskStatusId IS NOT NULL
+     LIMIT 1`,
+    [organizationId, statusName]
+  );
+
+  if (!mapped.length || mapped[0].TaskStatusId == null) {
+    return;
+  }
+
+  const taskStatusId = Number(mapped[0].TaskStatusId);
+  if (!Number.isFinite(taskStatusId) || taskStatusId <= 0) {
+    return;
+  }
 
   if (dbProvider === 'mssql') {
     await pool.execute(
       `UPDATE t
-       SET t.ReleaseVersionId = ?, t.Status = ?
+       SET t.Status = ?
        FROM Tasks t
        INNER JOIN ApplicationVersionTasks avt ON avt.TaskId = t.Id
        WHERE avt.VersionId = ?`,
-      [versionId, closedStatusId, versionId]
+      [taskStatusId, versionId]
     );
   } else {
     await pool.execute(
       `UPDATE Tasks t
        INNER JOIN ApplicationVersionTasks avt ON avt.TaskId = t.Id
-       SET t.ReleaseVersionId = ?, t.Status = ?
+       SET t.Status = ?
        WHERE avt.VersionId = ?`,
-      [versionId, closedStatusId, versionId]
+      [taskStatusId, versionId]
     );
   }
+}
+
+async function findTasksLinkedToOtherApplications(
+  applicationId: string | number,
+  taskIds: number[]
+): Promise<Array<{ Id: number; TaskName: string; LinkedApplicationName: string | null; LinkedVersionNumber: string | null }>> {
+  if (taskIds.length === 0) return [];
+  const placeholders = taskIds.map(() => '?').join(',');
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT t.Id, t.TaskName,
+            COALESCE(la.Name, other_a.Name) as LinkedApplicationName,
+            COALESCE(lav.VersionNumber, other_av.VersionNumber) as LinkedVersionNumber
+     FROM Tasks t
+     LEFT JOIN Applications la ON t.ApplicationId = la.Id AND t.ApplicationId <> ?
+     LEFT JOIN ApplicationVersions lav ON t.ReleaseVersionId = lav.Id AND lav.ApplicationId <> ?
+     LEFT JOIN ApplicationVersionTasks other_avt ON other_avt.TaskId = t.Id
+       AND other_avt.VersionId IN (
+         SELECT avy.Id FROM ApplicationVersions avy WHERE avy.ApplicationId <> ?
+       )
+     LEFT JOIN ApplicationVersions other_av ON other_av.Id = other_avt.VersionId
+     LEFT JOIN Applications other_a ON other_a.Id = other_av.ApplicationId
+     WHERE t.Id IN (${placeholders})
+       AND (
+         (t.ApplicationId IS NOT NULL AND t.ApplicationId <> ?)
+         OR other_av.Id IS NOT NULL
+       )`,
+    [applicationId, applicationId, applicationId, ...taskIds, applicationId]
+  );
+
+  const byId = new Map<number, { Id: number; TaskName: string; LinkedApplicationName: string | null; LinkedVersionNumber: string | null }>();
+  for (const row of rows) {
+    const id = Number(row.Id);
+    if (!Number.isFinite(id) || byId.has(id)) continue;
+    byId.set(id, {
+      Id: id,
+      TaskName: String(row.TaskName || ''),
+      LinkedApplicationName: row.LinkedApplicationName ?? null,
+      LinkedVersionNumber: row.LinkedVersionNumber ?? null,
+    });
+  }
+  return Array.from(byId.values());
+}
+
+/** Tasks whose primary ApplicationId / ReleaseVersionId belong to another application. */
+async function findTasksWithForeignPrimaryApplication(
+  applicationId: string | number,
+  taskIds: number[]
+): Promise<number[]> {
+  if (taskIds.length === 0) return [];
+  const placeholders = taskIds.map(() => '?').join(',');
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT t.Id
+     FROM Tasks t
+     LEFT JOIN ApplicationVersions lav ON lav.Id = t.ReleaseVersionId
+     WHERE t.Id IN (${placeholders})
+       AND (
+         (t.ApplicationId IS NOT NULL AND t.ApplicationId <> ?)
+         OR (lav.Id IS NOT NULL AND lav.ApplicationId <> ?)
+       )`,
+    [...taskIds, applicationId, applicationId]
+  );
+  return rows
+    .map((row) => Number(row.Id))
+    .filter((id) => Number.isFinite(id) && id > 0);
 }
 
 async function ensureApplicationCustomerAssociation(
@@ -309,6 +410,21 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
       [id]
     );
     record.Versions = versions;
+
+    // Product versions that include any version of this application
+    const [productVersions] = await pool.execute<RowDataPacket[]>(
+      `SELECT pv.Id, pv.VersionNumber, pv.VersionName, pv.Status, pv.ReleaseDate,
+              p.Id as ProductId, p.Name as ProductName,
+              av.Id as ApplicationVersionId, av.VersionNumber as ApplicationVersionNumber
+       FROM ProductVersionApplicationVersions pvav
+       INNER JOIN ApplicationVersions av ON av.Id = pvav.ApplicationVersionId
+       INNER JOIN ProductVersions pv ON pv.Id = pvav.ProductVersionId
+       INNER JOIN Products p ON p.Id = pv.ProductId
+       WHERE av.ApplicationId = ?
+       ORDER BY p.Name ASC, pv.CreatedAt DESC, pv.Id DESC`,
+      [id]
+    );
+    record.ProductVersions = productVersions;
 
     return record;
     });
@@ -913,10 +1029,13 @@ router.put('/:id/projects', authenticateToken, async (req: AuthRequest, res: Res
 // GET /api/applications/:id/tasks - release task picker
 // Default: tasks from projects linked via ApplicationProjects.
 // ?search=: org-wide match (ignores project↔application link).
+// ?includeLinked=1: include tasks already linked to any version (with LinkedVersion*).
+// Default (includeLinked off): hide tasks linked via ApplicationVersionTasks or ReleaseVersionId
+// (any app), except the version being edited (excludeVersion).
 router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { excludeVersion, search: searchRaw } = req.query;
+    const { excludeVersion, search: searchRaw, includeLinked: includeLinkedRaw } = req.query;
 
     const appId = parseInt(Array.isArray(id) ? id[0] : id);
     if (!Number.isFinite(appId) || appId <= 0) {
@@ -927,6 +1046,10 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
       Array.isArray(searchRaw) ? String(searchRaw[0] ?? '') : String(searchRaw ?? '')
     );
     const scope = resolveReleaseTaskPickerScope(searchTerm);
+    const includeLinked =
+      String(Array.isArray(includeLinkedRaw) ? includeLinkedRaw[0] : includeLinkedRaw || '') === '1' ||
+      String(Array.isArray(includeLinkedRaw) ? includeLinkedRaw[0] : includeLinkedRaw || '').toLowerCase() ===
+        'true';
     const excludeVersionId = excludeVersion
       ? parseInt(String(Array.isArray(excludeVersion) ? excludeVersion[0] : excludeVersion))
       : null;
@@ -950,21 +1073,71 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
 
       const selectSql = `
       SELECT t.Id, t.TaskName, t.Description, t.Status, t.Priority, t.ProjectId,
+             t.ApplicationId, t.ReleaseVersionId,
+             t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
              tsv.StatusName, tsv.ColorCode as StatusColor,
              tpv.PriorityName, tpv.ColorCode as PriorityColor,
              p.ProjectName,
-             u.FirstName as AssigneeFN, u.LastName as AssigneeLN
+             u.FirstName as AssigneeFN, u.LastName as AssigneeLN,
+             tk.TicketNumber,
+             la.Name as LinkedApplicationName,
+             lav.VersionNumber as LinkedVersionNumber,
+             lav.ApplicationId as LinkedVersionApplicationId,
+             oji.JiraUrl,
+             oji.JiraProjectsUrl,
+             this_avt.VersionId as ThisAppLinkedVersionId,
+             this_av.VersionNumber as ThisAppLinkedVersionNumber,
+             other_av.Id as OtherAppLinkedVersionId,
+             other_av.VersionNumber as OtherAppLinkedVersionNumber,
+             other_a.Id as OtherAppLinkedApplicationId,
+             other_a.Name as OtherAppLinkedApplicationName
       FROM Tasks t`;
 
-      const exclusionSql = `
-      t.Id NOT IN (
-        SELECT avt.TaskId FROM ApplicationVersionTasks avt
-        INNER JOIN ApplicationVersions av ON avt.VersionId = av.Id
-        WHERE av.ApplicationId = ?${validExcludeVersion ? ' AND avt.VersionId != ?' : ''}
+      const joinsSql = `
+      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+      LEFT JOIN Users u ON t.AssignedTo = u.Id
+      LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+      LEFT JOIN Applications la ON t.ApplicationId = la.Id
+      LEFT JOIN ApplicationVersions lav ON t.ReleaseVersionId = lav.Id
+      LEFT JOIN OrganizationJiraIntegrations oji ON oji.OrganizationId = ? AND oji.IsEnabled = 1
+      LEFT JOIN ApplicationVersionTasks this_avt ON this_avt.TaskId = t.Id
+        AND this_avt.VersionId IN (
+          SELECT avx.Id FROM ApplicationVersions avx WHERE avx.ApplicationId = ?
+        )
+      LEFT JOIN ApplicationVersions this_av ON this_av.Id = this_avt.VersionId
+      LEFT JOIN ApplicationVersionTasks other_avt ON other_avt.TaskId = t.Id
+        AND other_avt.VersionId IN (
+          SELECT avy.Id FROM ApplicationVersions avy WHERE avy.ApplicationId <> ?
+        )
+      LEFT JOIN ApplicationVersions other_av ON other_av.Id = other_avt.VersionId
+      LEFT JOIN Applications other_a ON other_a.Id = other_av.ApplicationId`;
+
+      // Hide any version-linked task unless includeLinked=1.
+      // When editing a version, keep tasks already on that version visible.
+      const exclusionSql = includeLinked
+        ? '1=1'
+        : `(
+        t.Id NOT IN (
+          SELECT avt.TaskId FROM ApplicationVersionTasks avt
+          WHERE ${validExcludeVersion ? 'avt.VersionId != ?' : '1=1'}
+        )
+        AND (
+          t.ReleaseVersionId IS NULL
+          ${validExcludeVersion ? 'OR t.ReleaseVersionId = ?' : ''}
+        )
       )`;
 
       const params: Array<string | number> = [];
       let query: string;
+
+      const pushExclusionParams = () => {
+        if (includeLinked) return;
+        if (validExcludeVersion) {
+          params.push(validExcludeVersion);
+          params.push(validExcludeVersion);
+        }
+      };
 
       if (scope === 'organization-search') {
         const searchClause = buildReleaseTaskSearchClause({
@@ -974,41 +1147,91 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
         query = `
       ${selectSql}
       INNER JOIN Projects p ON t.ProjectId = p.Id AND p.OrganizationId = ?
-      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
-      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
-      LEFT JOIN Users u ON t.AssignedTo = u.Id
+      ${joinsSql}
       WHERE ${exclusionSql}
         AND ${searchClause.sql}
       ORDER BY p.ProjectName, t.DisplayOrder, t.Id`;
-        params.push(organizationId, appId);
-        if (validExcludeVersion) params.push(validExcludeVersion);
+        params.push(organizationId, organizationId, appId, appId);
+        pushExclusionParams();
         params.push(...searchClause.params);
       } else {
         query = `
       ${selectSql}
       INNER JOIN ApplicationProjects ap ON t.ProjectId = ap.ProjectId AND ap.ApplicationId = ?
-      LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
-      LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
       LEFT JOIN Projects p ON t.ProjectId = p.Id
-      LEFT JOIN Users u ON t.AssignedTo = u.Id
+      ${joinsSql}
       WHERE ${exclusionSql}
       ORDER BY p.ProjectName, t.DisplayOrder, t.Id`;
-        params.push(appId, appId);
-        if (validExcludeVersion) params.push(validExcludeVersion);
+        params.push(appId, organizationId, appId, appId);
+        pushExclusionParams();
       }
 
       const [taskRows] = await pool.execute<RowDataPacket[]>(query, params);
-      return taskRows;
+
+      // Deduplicate when multiple AVT joins inflate rows; prefer first row per task id.
+      const byId = new Map<number, RowDataPacket>();
+      for (const row of taskRows) {
+        const taskId = Number(row.Id);
+        if (!Number.isFinite(taskId) || byId.has(taskId)) continue;
+
+        const linkedAppId =
+          row.ApplicationId != null && Number(row.ApplicationId) > 0
+            ? Number(row.ApplicationId)
+            : row.OtherAppLinkedApplicationId != null
+              ? Number(row.OtherAppLinkedApplicationId)
+              : null;
+        const linkedAppName =
+          row.LinkedApplicationName || row.OtherAppLinkedApplicationName || null;
+        const linkedVersionId =
+          row.ReleaseVersionId != null && Number(row.ReleaseVersionId) > 0
+            ? Number(row.ReleaseVersionId)
+            : row.OtherAppLinkedVersionId != null
+              ? Number(row.OtherAppLinkedVersionId)
+              : row.ThisAppLinkedVersionId != null
+                ? Number(row.ThisAppLinkedVersionId)
+                : null;
+        const linkedVersionNumber =
+          row.LinkedVersionNumber ||
+          row.OtherAppLinkedVersionNumber ||
+          row.ThisAppLinkedVersionNumber ||
+          null;
+
+        const isLinkedToOtherApplication =
+          (linkedAppId != null && linkedAppId !== appId) ||
+          (row.OtherAppLinkedApplicationId != null &&
+            Number(row.OtherAppLinkedApplicationId) !== appId);
+        const isLinkedToVersion =
+          isLinkedToOtherApplication ||
+          (linkedVersionId != null && Number(linkedVersionId) > 0) ||
+          (row.ThisAppLinkedVersionId != null && Number(row.ThisAppLinkedVersionId) > 0) ||
+          (row.OtherAppLinkedVersionId != null && Number(row.OtherAppLinkedVersionId) > 0);
+
+        byId.set(taskId, {
+          ...row,
+          LinkedApplicationId: linkedAppId,
+          LinkedApplicationName: linkedAppName,
+          LinkedVersionId: linkedVersionId,
+          LinkedVersionNumber: linkedVersionNumber,
+          ThisAppLinkedVersionId: row.ThisAppLinkedVersionId ?? null,
+          ThisAppLinkedVersionNumber: row.ThisAppLinkedVersionNumber ?? null,
+          IsLinkedToOtherApplication: isLinkedToOtherApplication ? 1 : 0,
+          IsLinkedToVersion: isLinkedToVersion ? 1 : 0,
+        });
+      }
+
+      return Array.from(byId.values());
     };
 
     // Do not cache search results (query-dependent, high cardinality).
+    const cacheSuffix = [
+      validExcludeVersion ? `:exclude-${validExcludeVersion}` : '',
+      includeLinked ? ':include-linked' : '',
+    ].join('');
     const tasks =
       scope === 'organization-search'
         ? await fetchTasks()
         : await cachedJson(
-            `${cacheKeys.applicationTasks(appId)}${
-              validExcludeVersion ? `:exclude-${validExcludeVersion}` : ''
-            }`,
+            `${cacheKeys.applicationTasks(appId)}${cacheSuffix}`,
             ENTITY_TTL_SECONDS,
             fetchTasks
           );
@@ -1058,7 +1281,8 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
     const { versionId } = req.params;
 
     const [versions] = await pool.execute<RowDataPacket[]>(
-      `SELECT av.*, u.FirstName, u.LastName, a.Name as ApplicationName, c.Name as CustomerName
+      `SELECT av.*, u.FirstName, u.LastName, a.Name as ApplicationName, a.OrganizationId,
+              c.Name as CustomerName
        FROM ApplicationVersions av
        LEFT JOIN Users u ON av.CreatedBy = u.Id
        LEFT JOIN Applications a ON av.ApplicationId = a.Id
@@ -1073,22 +1297,40 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
 
     const version = versions[0];
 
-    // Load tasks in this version
+    // Load tasks in this version (includes changelog-only links where ApplicationId
+    // / ReleaseVersionId still point at another application/version).
     const [tasks] = await pool.execute<RowDataPacket[]>(
       `SELECT t.Id, t.ProjectId, t.TaskName, t.Description, t.Status, t.Priority,
+              t.ApplicationId, t.ReleaseVersionId,
+              t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
               tsv.StatusName, tsv.ColorCode as StatusColor,
               tpv.PriorityName, tpv.ColorCode as PriorityColor,
               p.ProjectName,
-              u.FirstName as AssigneeFN, u.LastName as AssigneeLN
+              u.FirstName as AssigneeFN, u.LastName as AssigneeLN,
+              tk.TicketNumber,
+              oji.JiraUrl,
+              oji.JiraProjectsUrl,
+              la.Name as LinkedApplicationName,
+              lav.VersionNumber as LinkedVersionNumber,
+              CASE
+                WHEN t.ApplicationId IS NOT NULL AND t.ApplicationId <> ? THEN 1
+                WHEN lav.ApplicationId IS NOT NULL AND lav.ApplicationId <> ? THEN 1
+                ELSE 0
+              END as IsLinkedToOtherApplication
        FROM Tasks t
        INNER JOIN ApplicationVersionTasks avt ON t.Id = avt.TaskId
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
        LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
        LEFT JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN Users u ON t.AssignedTo = u.Id
+       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+       LEFT JOIN Applications la ON t.ApplicationId = la.Id
+       LEFT JOIN ApplicationVersions lav ON t.ReleaseVersionId = lav.Id
+       LEFT JOIN OrganizationJiraIntegrations oji
+         ON oji.OrganizationId = ? AND oji.IsEnabled = 1
        WHERE avt.VersionId = ?
        ORDER BY t.DisplayOrder, t.Id`,
-      [versionId]
+      [version.ApplicationId, version.ApplicationId, version.OrganizationId, versionId]
     );
 
     version.Tasks = tasks;
@@ -1115,7 +1357,16 @@ router.post('/:id/versions', authenticateToken, async (req: AuthRequest, res: Re
     const userId = req.user?.userId;
     const { id } = req.params;
     const applicationId = Array.isArray(id) ? id[0] : id;
-    const { VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId } = req.body;
+    const {
+      VersionNumber,
+      VersionName,
+      Status,
+      ReleaseDate,
+      PatchNotes,
+      IsCustomerSpecific,
+      CustomerId,
+      updateTaskStatuses,
+    } = req.body;
     const normalizedReleaseDate = normalizeDateOnly(ReleaseDate);
     const isCustomerSpecific = IsCustomerSpecific ? 1 : 0;
     const normalizedCustomerId = CustomerId === null || CustomerId === undefined || CustomerId === '' ? null : Number(CustomerId);
@@ -1194,9 +1445,9 @@ router.post('/:id/versions', authenticateToken, async (req: AuthRequest, res: Re
       await ensureApplicationCustomerAssociation(applicationId, normalizedCustomerId);
     }
 
-    if ((Status || 'Planning') === 'Released') {
-      await syncReleasedVersionTasks(result.insertId, applicationId);
-    }
+    await syncVersionLinkedTaskStatuses(result.insertId, applicationId, {
+      updateTaskStatuses: Boolean(updateTaskStatuses),
+    });
 
     await invalidateByEntity('application', { applicationId, orgId: organizationId });
 
@@ -1214,7 +1465,16 @@ router.put('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
     const { id, versionId } = req.params;
     const applicationId = Array.isArray(id) ? id[0] : id;
     const normalizedVersionId = Array.isArray(versionId) ? versionId[0] : versionId;
-    const { VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId } = req.body;
+    const {
+      VersionNumber,
+      VersionName,
+      Status,
+      ReleaseDate,
+      PatchNotes,
+      IsCustomerSpecific,
+      CustomerId,
+      updateTaskStatuses,
+    } = req.body;
     const normalizedReleaseDate = normalizeDateOnly(ReleaseDate);
     const normalizedCustomerId = CustomerId === null || CustomerId === undefined || CustomerId === '' ? null : Number(CustomerId);
 
@@ -1280,8 +1540,9 @@ router.put('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
       [normalizedVersionId]
     );
 
-    const wasReleased = currentVersion.length > 0 && currentVersion[0].Status === 'Released';
-    const isNowReleased = Status === 'Released';
+    const previousStatus = currentVersion.length > 0 ? String(currentVersion[0].Status || '') : '';
+    const nextStatus = String(Status || 'Planning');
+    const statusChanged = previousStatus !== nextStatus;
 
     const versionIsCustomerSpecificValue = IsCustomerSpecific === undefined ? null : (IsCustomerSpecific ? 1 : 0);
 
@@ -1318,9 +1579,10 @@ router.put('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
       await ensureApplicationCustomerAssociation(applicationId, normalizedCustomerId);
     }
 
-    // If version is being released (status changed to Released), update associated tasks
-    if (isNowReleased && !wasReleased) {
-      await syncReleasedVersionTasks(normalizedVersionId, applicationId);
+    if (statusChanged) {
+      await syncVersionLinkedTaskStatuses(normalizedVersionId, applicationId, {
+        updateTaskStatuses: Boolean(updateTaskStatuses),
+      });
     }
 
     await invalidateByEntity('application', { applicationId, orgId: organizationId });
@@ -1415,7 +1677,7 @@ router.put('/:id/versions/:versionId/tasks', authenticateToken, async (req: Auth
     const { id, versionId } = req.params;
     const applicationId = Array.isArray(id) ? id[0] : id;
     const normalizedVersionId = Array.isArray(versionId) ? versionId[0] : versionId;
-    const { TaskIds } = req.body;
+    const { TaskIds, reassignTaskIds: rawReassignTaskIds, reassignFromOtherApplications } = req.body;
 
     const normalizedTaskIds = Array.isArray(TaskIds)
       ? Array.from(new Set(TaskIds.map((value: any) => Number(value)).filter((value: number) => Number.isFinite(value) && value > 0)))
@@ -1429,26 +1691,108 @@ router.put('/:id/versions/:versionId/tasks', authenticateToken, async (req: Auth
       .map((row) => Number(row.TaskId))
       .filter((value) => Number.isFinite(value) && value > 0);
 
-    await pool.execute('DELETE FROM ApplicationVersionTasks WHERE VersionId = ?', [normalizedVersionId]);
-    if (normalizedTaskIds.length > 0) {
-      for (const taskId of normalizedTaskIds) {
+    const newlySelected = normalizedTaskIds.filter((taskId) => !existingTaskIds.includes(taskId));
+    const conflicts =
+      newlySelected.length > 0
+        ? await findTasksLinkedToOtherApplications(applicationId, newlySelected)
+        : [];
+    const conflictIds = conflicts.map((c) => Number(c.Id)).filter((id) => Number.isFinite(id) && id > 0);
+
+    let reassignTaskIds = Array.isArray(rawReassignTaskIds)
+      ? Array.from(
+          new Set(
+            rawReassignTaskIds
+              .map((value: any) => Number(value))
+              .filter((value: number) => Number.isFinite(value) && value > 0)
+          )
+        )
+      : [];
+    // Legacy boolean: reassign every newly selected conflict.
+    if (reassignFromOtherApplications && reassignTaskIds.length === 0) {
+      reassignTaskIds = conflictIds.slice();
+    }
+    reassignTaskIds = reassignTaskIds.filter((id) => newlySelected.includes(id));
+
+    // Conflict tasks may stay linked to this version without changing ApplicationId /
+    // ReleaseVersionId. Only require an explicit decision when the client did not send
+    // reassignTaskIds at all (legacy clients). Modern clients send the array (possibly empty).
+    const reassignDecisionProvided =
+      Array.isArray(rawReassignTaskIds) || Boolean(reassignFromOtherApplications);
+    if (!reassignDecisionProvided) {
+      const unresolvedConflicts = conflicts.filter((c) => !reassignTaskIds.includes(Number(c.Id)));
+      if (unresolvedConflicts.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Some tasks are linked to another application',
+          conflicts: unresolvedConflicts,
+        });
+      }
+    }
+
+    if (reassignTaskIds.length > 0) {
+      const placeholders = reassignTaskIds.map(() => '?').join(',');
+      if (dbProvider === 'mssql') {
         await pool.execute(
-          'INSERT IGNORE INTO ApplicationVersionTasks (VersionId, TaskId) VALUES (?, ?)',
-          [normalizedVersionId, taskId]
+          `DELETE avt
+           FROM ApplicationVersionTasks avt
+           INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+           WHERE avt.TaskId IN (${placeholders}) AND av.ApplicationId <> ?`,
+          [...reassignTaskIds, applicationId]
+        );
+      } else {
+        await pool.execute(
+          `DELETE avt FROM ApplicationVersionTasks avt
+           INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+           WHERE avt.TaskId IN (${placeholders}) AND av.ApplicationId <> ?`,
+          [...reassignTaskIds, applicationId]
         );
       }
     }
 
+    // Always (re)link every selected task to this version for changelog purposes.
+    // ApplicationId / ReleaseVersionId are updated only for claimed tasks below.
+    await pool.execute('DELETE FROM ApplicationVersionTasks WHERE VersionId = ?', [normalizedVersionId]);
+    for (const taskId of normalizedTaskIds) {
+      await pool.execute(
+        `INSERT INTO ApplicationVersionTasks (VersionId, TaskId)
+         SELECT ?, ?
+         WHERE NOT EXISTS (
+           SELECT 1 FROM ApplicationVersionTasks WHERE VersionId = ? AND TaskId = ?
+         )`,
+        [normalizedVersionId, taskId, normalizedVersionId, taskId]
+      );
+    }
+
     await pool.execute('UPDATE Tasks SET ReleaseVersionId = NULL WHERE ReleaseVersionId = ?', [normalizedVersionId]);
 
-    if (normalizedTaskIds.length > 0) {
-      const placeholders = normalizedTaskIds.map(() => '?').join(',');
+    // Claim ApplicationId/ReleaseVersionId only when this app already owns the task primary,
+    // or the user explicitly reassigned. Changelog-only links (foreign primary) must survive
+    // later saves such as status changes — not only the first "new task" prompt.
+    const reassignIdSet = new Set(reassignTaskIds);
+    const foreignPrimaryIds = await findTasksWithForeignPrimaryApplication(
+      applicationId,
+      normalizedTaskIds
+    );
+    const foreignPrimarySet = new Set(foreignPrimaryIds);
+    const claimTaskIds = normalizedTaskIds.filter(
+      (taskId) => reassignIdSet.has(taskId) || !foreignPrimarySet.has(taskId)
+    );
+    if (claimTaskIds.length > 0) {
+      const placeholders = claimTaskIds.map(() => '?').join(',');
       await pool.execute(
         `UPDATE Tasks
          SET ApplicationId = ?, ReleaseVersionId = ?
          WHERE Id IN (${placeholders})`,
-        [applicationId, normalizedVersionId, ...normalizedTaskIds]
+        [applicationId, normalizedVersionId, ...claimTaskIds]
       );
+    }
+
+    // Related applications: every task linked to this version gains this application
+    const versionAppId = Number(applicationId);
+    if (Number.isFinite(versionAppId) && versionAppId > 0 && normalizedTaskIds.length > 0) {
+      for (const taskId of normalizedTaskIds) {
+        await ensureTaskApplications(taskId, [versionAppId]);
+      }
     }
 
     const removedTaskIds = existingTaskIds.filter((taskId) => !normalizedTaskIds.includes(taskId));
@@ -1463,8 +1807,6 @@ router.put('/:id/versions/:versionId/tasks', authenticateToken, async (req: Auth
       );
     }
 
-    await syncReleasedVersionTasks(normalizedVersionId, applicationId);
-
     const [apps] = await pool.execute<RowDataPacket[]>(
       'SELECT OrganizationId FROM Applications WHERE Id = ?',
       [applicationId]
@@ -1478,6 +1820,52 @@ router.put('/:id/versions/:versionId/tasks', authenticateToken, async (req: Auth
   } catch (error) {
     logger.error('Error updating version tasks:', error);
     res.status(500).json({ success: false, message: 'Failed to update version tasks' });
+  }
+});
+
+// GET /api/applications/:id/version-commits/linked - SHAs already linked to versions of this app
+router.get('/:id/version-commits/linked', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const appId = parseInt(Array.isArray(id) ? id[0] : id);
+    if (!Number.isFinite(appId) || appId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid application id' });
+    }
+
+    const excludeVersionRaw = req.query.excludeVersion;
+    const excludeVersionId = excludeVersionRaw
+      ? parseInt(String(Array.isArray(excludeVersionRaw) ? excludeVersionRaw[0] : excludeVersionRaw))
+      : null;
+    const validExcludeVersion =
+      excludeVersionId !== null && Number.isFinite(excludeVersionId) && excludeVersionId > 0
+        ? excludeVersionId
+        : null;
+
+    const params: Array<string | number> = [appId];
+    let excludeSql = '';
+    if (validExcludeVersion) {
+      excludeSql = ' AND av.Id <> ?';
+      params.push(validExcludeVersion);
+    }
+
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT LOWER(avc.CommitSha) as sha, av.Id as versionId, av.VersionNumber as versionNumber
+       FROM ApplicationVersionCommits avc
+       INNER JOIN ApplicationVersions av ON av.Id = avc.VersionId
+       WHERE av.ApplicationId = ?${excludeSql}`,
+      params
+    );
+
+    const linked = rows.map((row) => ({
+      sha: String(row.sha || '').toLowerCase(),
+      versionId: Number(row.versionId),
+      versionNumber: row.versionNumber != null ? String(row.versionNumber) : null,
+    }));
+
+    res.json({ success: true, linked });
+  } catch (error) {
+    logger.error('Error fetching linked version commits:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch linked commits' });
   }
 });
 
@@ -1648,13 +2036,24 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       return res.status(400).json({ success: false, message: llmNotConfiguredMessage(llmConfig) });
     }
 
-    let taskContext: Array<{ id: number; name: string; project: string }> = [];
+    let taskContext: Array<{
+      id: number;
+      name: string;
+      project: string;
+      issueKey: string | null;
+      issueUrl: string | null;
+    }> = [];
     if (taskIds.length > 0) {
       const placeholders = taskIds.map(() => '?').join(',');
       const [taskRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT t.Id, t.TaskName, p.ProjectName
+        `SELECT t.Id, t.TaskName, p.ProjectName,
+                t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
+                tk.TicketNumber, oji.JiraUrl, oji.JiraProjectsUrl
          FROM Tasks t
          INNER JOIN Projects p ON p.Id = t.ProjectId
+         LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+         LEFT JOIN OrganizationJiraIntegrations oji
+           ON oji.OrganizationId = p.OrganizationId AND oji.IsEnabled = 1
          WHERE p.OrganizationId = (
            SELECT OrganizationId FROM Applications WHERE Id = ? LIMIT 1
          )
@@ -1663,11 +2062,25 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
         [applicationId, ...taskIds]
       );
 
-      taskContext = taskRows.map((row) => ({
-        id: Number(row.Id),
-        name: String(row.TaskName || ''),
-        project: String(row.ProjectName || ''),
-      }));
+      taskContext = taskRows.map((row) => {
+        const ref = {
+          JiraIssueKey: row.JiraIssueKey,
+          ExternalIssueId: row.ExternalIssueId,
+          TicketId: row.TicketId,
+          TicketNumber: row.TicketNumber,
+          JiraUrl: row.JiraUrl,
+          JiraProjectsUrl: row.JiraProjectsUrl,
+          GitHubIssueNumber: row.GitHubIssueNumber,
+          GiteaIssueNumber: row.GiteaIssueNumber,
+        };
+        return {
+          id: Number(row.Id),
+          name: String(row.TaskName || ''),
+          project: String(row.ProjectName || ''),
+          issueKey: resolvePatchNoteIssueKey(ref),
+          issueUrl: resolvePatchNoteIssueUrl(ref),
+        };
+      });
     }
 
     const systemPrompt = [
@@ -1678,6 +2091,9 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       '- Use concise, clear bullet points.',
       '- Preserve factual meaning; do not invent features.',
       '- Ensure the final output still contains bullet lists.',
+      '- Preserve every existing HTML hyperlink: keep <a href="...">...</a> tags (including href, target="_blank", rel="noopener noreferrer").',
+      '- When a bullet mentions a ticket/board key such as [PROJ-12] or #41 that has a matching issueUrl in selectedTasks, keep or restore that key as an <a> link.',
+      '- Do not strip, unwrap, or convert links to plain text.',
       ...(splitByChangeType
         ? [
             '- You MUST organize all bullets under these sections in this exact order: Added, Changed, Fixed.',
@@ -1697,8 +2113,8 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       selectedCommits: commitContext,
       splitByChangeType,
       instruction: splitByChangeType
-        ? 'Improve clarity and readability while preserving meaning. Separate every item into Added, Changed, or Fixed sections as required by the system rules. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.'
-        : 'Improve clarity and readability while preserving meaning. Keep bullets in the final result. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.',
+        ? 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Separate every item into Added, Changed, or Fixed sections as required by the system rules. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.'
+        : 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Keep bullets in the final result. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.',
     });
 
     let improved = '';
@@ -1731,7 +2147,10 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
           .map((line: string) => `<li>${line.replace(/^[-•]\s*/, '')}</li>`)
           .join('')}</ul>`;
 
-    return res.json({ success: true, patchNotes: normalized });
+    // Models often unwrap anchors; restore issue/ticket links from the original HTML.
+    const withLinks = reapplyPatchNoteIssueLinks(patchNotes, normalized);
+
+    return res.json({ success: true, patchNotes: withLinks });
   } catch (error: any) {
     logger.error('Improve patch notes error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Failed to improve patch notes' });
@@ -1739,19 +2158,58 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
 });
 
 // POST /api/applications/:id/versions/:versionId/tasks/:taskId - add task to version
+// Always links via ApplicationVersionTasks. ApplicationId/ReleaseVersionId are claimed only when
+// reassignFromOtherApplications is true, or the task has no other-app link.
 router.post('/:id/versions/:versionId/tasks/:taskId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id, versionId, taskId } = req.params;
     const applicationId = Array.isArray(id) ? id[0] : id;
     const normalizedTaskId = Number(taskId);
+    const reassignFromOtherApplications = Boolean(req.body?.reassignFromOtherApplications);
+
+    const conflicts = await findTasksLinkedToOtherApplications(applicationId, [normalizedTaskId]);
+    const hasConflict = conflicts.length > 0;
+
+    if (reassignFromOtherApplications && hasConflict) {
+      if (dbProvider === 'mssql') {
+        await pool.execute(
+          `DELETE avt
+           FROM ApplicationVersionTasks avt
+           INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+           WHERE avt.TaskId = ? AND av.ApplicationId <> ?`,
+          [normalizedTaskId, applicationId]
+        );
+      } else {
+        await pool.execute(
+          `DELETE avt FROM ApplicationVersionTasks avt
+           INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+           WHERE avt.TaskId = ? AND av.ApplicationId <> ?`,
+          [normalizedTaskId, applicationId]
+        );
+      }
+    }
+
     await pool.execute(
-      'INSERT IGNORE INTO ApplicationVersionTasks (VersionId, TaskId) VALUES (?, ?)',
-      [versionId, normalizedTaskId]
+      `INSERT INTO ApplicationVersionTasks (VersionId, TaskId)
+       SELECT ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM ApplicationVersionTasks WHERE VersionId = ? AND TaskId = ?
+       )`,
+      [versionId, normalizedTaskId, versionId, normalizedTaskId]
     );
-    await pool.execute(
-      'UPDATE Tasks SET ApplicationId = ?, ReleaseVersionId = ? WHERE Id = ?',
-      [applicationId, versionId, normalizedTaskId]
-    );
+
+    // Changelog-only link when conflict and not reassigning: keep primary app/version as-is.
+    if (!hasConflict || reassignFromOtherApplications) {
+      await pool.execute(
+        'UPDATE Tasks SET ApplicationId = ?, ReleaseVersionId = ? WHERE Id = ?',
+        [applicationId, versionId, normalizedTaskId]
+      );
+    }
+
+    const versionAppId = Number(applicationId);
+    if (Number.isFinite(versionAppId) && versionAppId > 0) {
+      await ensureTaskApplications(normalizedTaskId, [versionAppId]);
+    }
     const [apps] = await pool.execute<RowDataPacket[]>(
       'SELECT OrganizationId FROM Applications WHERE Id = ?',
       [applicationId]
@@ -1918,6 +2376,7 @@ router.get('/:id/versions/:versionId/pdf', authenticateToken, async (req: AuthRe
       width: 515,
       darkGray,
       midGray,
+      linkBaseUrl: resolvePdfLinkBaseUrl(req),
     });
 
     // Footer
@@ -2068,6 +2527,7 @@ router.post('/release-notes/pdf', authenticateToken, async (req: AuthRequest, re
           width: 505,
           darkGray,
           midGray,
+          linkBaseUrl: resolvePdfLinkBaseUrl(req),
         });
 
         doc.moveDown(1.2);
@@ -2206,6 +2666,7 @@ router.get('/:id/pdf', authenticateToken, async (req: AuthRequest, res: Response
         width: 505,
         darkGray,
         midGray,
+        linkBaseUrl: resolvePdfLinkBaseUrl(req),
       });
 
       doc.moveDown(1.5);

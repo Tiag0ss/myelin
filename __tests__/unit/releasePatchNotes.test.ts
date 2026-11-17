@@ -1,7 +1,13 @@
 import {
   buildPatchNotesFromTasksAndCommits,
   extractTaskIdsFromCommitMessage,
+  formatPatchNoteTaskBulletHtml,
+  formatPatchNoteTaskLabel,
   normalizeCommitSha,
+  reapplyPatchNoteIssueLinks,
+  resolvePatchNoteIssueKey,
+  resolvePatchNoteIssueRef,
+  resolvePatchNoteIssueUrl,
   stripTaskRefsFromCommitSubject,
   suggestCommitShasFromTasks,
   suggestTaskIdsFromCommits,
@@ -25,9 +31,143 @@ describe('stripTaskRefsFromCommitSubject', () => {
   });
 });
 
+describe('resolvePatchNoteIssueKey / formatPatchNoteTaskLabel', () => {
+  it('prefers Jira over ticket number', () => {
+    expect(
+      resolvePatchNoteIssueKey({
+        JiraIssueKey: 'PROJ-12',
+        TicketNumber: 41,
+      })
+    ).toBe('PROJ-12');
+  });
+
+  it('formats ticket number as #N', () => {
+    expect(resolvePatchNoteIssueKey({ TicketNumber: 41 })).toBe('#41');
+    expect(formatPatchNoteTaskLabel({ Id: 1, TaskName: 'Fix login', issueKey: '#41' })).toBe(
+      '[#41] Fix login'
+    );
+  });
+
+  it('returns task name only when no key', () => {
+    expect(formatPatchNoteTaskLabel({ Id: 1, TaskName: 'Fix login' })).toBe('Fix login');
+  });
+});
+
+describe('resolvePatchNoteIssueRef (paired key + url)', () => {
+  it('links Jira key to Jira browse even when TicketId is set', () => {
+    expect(
+      resolvePatchNoteIssueRef({
+        JiraIssueKey: 'PROJ-12',
+        TicketId: 41,
+        TicketNumber: 99,
+        JiraUrl: 'https://jira.example',
+      })
+    ).toEqual({
+      key: 'PROJ-12',
+      url: 'https://jira.example/browse/PROJ-12',
+      source: 'jira',
+    });
+  });
+
+  it('links ExternalIssueId to board base (JiraProjectsUrl)', () => {
+    expect(
+      resolvePatchNoteIssueRef({
+        ExternalIssueId: 'BOARD-7',
+        TicketId: 41,
+        JiraUrl: 'https://tickets.example',
+        JiraProjectsUrl: 'https://board.example',
+      })
+    ).toEqual({
+      key: 'BOARD-7',
+      url: 'https://board.example/browse/BOARD-7',
+      source: 'external',
+    });
+  });
+
+  it('links internal ticket to /tickets/:id', () => {
+    expect(
+      resolvePatchNoteIssueRef({
+        TicketId: 41,
+        TicketNumber: 99,
+      })
+    ).toEqual({
+      key: '#99',
+      url: '/tickets/41',
+      source: 'ticket',
+    });
+  });
+
+  it('does not prefer a stale issueUrl over raw Jira fields', () => {
+    expect(
+      resolvePatchNoteIssueUrl({
+        issueKey: 'PROJ-12',
+        issueUrl: '/tickets/41',
+        JiraIssueKey: 'PROJ-12',
+        TicketId: 41,
+        JiraUrl: 'https://jira.example',
+      })
+    ).toBe('https://jira.example/browse/PROJ-12');
+  });
+});
+
+describe('reapplyPatchNoteIssueLinks', () => {
+  it('restores dropped anchors when link text remains', () => {
+    const original =
+      '<ul><li><a href="https://jira.example/browse/PROJ-12" target="_blank" rel="noopener noreferrer">[PROJ-12]</a> Fix login</li></ul>';
+    const improved = '<ul><li>[PROJ-12] Fix authentication flow</li></ul>';
+    const result = reapplyPatchNoteIssueLinks(original, improved);
+    expect(result).toContain('href="https://jira.example/browse/PROJ-12"');
+    expect(result).toContain('[PROJ-12]</a> Fix authentication flow');
+  });
+
+  it('does not duplicate when href already present', () => {
+    const original =
+      '<ul><li><a href="https://jira.example/browse/PROJ-12">[PROJ-12]</a> Fix login</li></ul>';
+    const improved =
+      '<ul><li><a href="https://jira.example/browse/PROJ-12">[PROJ-12]</a> Fix login better</li></ul>';
+    expect(reapplyPatchNoteIssueLinks(original, improved)).toBe(improved);
+  });
+});
+
 describe('buildPatchNotesFromTasksAndCommits', () => {
   it('returns empty string when both are empty', () => {
     expect(buildPatchNotesFromTasksAndCommits({ tasks: [], commits: [] })).toBe('');
+  });
+
+  it('prefixes task bullets with issue key when present', () => {
+    const html = buildPatchNotesFromTasksAndCommits({
+      tasks: [{ Id: 12, TaskName: 'Fix login', ProjectName: 'App', issueKey: 'PROJ-12' }],
+      commits: [],
+    });
+    expect(html).toContain('<li>[PROJ-12] Fix login</li>');
+  });
+
+  it('wraps issue key in an anchor when issueUrl is present', () => {
+    expect(
+      formatPatchNoteTaskBulletHtml({
+        Id: 12,
+        TaskName: 'Fix login',
+        issueKey: 'PROJ-12',
+        issueUrl: 'https://jira.example/browse/PROJ-12',
+      })
+    ).toContain(
+      '<a href="https://jira.example/browse/PROJ-12" target="_blank" rel="noopener noreferrer">[PROJ-12]</a> Fix login'
+    );
+
+    const html = buildPatchNotesFromTasksAndCommits({
+      tasks: [
+        {
+          Id: 12,
+          TaskName: 'Fix login',
+          ProjectName: 'App',
+          issueKey: 'PROJ-12',
+          issueUrl: 'https://jira.example/browse/PROJ-12',
+        },
+      ],
+      commits: [],
+    });
+    expect(html).toContain('href="https://jira.example/browse/PROJ-12"');
+    expect(html).toContain('[PROJ-12]</a> Fix login');
   });
 
   it('dedupes commit that references a selected task (task name wins)', () => {

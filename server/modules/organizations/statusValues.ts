@@ -65,6 +65,17 @@ const canManageOrganizationSettings = async (organizationId: number | string, us
   );
 };
 
+const taskStatusBelongsToOrg = async (
+  taskStatusId: number | string,
+  organizationId: number | string
+): Promise<boolean> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT Id FROM TaskStatusValues WHERE Id = ? AND OrganizationId = ?',
+    [taskStatusId, organizationId]
+  );
+  return rows.length > 0;
+};
+
 /**
  * @swagger
  * /api/status-values/project/{organizationId}:
@@ -269,6 +280,75 @@ router.get('/task/:orgId', authenticateToken, async (req: AuthRequest, res: Resp
   }
 });
 
+// Get application version status values for an organization
+router.get('/application-version/:orgId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const orgId = req.params.orgId;
+
+    const [access] = await pool.execute<RowDataPacket[]>(
+      'SELECT Id FROM OrganizationMembers WHERE OrganizationId = ? AND UserId = ?',
+      [orgId, userId]
+    );
+
+    if (access.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    const statuses = await cachedJson(
+      cacheKeys.orgStatusValues(String(orgId), 'application-version'),
+      ENTITY_TTL_SECONDS,
+      async () => {
+        const [statusCountResult] = await pool.execute<RowDataPacket[]>(
+          'SELECT COUNT(*) as Count FROM ApplicationVersionStatusValues WHERE OrganizationId = ?',
+          [orgId]
+        );
+
+        const statusCount = Number(statusCountResult[0]?.Count || 0);
+        if (statusCount === 0) {
+          const defaultApplicationVersionStatuses = [
+            { name: 'Planning', color: '#6b7280', order: 1, isDefault: 1, isReleased: 0 },
+            { name: 'In Development', color: '#3b82f6', order: 2, isDefault: 0, isReleased: 0 },
+            { name: 'Testing', color: '#f59e0b', order: 3, isDefault: 0, isReleased: 0 },
+            { name: 'Released', color: '#10b981', order: 4, isDefault: 0, isReleased: 1 },
+            { name: 'Archived', color: '#94a3b8', order: 5, isDefault: 0, isReleased: 0 },
+          ];
+
+          for (const status of defaultApplicationVersionStatuses) {
+            await pool.execute(
+              `INSERT INTO ApplicationVersionStatusValues
+               (OrganizationId, StatusName, ColorCode, SortOrder, IsDefault, IsReleased)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [orgId, status.name, status.color, status.order, status.isDefault, status.isReleased]
+            );
+          }
+        }
+
+        const [rows] = await pool.execute<RowDataPacket[]>(
+          'SELECT * FROM ApplicationVersionStatusValues WHERE OrganizationId = ? ORDER BY SortOrder, StatusName',
+          [orgId]
+        );
+
+        return rows;
+      }
+    );
+
+    res.json({
+      success: true,
+      statuses,
+    });
+  } catch (error) {
+    logger.error('Get application version status values error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch application version status values',
+    });
+  }
+});
+
 /**
  * @swagger
  * /api/status-values/project:
@@ -435,6 +515,80 @@ router.post('/task', authenticateToken, async (req: AuthRequest, res: Response) 
     res.status(500).json({ 
       success: false, 
       message: 'Failed to create task status value' 
+    });
+  }
+});
+
+// Create application version status value
+router.post('/application-version', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { organizationId, statusName, colorCode, sortOrder, isDefault, isReleased, taskStatusId } = req.body;
+
+    if (!statusName || !organizationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status name and organization ID are required',
+      });
+    }
+
+    if (!(await canManageOrganizationSettings(organizationId, userId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied',
+      });
+    }
+
+    const resolvedTaskStatusId =
+      taskStatusId === null || taskStatusId === undefined || taskStatusId === ''
+        ? null
+        : Number(taskStatusId);
+    if (resolvedTaskStatusId !== null) {
+      if (!Number.isFinite(resolvedTaskStatusId) || resolvedTaskStatusId <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid task status ID' });
+      }
+      if (!(await taskStatusBelongsToOrg(resolvedTaskStatusId, organizationId))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Task status does not belong to this organization',
+        });
+      }
+    }
+
+    if (isDefault) {
+      await pool.execute(
+        'UPDATE ApplicationVersionStatusValues SET IsDefault = 0 WHERE OrganizationId = ?',
+        [organizationId]
+      );
+    }
+
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO ApplicationVersionStatusValues
+       (OrganizationId, StatusName, ColorCode, SortOrder, IsDefault, IsReleased, TaskStatusId)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        organizationId,
+        statusName,
+        colorCode || null,
+        sortOrder || 0,
+        isDefault ? 1 : 0,
+        isReleased ? 1 : 0,
+        resolvedTaskStatusId,
+      ]
+    );
+
+    await invalidateByEntity('statusValue', { orgId: organizationId, statusType: 'application-version' });
+
+    res.status(201).json({
+      success: true,
+      message: 'Application version status value created successfully',
+      statusId: result.insertId,
+    });
+  } catch (error) {
+    logger.error('Create application version status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create application version status value',
     });
   }
 });
@@ -627,6 +781,90 @@ router.put('/task/:id', authenticateToken, async (req: AuthRequest, res: Respons
   }
 });
 
+// Update application version status value
+router.put('/application-version/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const statusId = req.params.id;
+    const { statusName, colorCode, sortOrder, isDefault, isReleased, taskStatusId } = req.body;
+
+    const [statuses] = await pool.execute<RowDataPacket[]>(
+      'SELECT OrganizationId, TaskStatusId FROM ApplicationVersionStatusValues WHERE Id = ?',
+      [statusId]
+    );
+
+    if (statuses.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Status not found',
+      });
+    }
+
+    const orgId = statuses[0].OrganizationId;
+    let resolvedTaskStatusId: number | null =
+      statuses[0].TaskStatusId === null || statuses[0].TaskStatusId === undefined
+        ? null
+        : Number(statuses[0].TaskStatusId);
+
+    if (!(await canManageOrganizationSettings(orgId, userId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied',
+      });
+    }
+
+    if (taskStatusId !== undefined) {
+      if (taskStatusId === null || taskStatusId === '') {
+        resolvedTaskStatusId = null;
+      } else {
+        resolvedTaskStatusId = Number(taskStatusId);
+        if (!Number.isFinite(resolvedTaskStatusId) || resolvedTaskStatusId <= 0) {
+          return res.status(400).json({ success: false, message: 'Invalid task status ID' });
+        }
+        if (!(await taskStatusBelongsToOrg(resolvedTaskStatusId, orgId))) {
+          return res.status(400).json({
+            success: false,
+            message: 'Task status does not belong to this organization',
+          });
+        }
+      }
+    }
+
+    if (isDefault) {
+      await pool.execute(
+        'UPDATE ApplicationVersionStatusValues SET IsDefault = 0 WHERE OrganizationId = ? AND Id != ?',
+        [orgId, statusId]
+      );
+    }
+
+    await pool.execute(
+      'UPDATE ApplicationVersionStatusValues SET StatusName = ?, ColorCode = ?, SortOrder = ?, IsDefault = ?, IsReleased = ?, TaskStatusId = ? WHERE Id = ?',
+      [
+        statusName,
+        colorCode,
+        sortOrder,
+        isDefault ? 1 : 0,
+        isReleased ? 1 : 0,
+        resolvedTaskStatusId,
+        statusId,
+      ]
+    );
+
+    await invalidateByEntity('statusValue', { orgId, statusType: 'application-version' });
+
+    res.json({
+      success: true,
+      message: 'Application version status value updated successfully',
+    });
+  } catch (error) {
+    logger.error('Update application version status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update application version status value',
+    });
+  }
+});
+
 /**
  * @swagger
  * /api/status-values/project/{id}:
@@ -757,6 +995,50 @@ router.delete('/task/:id', authenticateToken, async (req: AuthRequest, res: Resp
     res.status(500).json({ 
       success: false, 
       message: 'Failed to delete task status value' 
+    });
+  }
+});
+
+// Delete application version status value
+router.delete('/application-version/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const statusId = req.params.id;
+
+    const [statuses] = await pool.execute<RowDataPacket[]>(
+      'SELECT OrganizationId FROM ApplicationVersionStatusValues WHERE Id = ?',
+      [statusId]
+    );
+
+    if (statuses.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Status not found',
+      });
+    }
+
+    const orgId = statuses[0].OrganizationId;
+
+    if (!(await canManageOrganizationSettings(orgId, userId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Permission denied',
+      });
+    }
+
+    await pool.execute('DELETE FROM ApplicationVersionStatusValues WHERE Id = ?', [statusId]);
+
+    await invalidateByEntity('statusValue', { orgId, statusType: 'application-version' });
+
+    res.json({
+      success: true,
+      message: 'Application version status value deleted successfully',
+    });
+  } catch (error) {
+    logger.error('Delete application version status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete application version status value',
     });
   }
 });

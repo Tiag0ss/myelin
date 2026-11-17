@@ -8,6 +8,8 @@ import { createPortal } from 'react-dom';
 interface Option {
   value: string | number;
   label: string;
+  /** Optional group heading for grouped dropdowns (search still matches label). */
+  group?: string;
 }
 
 interface SearchableSelectProps {
@@ -44,15 +46,80 @@ export default function SearchableSelect({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter options based on search
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(search.toLowerCase())
+  // Filter options based on search (also match group name)
+  const filteredOptions = options.filter(option => {
+    const q = search.toLowerCase();
+    return (
+      option.label.toLowerCase().includes(q) ||
+      (option.group || '').toLowerCase().includes(q)
+    );
+  });
+
+  const groupedFilteredOptions = (() => {
+    const groups: { name: string; options: Option[] }[] = [];
+    const indexByName = new Map<string, number>();
+    for (const option of filteredOptions) {
+      const name = option.group?.trim() || '';
+      const existing = indexByName.get(name);
+      if (existing === undefined) {
+        indexByName.set(name, groups.length);
+        groups.push({ name, options: [option] });
+      } else {
+        groups[existing].options.push(option);
+      }
+    }
+    return groups;
+  })();
+
+  const renderOptionsList = () => (
+    <>
+      {emptyTextResolved && (
+        <div
+          onClick={() => handleSelect('')}
+          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-gray-500 dark:text-gray-400 italic"
+        >
+          {emptyTextResolved}
+        </div>
+      )}
+      {filteredOptions.length === 0 ? (
+        <div className="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
+          {search ? t('lit.noResultsFound') : t('lit.noOptionsAvailable')}
+        </div>
+      ) : (
+        groupedFilteredOptions.map((group) => (
+          <div key={group.name || '__ungrouped'}>
+            {group.name ? (
+              <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/80 sticky top-0">
+                {group.name}
+              </div>
+            ) : null}
+            {group.options.map((option) => (
+              <div
+                key={option.value}
+                onClick={() => handleSelect(option.value)}
+                className={`px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 ${
+                  String(option.value) === String(value)
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+                    : 'text-gray-900 dark:text-white'
+                }`}
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </>
   );
 
-  // Get selected option label
+  // Get selected option label (include group when present, e.g. app · version)
   const selectedOption = options.find(opt => String(opt.value) === String(value));
   const hasSelectedValue = value !== '' && value !== null && value !== undefined && String(value) !== '0' && !!selectedOption;
-  const displayValue = selectedOption?.label || emptyTextResolved;
+  const displayValue = selectedOption
+    ? (selectedOption.group
+      ? `${selectedOption.group} · ${selectedOption.label}`
+      : selectedOption.label)
+    : emptyTextResolved;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -188,41 +255,13 @@ export default function SearchableSelect({
               />
             </div>
 
-            {/* Options list */}
             <div className="overflow-y-auto max-h-48">
-              {emptyTextResolved && (
-                <div
-                  onClick={() => handleSelect('')}
-                  className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-gray-500 dark:text-gray-400 italic"
-                >
-                  {emptyTextResolved}
-                </div>
-              )}
-              {filteredOptions.length === 0 ? (
-                <div className="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
-                  {search ? t('lit.noResultsFound') : t('lit.noOptionsAvailable')}
-                </div>
-              ) : (
-                filteredOptions.map((option) => (
-                  <div
-                    key={option.value}
-                    onClick={() => handleSelect(option.value)}
-                    className={`px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 ${
-                      String(option.value) === String(value)
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
-                        : 'text-gray-900 dark:text-white'
-                    }`}
-                  >
-                    {option.label}
-                  </div>
-                ))
-              )}
+              {renderOptionsList()}
             </div>
           </div>,
           document.body
         ) : (
           <div ref={dropdownRef} className="absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-hidden flex flex-col">
-          {/* Search input */}
           <div className="p-2 border-b border-gray-200 dark:border-gray-600">
             <input
               ref={inputRef}
@@ -235,35 +274,8 @@ export default function SearchableSelect({
             />
           </div>
 
-          {/* Options list */}
           <div className="overflow-y-auto max-h-48">
-            {emptyTextResolved && (
-              <div
-                onClick={() => handleSelect('')}
-                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-gray-500 dark:text-gray-400 italic"
-              >
-                {emptyTextResolved}
-              </div>
-            )}
-            {filteredOptions.length === 0 ? (
-              <div className="px-4 py-2 text-gray-500 dark:text-gray-400 italic text-sm">
-                {search ? t('lit.noResultsFound') : t('lit.noOptionsAvailable')}
-              </div>
-            ) : (
-              filteredOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleSelect(option.value)}
-                  className={`px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 ${
-                    String(option.value) === String(value)
-                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
-                      : 'text-gray-900 dark:text-white'
-                  }`}
-                >
-                  {option.label}
-                </div>
-              ))
-            )}
+            {renderOptionsList()}
           </div>
           </div>
         )}

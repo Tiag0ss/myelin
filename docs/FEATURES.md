@@ -185,16 +185,17 @@ Applications represent software products that projects may be building or mainta
 - Detail and list pages show the uploaded image (or a package icon fallback)
 - Sidebar tabs on detail pages persist in `?tab=` (overview / versions / commits / agent-docs) so refresh keeps the active panel
 - **Agent docs** tab: Application-scoped agent skills and rules (merged after org docs for MCP clients). UI supports create/edit, **archive / unarchive**, and hard delete. Archived docs are hidden from MCP list/get
-- **Commits** tab / release commit picker: commits can show **membership branches** (branches that contain the commit), not only tip branches — filter and badges help when building patch notes
+- **Commits** tab / release commit picker: commits can show **membership branches** (branches that contain the commit), not only tip branches — filter and badges help when building patch notes. Pickers can optionally show commits already linked to other versions of the same application.
 
 ### Application Versions (Releases)
 Each application can have multiple versioned releases:
 
 - Fields: Version Number, Version Name, Status, Release Date, Patch Notes (rich text with images), `IsCustomerSpecific` flag
-- Tasks are linked to a version — once linked, the task disappears from the available pool for other versions
-- Linking tasks auto-sets `Tasks.ReleaseVersionId`
-- Release task picker defaults to tasks from projects associated with the application; search can expand to all organization tasks
-- Patch notes can be built from selected tasks and commits (structured HTML: headings, lists, images) before PDF export
+- Version statuses are org-configurable (`ApplicationVersionStatusValues`) with optional **linked task status**; Administration can enable syncing linked task statuses when a version’s status changes (user is still asked to confirm)
+- Tasks are linked to a version — by default they disappear from the available pool for other versions of the same app (picker checkbox can show already-linked tasks with version badges)
+- Linking tasks auto-sets `Tasks.ReleaseVersionId` / `ApplicationId`; if a task is already tied to another application, the UI asks before reassigning
+- Release task picker defaults to tasks from projects associated with the application; search can expand to all organization tasks; rows show ticket/board id (new-tab link when available) and current app/version association
+- Patch notes can be built from selected tasks and commits (structured HTML: headings, lists, images) before PDF export; task bullets prefer `[KEY] Task name` when a Jira/external/ticket/GitHub/Gitea key exists
 
 ### Patch Notes PDF Export
 Two export modes exist:

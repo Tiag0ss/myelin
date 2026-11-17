@@ -16,7 +16,7 @@ import {
   uploadErrorMessage,
   writePublicUpload,
 } from '../../utils/publicUploads';
-import { renderPatchNotesToPdf } from '../../utils/releaseNotesPdf';
+import { renderPatchNotesToPdf, resolvePdfLinkBaseUrl } from '../../utils/releaseNotesPdf';
 import {
   chatCompletion,
   getLlmConfig,
@@ -1209,6 +1209,7 @@ router.get('/:id/versions/:versionId/pdf', authenticateToken, async (req: AuthRe
       width: 515,
       darkGray,
       midGray,
+      linkBaseUrl: resolvePdfLinkBaseUrl(req),
     });
 
     doc.fontSize(7).fillColor(midGray)

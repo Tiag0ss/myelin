@@ -1986,6 +1986,7 @@ function StatusesTab({
 
   const [projectStatuses, setProjectStatuses] = useState<StatusValue[]>([]);
   const [taskStatuses, setTaskStatuses] = useState<StatusValue[]>([]);
+  const [applicationVersionStatuses, setApplicationVersionStatuses] = useState<StatusValue[]>([]);
   const [taskPriorities, setTaskPriorities] = useState<StatusValue[]>([]);
   const [taskTypes, setTaskTypes] = useState<StatusValue[]>([]);
   const [milestoneTypes, setMilestoneTypes] = useState<StatusValue[]>([]);
@@ -1993,7 +1994,7 @@ function StatusesTab({
   const [ticketPriorities, setTicketPriorities] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeType, setActiveType] = useState<'project' | 'task' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority'>('project');
+  const [activeType, setActiveType] = useState<'project' | 'task' | 'application-version' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority'>('project');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingStatus, setEditingStatus] = useState<StatusValue | null>(null);
 
@@ -2010,9 +2011,10 @@ function StatusesTab({
   const loadStatuses = async () => {
     try {
       setIsLoading(true);
-      const [projectRes, taskRes, priorityRes, typeRes, milestoneTypeRes] = await Promise.all([
+      const [projectRes, taskRes, applicationVersionRes, priorityRes, typeRes, milestoneTypeRes] = await Promise.all([
         statusValuesApi.getProjectStatuses(orgId, token),
         statusValuesApi.getTaskStatuses(orgId, token),
+        statusValuesApi.getApplicationVersionStatuses(orgId, token),
         statusValuesApi.getTaskPriorities(orgId, token),
         statusValuesApi.getTaskTypes(orgId, token),
         statusValuesApi.getMilestoneTypes(orgId, token),
@@ -2030,6 +2032,7 @@ function StatusesTab({
 
       setProjectStatuses(projectRes.statuses);
       setTaskStatuses(taskRes.statuses);
+      setApplicationVersionStatuses(applicationVersionRes.statuses || []);
       setTaskPriorities(priorityRes.priorities);
       setTaskTypes(typeRes.types);
       setMilestoneTypes(milestoneTypeRes.types);
@@ -2043,7 +2046,7 @@ function StatusesTab({
     }
   };
 
-  const handleDelete = async (id: number, type: 'project' | 'task' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority') => {
+  const handleDelete = async (id: number, type: 'project' | 'task' | 'application-version' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority') => {
     const itemType = (type === 'priority' || type === 'ticket-priority')
       ? 'priority'
       : (type === 'type' || type === 'milestone-type')
@@ -2058,6 +2061,8 @@ function StatusesTab({
             await statusValuesApi.deleteProjectStatus(id, token);
           } else if (type === 'task') {
             await statusValuesApi.deleteTaskStatus(id, token);
+          } else if (type === 'application-version') {
+            await statusValuesApi.deleteApplicationVersionStatus(id, token);
           } else if (type === 'priority') {
             await statusValuesApi.deleteTaskPriority(id, token);
           } else if (type === 'type') {
@@ -2084,6 +2089,10 @@ function StatusesTab({
   const statusSubTabs = [
     { id: 'project' as const, label: t('lit.projectStatuses') },
     { id: 'task' as const, label: t('lit.taskStatuses') },
+    {
+      id: 'application-version' as const,
+      label: t('lit.applicationVersionStatuses') || 'Application version statuses',
+    },
     { id: 'priority' as const, label: t('lit.taskPriorities') },
     { id: 'type' as const, label: t('lit.taskTypes') },
     { id: 'milestone-type' as const, label: t('lit.milestoneTypes') },
@@ -2097,6 +2106,7 @@ function StatusesTab({
 
   const currentStatuses = activeType === 'project' ? projectStatuses
     : activeType === 'task' ? taskStatuses
+    : activeType === 'application-version' ? applicationVersionStatuses
     : activeType === 'priority' ? taskPriorities
     : activeType === 'type' ? taskTypes
     : activeType === 'milestone-type' ? milestoneTypes
@@ -2213,6 +2223,11 @@ function StatusesTab({
                             {t('lit.closed')}
                           </span>
                         )}
+                        {!!status.IsReleased && (
+                          <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            {t('lit.released') || 'Released'}
+                          </span>
+                        )}
                         {!!status.IsCancelled && (
                           <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">
                             {t('lit.cancelled')}
@@ -2223,7 +2238,19 @@ function StatusesTab({
                             {t('lit.hiddenInPlanningStats')}
                           </span>
                         )}
-                        {!status.IsDefault && !status.IsClosed && !status.IsCancelled && !status.HideFromPlanningAndStatistics && (
+                        {activeType === 'application-version' && status.TaskStatusId ? (
+                          <span className="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                            {taskStatuses.find((ts) => ts.Id === status.TaskStatusId)?.StatusName ||
+                              t('lit.taskStatus') ||
+                              'Task status'}
+                          </span>
+                        ) : null}
+                        {!status.IsDefault &&
+                          !status.IsClosed &&
+                          !status.IsReleased &&
+                          !status.IsCancelled &&
+                          !status.HideFromPlanningAndStatistics &&
+                          !(activeType === 'application-version' && status.TaskStatusId) && (
                           <span className="text-xs text-gray-400">—</span>
                         )}
                       </div>
@@ -2705,17 +2732,19 @@ function WorkflowPolicyModal({
 
 function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
   orgId: number;
-  type: 'project' | 'task' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority';
+  type: 'project' | 'task' | 'application-version' | 'priority' | 'type' | 'milestone-type' | 'ticket' | 'ticket-priority';
   status?: any;
   onClose: () => void;
   onSaved: () => void;
   token: string;
 }) {
+  const { t } = useI18n();
   const isPriority = type === 'priority' || type === 'ticket-priority';
   const isTaskType = type === 'type' || type === 'milestone-type';
   const isMilestoneType = type === 'milestone-type';
   const isTaskTypeOnly = type === 'type';
   const isTicketStatus = type === 'ticket';
+  const isApplicationVersion = type === 'application-version';
   const STATUS_TYPE_OPTIONS = [
     { value: 'open',        label: t('lit.openNewTicketsAwaitingAction') },
     { value: 'in_progress', label: t('lit.inProgressActivelyBeingWorked') },
@@ -2739,10 +2768,29 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
     isCancelled: !!status?.IsCancelled,
     isInProgress: !!status?.IsInProgress,
     hideFromPlanningAndStatistics: !!status?.HideFromPlanningAndStatistics,
+    isReleased: !!status?.IsReleased,
+    taskStatusId: status?.TaskStatusId ?? null,
     statusType: status?.StatusType || 'other',
   });
+  const [taskStatusOptions, setTaskStatusOptions] = useState<StatusValue[]>([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isApplicationVersion || !token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await statusValuesApi.getTaskStatuses(orgId, token);
+        if (!cancelled) setTaskStatusOptions(res.statuses || []);
+      } catch {
+        if (!cancelled) setTaskStatusOptions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isApplicationVersion, orgId, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2765,6 +2813,8 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
           await statusValuesApi.updateProjectStatus(status.Id, formData, token);
         } else if (type === 'task') {
           await statusValuesApi.updateTaskStatus(status.Id, formData, token);
+        } else if (type === 'application-version') {
+          await statusValuesApi.updateApplicationVersionStatus(status.Id, formData, token);
         } else if (type === 'priority') {
           await statusValuesApi.updateTaskPriority(status.Id, formData, token);
         } else if (type === 'type') {
@@ -2785,6 +2835,8 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
           await statusValuesApi.createProjectStatus(formData, token);
         } else if (type === 'task') {
           await statusValuesApi.createTaskStatus(formData, token);
+        } else if (type === 'application-version') {
+          await statusValuesApi.createApplicationVersionStatus(formData, token);
         } else if (type === 'priority') {
           await statusValuesApi.createTaskPriority(formData, token);
         } else if (type === 'type') {
@@ -2815,7 +2867,22 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {status ? t('common.edit') : t('lit.create')} {type === 'ticket-priority' ? t('lit.ticketPriority') : type === 'ticket' ? t('lit.ticketStatus') : type === 'priority' ? t('lit.taskPriority') : type === 'type' ? t('lit.taskType') : type === 'milestone-type' ? t('lit.milestoneType') : type === 'project' ? t('lit.projectStatus') : t('lit.taskStatus')}
+              {status ? t('common.edit') : t('lit.create')}{' '}
+              {type === 'ticket-priority'
+                ? t('lit.ticketPriority')
+                : type === 'ticket'
+                  ? t('lit.ticketStatus')
+                  : type === 'priority'
+                    ? t('lit.taskPriority')
+                    : type === 'type'
+                      ? t('lit.taskType')
+                      : type === 'milestone-type'
+                        ? t('lit.milestoneType')
+                        : type === 'project'
+                          ? t('lit.projectStatus')
+                          : type === 'application-version'
+                            ? t('lit.applicationVersionStatus') || 'Application version status'
+                            : t('lit.taskStatus')}
             </h2>
             <button
               onClick={onClose}
@@ -2923,7 +2990,47 @@ function StatusValueModal({ orgId, type, status, onClose, onSaved, token }: {
               <span className="text-sm text-gray-700 dark:text-gray-300">Set as default {isPriority ? 'priority' : isTaskType ? 'type' : 'status'}</span>
             </label>
 
-            {!isPriority && !isTaskType && (
+            {isApplicationVersion && (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!formData.isReleased}
+                    onChange={(e) => setFormData({ ...formData, isReleased: e.target.checked })}
+                    className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {t('lit.markAsReleasedStatus') || 'Mark as released status'}
+                  </span>
+                </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('lit.linkedTaskStatus') || 'Linked task status'}
+                  </label>
+                  <select
+                    value={formData.taskStatusId ?? ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        taskStatusId: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">
+                      {t('lit.doNotUpdateTasks') || 'Do not update tasks'}
+                    </option>
+                    {taskStatusOptions.map((ts) => (
+                      <option key={ts.Id} value={ts.Id}>
+                        {ts.StatusName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {!isPriority && !isTaskType && !isApplicationVersion && (
               <>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input

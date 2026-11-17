@@ -30,7 +30,11 @@ import AgentDocsPanel from '@/components/mcp/AgentDocsPanel';
 import PageTabs from '@/components/PageTabs';
 import PageStickyChrome from '@/components/PageStickyChrome';
 import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
-import { buildPatchNotesFromTasksAndCommits } from '@/lib/releasePatchNotes';
+import {
+  buildPatchNotesFromTasksAndCommits,
+  resolvePatchNoteIssueRef,
+} from '@/lib/releasePatchNotes';
+import { statusValuesApi, type StatusValue } from '@/lib/api/statusValues';
 import VersionCommitsPickerModal from './_components/VersionCommitsPickerModal';
 import VersionTasksPickerModal from './_components/VersionTasksPickerModal';
 
@@ -87,6 +91,17 @@ interface Application {
   Customers: { Id: number; Name: string; Email?: string }[];
   Projects: { Id: number; ProjectName: string; StatusName?: string; StatusColor?: string }[];
   Versions: AppVersion[];
+  ProductVersions?: {
+    Id: number;
+    VersionNumber: string;
+    VersionName: string | null;
+    Status: string;
+    ReleaseDate: string | null;
+    ProductId: number;
+    ProductName: string;
+    ApplicationVersionId: number;
+    ApplicationVersionNumber: string;
+  }[];
 }
 
 interface AppVersion {
@@ -118,6 +133,21 @@ interface VersionTask {
   ProjectName: string | null;
   AssigneeFN: string | null;
   AssigneeLN: string | null;
+  IssueKey?: string | null;
+  IssueUrl?: string | null;
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  TicketId?: number | null;
+  TicketNumber?: string | number | null;
+  GitHubIssueNumber?: string | number | null;
+  GiteaIssueNumber?: string | number | null;
+  JiraUrl?: string | null;
+  JiraProjectsUrl?: string | null;
+  ApplicationId?: number | null;
+  ReleaseVersionId?: number | null;
+  LinkedApplicationName?: string | null;
+  LinkedVersionNumber?: string | null;
+  IsLinkedToOtherApplication?: boolean | number;
 }
 
 interface AvailableTask {
@@ -125,6 +155,37 @@ interface AvailableTask {
   TaskName: string;
   ProjectName: string;
   StatusName: string | null;
+  IssueKey?: string | null;
+  IssueUrl?: string | null;
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  TicketId?: number | null;
+  TicketNumber?: string | number | null;
+  GitHubIssueNumber?: string | number | null;
+  GiteaIssueNumber?: string | number | null;
+  JiraUrl?: string | null;
+  JiraProjectsUrl?: string | null;
+  LinkedApplicationName?: string | null;
+  LinkedVersionNumber?: string | null;
+  IsLinkedToOtherApplication?: boolean | number;
+}
+
+function withResolvedIssueLinks<T extends VersionTask | AvailableTask>(task: T): T {
+  const ref = resolvePatchNoteIssueRef({
+    JiraIssueKey: task.JiraIssueKey,
+    ExternalIssueId: task.ExternalIssueId,
+    TicketId: task.TicketId,
+    TicketNumber: task.TicketNumber,
+    JiraUrl: task.JiraUrl,
+    JiraProjectsUrl: task.JiraProjectsUrl,
+    GitHubIssueNumber: task.GitHubIssueNumber,
+    GiteaIssueNumber: task.GiteaIssueNumber,
+  });
+  return {
+    ...task,
+    IssueKey: ref?.key ?? null,
+    IssueUrl: ref?.url ?? null,
+  };
 }
 
 export default function ApplicationDetailPage(props: {
@@ -202,6 +263,13 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [showCommitsPickerModal, setShowCommitsPickerModal] = useState(false);
   const [showTasksPickerModal, setShowTasksPickerModal] = useState(false);
+  const [reassignPrompt, setReassignPrompt] = useState<{
+    conflicts: AvailableTask[];
+    selectedIds: Set<number>;
+  } | null>(null);
+  const [applicationVersionStatuses, setApplicationVersionStatuses] = useState<StatusValue[]>([]);
+  const [syncTaskStatusOnVersionChange, setSyncTaskStatusOnVersionChange] = useState(false);
+  const [originalVersionStatus, setOriginalVersionStatus] = useState<string | null>(null);
   const [showPatchNotes, setShowPatchNotes] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
@@ -240,14 +308,23 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const selectedTasksForForm = useMemo(() => {
     const byId = new Map(availableTasks.map((task) => [task.Id, task]));
     for (const task of versionTasks) {
-      if (!byId.has(task.Id)) {
-        byId.set(task.Id, {
-          Id: task.Id,
-          TaskName: task.TaskName,
-          ProjectName: task.ProjectName || '',
-          StatusName: task.StatusName,
-        });
-      }
+      const existing = byId.get(task.Id);
+      byId.set(task.Id, {
+        Id: task.Id,
+        TaskName: task.TaskName,
+        ProjectName: task.ProjectName || existing?.ProjectName || '',
+        StatusName: task.StatusName ?? existing?.StatusName ?? null,
+        IssueKey: task.IssueKey ?? existing?.IssueKey,
+        IssueUrl: task.IssueUrl ?? existing?.IssueUrl,
+        JiraIssueKey: task.JiraIssueKey ?? existing?.JiraIssueKey,
+        ExternalIssueId: task.ExternalIssueId ?? existing?.ExternalIssueId,
+        TicketId: task.TicketId ?? existing?.TicketId,
+        TicketNumber: task.TicketNumber ?? existing?.TicketNumber,
+        GitHubIssueNumber: task.GitHubIssueNumber ?? existing?.GitHubIssueNumber,
+        GiteaIssueNumber: task.GiteaIssueNumber ?? existing?.GiteaIssueNumber,
+        JiraUrl: task.JiraUrl ?? existing?.JiraUrl,
+        JiraProjectsUrl: task.JiraProjectsUrl ?? existing?.JiraProjectsUrl,
+      });
     }
     return versionForm.TaskIds.map((id) => byId.get(id)).filter(
       (task): task is AvailableTask => Boolean(task)
@@ -513,7 +590,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       });
       if (res.ok) {
         const data = await res.json();
-        setVersionTasks(data.version.Tasks || []);
+        const tasks = Array.isArray(data.version.Tasks) ? data.version.Tasks : [];
+        setVersionTasks(tasks.map((task: VersionTask) => withResolvedIssueLinks(task)));
         const linkedCommits = (data.version.Commits || []).map((c: RemoteCommit) => ({
           sha: String(c.sha || ''),
           message: String(c.message || ''),
@@ -538,7 +616,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       });
       if (res.ok) {
         const data = await res.json();
-        setAvailableTasks(data.tasks || []);
+        const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        setAvailableTasks(tasks.map((task: AvailableTask) => withResolvedIssueLinks(task)));
       } else {
         setAvailableTasks([]);
       }
@@ -567,14 +646,58 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     }
   };
 
+  const loadVersionStatusOptions = async () => {
+    if (!token || !application?.OrganizationId) {
+      setApplicationVersionStatuses([]);
+      return;
+    }
+    try {
+      const data = await statusValuesApi.getApplicationVersionStatuses(
+        application.OrganizationId,
+        token
+      );
+      setApplicationVersionStatuses(data.statuses || []);
+    } catch {
+      setApplicationVersionStatuses([]);
+    }
+  };
+
+  const loadSyncTaskStatusSetting = async () => {
+    if (!token) {
+      setSyncTaskStatusOnVersionChange(false);
+      return;
+    }
+    try {
+      const res = await fetch(`${getApiUrl()}/api/system-settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setSyncTaskStatusOnVersionChange(false);
+        return;
+      }
+      const data = await res.json();
+      setSyncTaskStatusOnVersionChange(
+        String(data?.settings?.syncTaskStatusOnVersionChange || '') === 'true'
+      );
+    } catch {
+      setSyncTaskStatusOnVersionChange(false);
+    }
+  };
+
   const openCreateVersionModal = () => {
     setEditingVersion(null);
+    setOriginalVersionStatus(null);
+    setReassignPrompt(null);
+    const defaultStatus =
+      applicationVersionStatuses.find((s) => s.IsDefault)?.StatusName ||
+      applicationVersionStatuses[0]?.StatusName ||
+      'Planning';
     setVersionForm({
       VersionNumber: '',
       VersionName: '',
       IsCustomerSpecific: false,
       CustomerId: null,
-      Status: t('lit.planning'),
+      Status: defaultStatus,
       ReleaseDate: '',
       PatchNotes: '',
       TaskIds: [],
@@ -583,11 +706,15 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     void loadAllCustomers(application?.OrganizationId);
     loadAvailableTasks();
     void loadOpenAiAvailability();
+    void loadVersionStatusOptions();
+    void loadSyncTaskStatusSetting();
     setShowVersionModal(true);
   };
 
   const openEditVersionModal = (v: AppVersion) => {
     setEditingVersion(v);
+    setOriginalVersionStatus(v.Status);
+    setReassignPrompt(null);
     void loadAllCustomers(application?.OrganizationId);
     // Pre-load current tasks and commits
     const currentTaskIds = versionTasks.map((task) => task.Id);
@@ -604,6 +731,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     });
     loadAvailableTasks(v.Id); // Pass version ID to exclude tasks from other versions
     void loadOpenAiAvailability();
+    void loadVersionStatusOptions();
+    void loadSyncTaskStatusSetting();
     setShowVersionModal(true);
   };
 
@@ -612,17 +741,57 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     setShowCommitsPickerModal(false);
     setShowTasksPickerModal(false);
     setEditingVersion(null);
+    setOriginalVersionStatus(null);
+    setReassignPrompt(null);
     setError('');
   };
 
-  const handleSaveVersion = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const versionStatusOptions =
+    applicationVersionStatuses.length > 0
+      ? applicationVersionStatuses.map((s) => s.StatusName)
+      : VERSION_STATUSES;
+
+  const getCrossAppConflictsForSave = (taskIds: number[]): AvailableTask[] => {
+    const alreadyOnVersion = new Set(
+      editingVersion ? versionTasks.map((task) => Number(task.Id)) : []
+    );
+    const byId = new Map(selectedTasksForForm.map((task) => [task.Id, task]));
+    for (const task of availableTasks) byId.set(task.Id, task);
+    return taskIds
+      .map((id) => byId.get(id))
+      .filter((task): task is AvailableTask => Boolean(task))
+      .filter(
+        (task) =>
+          Boolean(task.IsLinkedToOtherApplication) && !alreadyOnVersion.has(Number(task.Id))
+      );
+  };
+
+  const persistVersion = async (
+    updateTaskStatuses: boolean,
+    overrides?: { taskIds?: number[]; reassignTaskIds?: number[] }
+  ) => {
     setError('');
     setIsSavingVersion(true);
+    const decisionMade = overrides !== undefined;
+    const taskIds = overrides?.taskIds ?? versionForm.TaskIds;
+    const reassignTaskIds = overrides?.reassignTaskIds ?? [];
     try {
       if (!versionForm.VersionNumber.trim()) throw new Error(t('lit.versionNumberIsRequired'));
       if (versionForm.IsCustomerSpecific && !versionForm.CustomerId) {
         throw new Error(t('lit.customerIsRequiredWhenVersionIsCustomerSpecific'));
+      }
+
+      // Prompt only before the first save attempt; after the dialog, keep all selected
+      // tasks linked and only reassign ApplicationId/ReleaseVersionId for checked ones.
+      if (!decisionMade) {
+        const conflicts = getCrossAppConflictsForSave(taskIds);
+        if (conflicts.length > 0) {
+          setReassignPrompt({
+            conflicts,
+            selectedIds: new Set(conflicts.map((task) => task.Id)),
+          });
+          return;
+        }
       }
 
       const url = editingVersion
@@ -642,6 +811,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           Status: versionForm.Status,
           ReleaseDate: versionForm.ReleaseDate || null,
           PatchNotes: versionForm.PatchNotes || null,
+          updateTaskStatuses,
         }),
       });
 
@@ -652,15 +822,61 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       const data = await res.json();
       const versionId = editingVersion ? editingVersion.Id : data.id;
+      if (!editingVersion && versionId) {
+        // So a later conflict retry updates this version instead of creating another.
+        setEditingVersion({
+          Id: Number(versionId),
+          VersionNumber: versionForm.VersionNumber,
+          VersionName: versionForm.VersionName || null,
+          IsCustomerSpecific: versionForm.IsCustomerSpecific ? 1 : 0,
+          CustomerId: versionForm.IsCustomerSpecific ? versionForm.CustomerId : null,
+          Status: versionForm.Status,
+          ReleaseDate: versionForm.ReleaseDate || null,
+          PatchNotes: versionForm.PatchNotes || null,
+        } as AppVersion);
+      }
 
-      // Sync tasks
-      await fetch(`${getApiUrl()}/api/applications/${id}/versions/${versionId}/tasks`, {
+      const tasksRes = await fetch(`${getApiUrl()}/api/applications/${id}/versions/${versionId}/tasks`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ TaskIds: versionForm.TaskIds }),
+        body: JSON.stringify({
+          TaskIds: taskIds,
+          reassignTaskIds,
+        }),
       });
+      if (!tasksRes.ok) {
+        const d = await tasksRes.json().catch(() => ({}));
+        if (tasksRes.status === 409 && Array.isArray(d.conflicts) && d.conflicts.length > 0) {
+          const conflictIds = new Set(d.conflicts.map((c: { Id: number }) => Number(c.Id)));
+          const fromForm = getCrossAppConflictsForSave(taskIds).filter((task) =>
+            conflictIds.has(task.Id)
+          );
+          const fallback = d.conflicts.map((c: {
+            Id: number;
+            TaskName: string;
+            LinkedApplicationName?: string | null;
+            LinkedVersionNumber?: string | null;
+          }) => ({
+            Id: Number(c.Id),
+            TaskName: String(c.TaskName || ''),
+            ProjectName: '',
+            StatusName: null,
+            LinkedApplicationName: c.LinkedApplicationName ?? null,
+            LinkedVersionNumber: c.LinkedVersionNumber ?? null,
+            IsLinkedToOtherApplication: 1,
+          }));
+          setReassignPrompt({
+            conflicts: fromForm.length > 0 ? fromForm : fallback,
+            selectedIds: new Set(
+              (fromForm.length > 0 ? fromForm : fallback).map((task: AvailableTask) => task.Id)
+            ),
+          });
+          setVersionForm((prev) => ({ ...prev, TaskIds: taskIds }));
+          return;
+        }
+        throw new Error(d.message || t('lit.failedToSaveVersion'));
+      }
 
-      // Sync commits
       await fetch(`${getApiUrl()}/api/applications/${id}/versions/${versionId}/commits`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -675,11 +891,11 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         }),
       });
 
+      setReassignPrompt(null);
       closeVersionModal();
       await loadApplication();
-      // Refresh selected / newly created version detail
       if (editingVersion && selectedVersion?.Id === editingVersion.Id) {
-        const updated = { ...editingVersion, ...versionForm, Id: editingVersion.Id };
+        const updated = { ...editingVersion, ...versionForm, TaskIds: taskIds, Id: editingVersion.Id };
         setSelectedVersion(updated as AppVersion);
         void loadVersionDetail(updated as AppVersion);
       } else if (versionId) {
@@ -699,6 +915,74 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     } finally {
       setIsSavingVersion(false);
     }
+  };
+
+  const askStatusSyncThenPersist = (
+    taskIds: number[],
+    reassignTaskIds: number[]
+  ) => {
+    const statusChanged =
+      !editingVersion ||
+      (originalVersionStatus != null && originalVersionStatus !== versionForm.Status);
+    const mappedStatus = applicationVersionStatuses.find(
+      (s) => s.StatusName === versionForm.Status && s.TaskStatusId != null
+    );
+    const hasLinkedTasks = taskIds.length > 0;
+    const shouldAskStatusSync =
+      syncTaskStatusOnVersionChange && statusChanged && Boolean(mappedStatus) && hasLinkedTasks;
+
+    if (shouldAskStatusSync) {
+      setDialog({
+        type: 'confirm',
+        title: t('lit.updateLinkedTaskStatuses') || 'Update linked task statuses?',
+        message:
+          t('lit.updateLinkedTaskStatusesHelp') ||
+          'Update linked tasks to the task status mapped for this version status?',
+        confirmLabel: t('lit.yesUpdateTaskStatuses') || 'Yes, update statuses',
+        cancelLabel: t('lit.noKeepTaskStatuses') || 'No, keep task statuses',
+        confirmVariant: 'primary',
+        onConfirm: () => void persistVersion(true, { taskIds, reassignTaskIds }),
+        onCancel: () => void persistVersion(false, { taskIds, reassignTaskIds }),
+      });
+      return;
+    }
+
+    void persistVersion(false, { taskIds, reassignTaskIds });
+  };
+
+  const handleSaveVersion = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const conflicts = getCrossAppConflictsForSave(versionForm.TaskIds);
+    if (conflicts.length > 0) {
+      setReassignPrompt({
+        conflicts,
+        selectedIds: new Set(conflicts.map((task) => task.Id)),
+      });
+      return;
+    }
+
+    askStatusSyncThenPersist(versionForm.TaskIds, []);
+  };
+
+  const confirmReassignOnSave = () => {
+    if (!reassignPrompt) return;
+    const conflictIds = new Set(reassignPrompt.conflicts.map((task) => task.Id));
+    const reassignTaskIds = Array.from(reassignPrompt.selectedIds).filter((id) =>
+      conflictIds.has(id)
+    );
+    // Keep every selected task on this version (changelog link). Checkbox only claims
+    // ApplicationId / ReleaseVersionId for the checked subset.
+    const taskIds = Array.from(
+      new Set(
+        [...versionForm.TaskIds, ...reassignPrompt.conflicts.map((task) => task.Id)].filter(
+          (id) => Number.isFinite(id) && id > 0
+        )
+      )
+    );
+    setVersionForm((prev) => ({ ...prev, TaskIds: taskIds }));
+    setReassignPrompt(null);
+    askStatusSyncThenPersist(taskIds, reassignTaskIds);
   };
 
   const handleDeleteVersion = (v: AppVersion) => {
@@ -865,24 +1149,108 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     }));
   };
 
-  const handleGeneratePatchNotes = () => {
-    const selectedTasks = availableTasks.filter((task) => versionForm.TaskIds.includes(task.Id));
-    const generated = buildPatchNotesFromTasksAndCommits({
-      tasks: selectedTasks.map((task) => ({
+  const buildGeneratedPatchNotes = (): string => {
+    const byId = new Map(availableTasks.map((task) => [task.Id, task]));
+    for (const task of versionTasks) {
+      const existing = byId.get(task.Id);
+      byId.set(task.Id, {
         Id: task.Id,
         TaskName: task.TaskName,
-        ProjectName: task.ProjectName,
-      })),
+        ProjectName: task.ProjectName || existing?.ProjectName || '',
+        StatusName: task.StatusName ?? existing?.StatusName ?? null,
+        IssueKey: task.IssueKey ?? existing?.IssueKey,
+        IssueUrl: task.IssueUrl ?? existing?.IssueUrl,
+        JiraIssueKey: task.JiraIssueKey ?? existing?.JiraIssueKey,
+        ExternalIssueId: task.ExternalIssueId ?? existing?.ExternalIssueId,
+        TicketId: task.TicketId ?? existing?.TicketId,
+        TicketNumber: task.TicketNumber ?? existing?.TicketNumber,
+        GitHubIssueNumber: task.GitHubIssueNumber ?? existing?.GitHubIssueNumber,
+        GiteaIssueNumber: task.GiteaIssueNumber ?? existing?.GiteaIssueNumber,
+        JiraUrl: task.JiraUrl ?? existing?.JiraUrl,
+        JiraProjectsUrl: task.JiraProjectsUrl ?? existing?.JiraProjectsUrl,
+      });
+    }
+    const selectedTasks = versionForm.TaskIds.map((id) => byId.get(id)).filter(
+      (task): task is AvailableTask => Boolean(task)
+    );
+    return buildPatchNotesFromTasksAndCommits({
+      tasks: selectedTasks.map((task) => {
+        const resolved = withResolvedIssueLinks(task);
+        return {
+          Id: resolved.Id,
+          TaskName: resolved.TaskName,
+          ProjectName: resolved.ProjectName,
+          issueKey: resolved.IssueKey,
+          issueUrl: resolved.IssueUrl,
+          JiraIssueKey: resolved.JiraIssueKey,
+          ExternalIssueId: resolved.ExternalIssueId,
+          TicketId: resolved.TicketId,
+          TicketNumber: resolved.TicketNumber,
+          JiraUrl: resolved.JiraUrl,
+          JiraProjectsUrl: resolved.JiraProjectsUrl,
+          GitHubIssueNumber: resolved.GitHubIssueNumber,
+          GiteaIssueNumber: resolved.GiteaIssueNumber,
+        };
+      }),
       commits: versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message })),
       generalProjectLabel: t('lit.general'),
     });
+  };
+
+  const applyGeneratedPatchNotes = (generated: string) => {
     setVersionForm((prev) => ({
       ...prev,
       PatchNotes: generated,
     }));
   };
 
-  const runImprovePatchNotesWithAI = async (splitByChangeType: boolean) => {
+  const askImproveSplitAfterGenerate = (generated: string) => {
+    setDialog({
+      type: 'confirm',
+      title: t('lit.improveWithAi') || 'Improve with AI',
+      message:
+        t('lit.improvePatchNotesSplitHelp') ||
+        'Split the patch notes into Added, Changed, and Fixed sections? Choose Yes to group by change type, or No to improve without that structure.',
+      confirmLabel: t('lit.yesSplit') || 'Yes, split',
+      cancelLabel: t('lit.noKeepFlat') || 'No, keep flat',
+      confirmVariant: 'primary',
+      onConfirm: () => void runImprovePatchNotesWithAI(true, generated),
+      onCancel: () => void runImprovePatchNotesWithAI(false, generated),
+    });
+  };
+
+  const handleGeneratePatchNotes = () => {
+    if (versionForm.TaskIds.length === 0 && versionForm.Commits.length === 0) return;
+
+    if (isOpenAIAvailable) {
+      setDialog({
+        type: 'confirm',
+        title: t('lit.generatePatchNotesWithAi') || 'Generate with AI?',
+        message:
+          t('lit.generatePatchNotesWithAiHelp') ||
+          'AI is configured. Generate from tasks & commits and refine the notes with AI?',
+        confirmLabel: t('lit.yesUseAi') || 'Yes, use AI',
+        cancelLabel: t('lit.noGenerateOnly') || 'No, generate only',
+        confirmVariant: 'primary',
+        onConfirm: () => {
+          const generated = buildGeneratedPatchNotes();
+          applyGeneratedPatchNotes(generated);
+          askImproveSplitAfterGenerate(generated);
+        },
+        onCancel: () => {
+          applyGeneratedPatchNotes(buildGeneratedPatchNotes());
+        },
+      });
+      return;
+    }
+
+    applyGeneratedPatchNotes(buildGeneratedPatchNotes());
+  };
+
+  const runImprovePatchNotesWithAI = async (
+    splitByChangeType: boolean,
+    patchNotesOverride?: string
+  ) => {
     if (!token || !isOpenAIAvailable || isImprovingPatchNotes) return;
 
     setIsImprovingPatchNotes(true);
@@ -895,7 +1263,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patchNotes: versionForm.PatchNotes || '',
+          patchNotes: patchNotesOverride ?? versionForm.PatchNotes ?? '',
           taskIds: versionForm.TaskIds,
           commits: versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message })),
           splitByChangeType,
@@ -929,11 +1297,12 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
     setDialog({
       type: 'confirm',
-      title: 'Improve with AI',
+      title: t('lit.improveWithAi') || 'Improve with AI',
       message:
+        t('lit.improvePatchNotesSplitHelp') ||
         'Split the patch notes into Added, Changed, and Fixed sections? Choose Yes to group by change type, or No to improve without that structure.',
-      confirmLabel: 'Yes, split',
-      cancelLabel: 'No, keep flat',
+      confirmLabel: t('lit.yesSplit') || 'Yes, split',
+      cancelLabel: t('lit.noKeepFlat') || 'No, keep flat',
       confirmVariant: 'primary',
       onConfirm: () => void runImprovePatchNotesWithAI(true),
       onCancel: () => void runImprovePatchNotesWithAI(false),
@@ -1058,6 +1427,41 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             {p.StatusName}
                           </span>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+                  {t('lit.associatedProductVersions')} (
+                  {application.ProductVersions?.length ?? 0})
+                </h2>
+                {(application.ProductVersions?.length ?? 0) === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {t('lit.noProductVersionsLinkedYet')}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(application.ProductVersions || []).map((pv) => (
+                      <div
+                        key={`${pv.ProductId}-${pv.Id}-${pv.ApplicationVersionId}`}
+                        className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        onClick={() => router.push(`/products/${pv.ProductId}`)}
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {pv.ProductName} · v{pv.VersionNumber}
+                            {pv.VersionName ? ` — ${pv.VersionName}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {t('lit.includesAppVersion')} v{pv.ApplicationVersionNumber}
+                          </p>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+                          {pv.Status}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -1326,26 +1730,66 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       <p className="text-sm text-gray-500 dark:text-gray-400">{t('lit.noTasksAssignedToThisVersionYet')}</p>
                     ) : (
                       <div className="space-y-2">
-                        {versionTasks.map((task) => (
-                          <button
+                        {versionTasks.map((task) => {
+                          const otherAppPrimary = Boolean(task.IsLinkedToOtherApplication);
+                          const primaryLabel = [
+                            task.LinkedApplicationName,
+                            task.LinkedVersionNumber ? `v${task.LinkedVersionNumber}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ');
+                          return (
+                          <div
                             key={task.Id}
-                            type="button"
-                            onClick={() => void handleOpenTaskDetail(task)}
-                            className="w-full text-left flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            className={`flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${
+                              otherAppPrimary ? 'ring-1 ring-amber-300/80 dark:ring-amber-700/60' : ''
+                            }`}
                           >
-                            <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleOpenTaskDetail(task)}
+                              className="min-w-0 flex-1 text-left"
+                            >
                               <p className="font-medium text-gray-900 dark:text-white text-sm">{task.TaskName}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                {task.IssueKey ? (
+                                  task.IssueUrl ? (
+                                    <a
+                                      href={task.IssueUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    >
+                                      {task.IssueKey}
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {task.IssueKey}
+                                    </span>
+                                  )
+                                ) : null}
                                 {task.ProjectName && (
                                   <span className="text-xs text-gray-500 dark:text-gray-400">{task.ProjectName}</span>
                                 )}
+                                {primaryLabel ? (
+                                  <span
+                                    className={
+                                      otherAppPrimary
+                                        ? 'text-xs text-amber-700 dark:text-amber-300'
+                                        : 'text-xs text-gray-500 dark:text-gray-400'
+                                    }
+                                  >
+                                    {primaryLabel}
+                                  </span>
+                                ) : null}
                                 {task.AssigneeFN && (
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     · {task.AssigneeFN} {task.AssigneeLN}
                                   </span>
                                 )}
                               </div>
-                            </div>
+                            </button>
                             <div className="flex items-center gap-2 ml-3 shrink-0">
                               {task.StatusName && (
                                 <span
@@ -1364,8 +1808,9 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                                 </span>
                               )}
                             </div>
-                          </button>
-                        ))}
+                          </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1685,27 +2130,32 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
       {/* ── Version Modal ─────────────────────────────────────────────────── */}
       {showVersionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[92vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingVersion ? `Edit Version ${editingVersion.VersionNumber}` : t('lit.newVersion')}
-                </h2>
-                <button onClick={closeVersionModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <form
+            onSubmit={handleSaveVersion}
+            className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingVersion ? `Edit Version ${editingVersion.VersionNumber}` : t('lit.newVersion')}
+              </h2>
+              <button
+                type="button"
+                onClick={closeVersionModal}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
               {error && (
-                <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-400 rounded text-sm">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-400 rounded text-sm">
                   {error}
                 </div>
               )}
-
-              <form onSubmit={handleSaveVersion} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1744,7 +2194,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       onChange={(e) => setVersionForm({ ...versionForm, Status: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      {VERSION_STATUSES.map((s) => (
+                      {versionStatusOptions.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
@@ -1829,9 +2279,25 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {task.TaskName}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {[task.ProjectName, task.StatusName].filter(Boolean).join(' · ')}
-                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              {task.IssueKey ? (
+                                task.IssueUrl ? (
+                                  <a
+                                    href={task.IssueUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                  >
+                                    {task.IssueKey}
+                                  </a>
+                                ) : (
+                                  <span>{task.IssueKey}</span>
+                                )
+                              ) : null}
+                              <span>
+                                {[task.ProjectName, task.StatusName].filter(Boolean).join(' · ')}
+                              </span>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -1950,25 +2416,25 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={closeVersionModal}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSavingVersion}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
-                  >
-                    {isSavingVersion ? t('lit.saving') : editingVersion ? t('lit.updateVersion') : t('lit.createVersion')}
-                  </button>
-                </div>
-              </form>
             </div>
-          </div>
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
+              <button
+                type="button"
+                onClick={closeVersionModal}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingVersion}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+              >
+                {isSavingVersion ? t('lit.saving') : editingVersion ? t('lit.updateVersion') : t('lit.createVersion')}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -1985,11 +2451,25 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           setAvailableTasks((prev) => {
             const byId = new Map(prev.map((task) => [task.Id, task]));
             for (const task of selectedTasks) {
+              const resolved = withResolvedIssueLinks(task);
               byId.set(task.Id, {
-                Id: task.Id,
-                TaskName: task.TaskName,
-                ProjectName: task.ProjectName || '',
-                StatusName: task.StatusName ?? null,
+                Id: resolved.Id,
+                TaskName: resolved.TaskName,
+                ProjectName: resolved.ProjectName || '',
+                StatusName: resolved.StatusName ?? null,
+                IssueKey: resolved.IssueKey,
+                IssueUrl: resolved.IssueUrl,
+                JiraIssueKey: resolved.JiraIssueKey,
+                ExternalIssueId: resolved.ExternalIssueId,
+                TicketId: resolved.TicketId,
+                TicketNumber: resolved.TicketNumber,
+                GitHubIssueNumber: resolved.GitHubIssueNumber,
+                GiteaIssueNumber: resolved.GiteaIssueNumber,
+                JiraUrl: resolved.JiraUrl,
+                JiraProjectsUrl: resolved.JiraProjectsUrl,
+                LinkedApplicationName: resolved.LinkedApplicationName,
+                LinkedVersionNumber: resolved.LinkedVersionNumber,
+                IsLinkedToOtherApplication: resolved.IsLinkedToOtherApplication,
               });
             }
             return Array.from(byId.values());
@@ -2005,6 +2485,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         hasRepositoryUrl={Boolean(application?.RepositoryUrl)}
         initiallySelected={versionForm.Commits}
         selectedTaskIds={versionForm.TaskIds}
+        excludeVersionId={editingVersion?.Id ?? null}
         onClose={() => setShowCommitsPickerModal(false)}
         onConfirm={(commits) => {
           setVersionForm((prev) => ({
@@ -2161,6 +2642,98 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                   {isSavingCustomers ? t('lit.saving') : t('lit.saveChanges')}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reassignPrompt && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reassign-tasks-on-save-title"
+            className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-gray-800"
+          >
+            <h4
+              id="reassign-tasks-on-save-title"
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+            >
+              {t('lit.reassignTasksFromOtherApplications') ||
+                'Reassign tasks from other applications?'}
+            </h4>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              {t('lit.reassignTasksFromOtherApplicationsHelp') ||
+                "These tasks are already linked to another application. Checked: make this the task's primary application and version. Unchecked: still add the task to this version's changelog, but keep the existing primary application and version on the task."}
+            </p>
+            <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto">
+              {reassignPrompt.conflicts.map((task) => {
+                const checked = reassignPrompt.selectedIds.has(task.Id);
+                return (
+                  <li key={task.Id}>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={checked}
+                        onChange={() => {
+                          setReassignPrompt((prev) => {
+                            if (!prev) return prev;
+                            const next = new Set(prev.selectedIds);
+                            if (next.has(task.Id)) next.delete(task.Id);
+                            else next.add(task.Id);
+                            return { ...prev, selectedIds: next };
+                          });
+                        }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium text-gray-900 dark:text-white">
+                          {task.TaskName}
+                        </span>
+                        <span className="mt-0.5 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          {[
+                            task.LinkedApplicationName,
+                            task.LinkedVersionNumber ? `v${task.LinkedVersionNumber}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                          {task.IssueKey ? (
+                            task.IssueUrl ? (
+                              <a
+                                href={task.IssueUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                onClick={(ev) => ev.stopPropagation()}
+                              >
+                                {task.IssueKey}
+                              </a>
+                            ) : (
+                              <span>{task.IssueKey}</span>
+                            )
+                          ) : null}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReassignPrompt(null)}
+                className="rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={confirmReassignOnSave}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700"
+              >
+                {t('lit.yesReassign') || 'Continue'}
+              </button>
             </div>
           </div>
         </div>

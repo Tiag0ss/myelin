@@ -891,8 +891,37 @@ async function listRemoteCommitsAllBranches(
   // Bitbucket Cloud already returns commits across all refs when include= is omitted.
   if (creds.provider === 'bitbucket' && creds.bitbucketKind === 'cloud') {
     const pageResult = await fetchRemoteCommitsPage(parsed, creds, { page, perPage, branch: null });
+
+    const branchPages = await mapLimit(branches, ALL_BRANCH_CONCURRENCY, async (branch) => {
+      try {
+        const result = await fetchRemoteCommitsPage(parsed, creds, {
+          page,
+          perPage,
+          branch: branch.name,
+        });
+        return { branchName: branch.name, ...result, error: null as Error | null };
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error('Failed to list commits');
+        logger.error('listRemoteCommits all-branches fan-out failed:', branch.name, err);
+        return { branchName: branch.name, commits: [] as NormalizedCommit[], hasMore: false, error: err };
+      }
+    });
+
+    const successfulBranchPages = branchPages.filter((p) => !p.error);
+    const membership = mergeCommitMembership(
+      successfulBranchPages.map((pageResult) => ({
+        branchName: pageResult.branchName,
+        shas: pageResult.commits.map((commit) => commit.sha),
+      }))
+    );
+
+    const tips = branches.map((branch) => ({
+      name: branch.name,
+      sha: branch.sha || '',
+    }));
+
     return {
-      commits: applyCommitBranchMeta(pageResult.commits, branches),
+      commits: applyCommitBranchMeta(pageResult.commits, tips, membership),
       hasMore: pageResult.hasMore,
       provider: creds.provider,
       branch: null,

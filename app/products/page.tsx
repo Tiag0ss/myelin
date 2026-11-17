@@ -612,20 +612,27 @@ export default function ProductsPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingProduct ? t('lit.editProduct') : t('pages.products.newProduct')}
-                </h2>
-                <button type="button" onClick={closeModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+          <form
+            onSubmit={handleSave}
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingProduct ? t('lit.editProduct') : t('pages.products.newProduct')}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
               {error && (
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-400 rounded text-sm">
                   {error}
@@ -719,7 +726,9 @@ export default function ProductsPage() {
                 </>
               )}
 
-              <div className="flex justify-end gap-3 pt-2">
+              </div>
+
+              <div className="flex shrink-0 justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
                 <button
                   type="button"
                   onClick={closeModal}
@@ -735,8 +744,7 @@ export default function ProductsPage() {
                   {isSaving ? t('lit.saving') : t('common.save')}
                 </button>
               </div>
-            </form>
-          </div>
+          </form>
         </div>
       )}
 

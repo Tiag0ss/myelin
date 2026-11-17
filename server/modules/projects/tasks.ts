@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { AuthRequest, authenticateToken } from '../../middleware/auth';
-import { pool } from '../../config/database';
+import { pool, dbProvider } from '../../config/database';
 import { RowDataPacket, ResultSetHeader } from '../../config/database';
 import { createNotification } from '../notifications/notifications';
 import { prepareCustomFieldData } from '../../utils/customFields';
@@ -22,6 +22,13 @@ import {
   resolveProjectRepoCredentials,
   listCommitsForTask,
 } from '../../utils/gitRemote';
+import { normalizeApplicationIds } from '../../utils/taskApplications';
+import {
+  ensureTaskApplications,
+  listTaskApplicationIds,
+  resolveApplicationIdForVersion,
+  syncTaskApplicationsForSave,
+} from '../../utils/taskApplicationsDb';
 
 
 const parseOptionalHourlyRate = (value: unknown): number | null => {
@@ -179,14 +186,40 @@ const syncTaskPrimaryAssignee = async (
   );
 };
 
+/**
+ * Keep ApplicationVersionTasks in sync with Tasks.ReleaseVersionId without wiping
+ * changelog links on other applications (a task may appear in multiple apps' versions).
+ * Within the same application, replace other version links with the primary one.
+ */
 const syncTaskReleaseVersionLink = async (
   taskId: number,
   releaseVersionId: number | null
 ): Promise<void> => {
-  await pool.execute('DELETE FROM ApplicationVersionTasks WHERE TaskId = ?', [taskId]);
-
   if (!releaseVersionId) {
     return;
+  }
+
+  if (dbProvider === 'mssql') {
+    await pool.execute(
+      `DELETE avt
+       FROM ApplicationVersionTasks avt
+       INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+       INNER JOIN ApplicationVersions target ON target.Id = ?
+       WHERE avt.TaskId = ?
+         AND av.ApplicationId = target.ApplicationId
+         AND avt.VersionId <> ?`,
+      [releaseVersionId, taskId, releaseVersionId]
+    );
+  } else {
+    await pool.execute(
+      `DELETE avt FROM ApplicationVersionTasks avt
+       INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+       INNER JOIN ApplicationVersions target ON target.Id = ?
+       WHERE avt.TaskId = ?
+         AND av.ApplicationId = target.ApplicationId
+         AND avt.VersionId <> ?`,
+      [releaseVersionId, taskId, releaseVersionId]
+    );
   }
 
   await pool.execute(
@@ -197,6 +230,11 @@ const syncTaskReleaseVersionLink = async (
      )`,
     [releaseVersionId, taskId, releaseVersionId, taskId]
   );
+
+  const versionAppId = await resolveApplicationIdForVersion(releaseVersionId);
+  if (versionAppId) {
+    await ensureTaskApplications(taskId, [versionAppId]);
+  }
 };
 
 // Convert Jira description payloads (plain text, JSON string, or Atlassian Document Format) to HTML for RichTextEditor
@@ -1137,7 +1175,7 @@ router.get('/ticket/:ticketId', authenticateToken, async (req: AuthRequest, res:
 router.post('/', authenticateToken, validateRequest(createTaskSchema), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { projectId, taskName, description, status, priority, taskType, assignedTo, dueDate, dueDateMandatory, unscheduledWork, estimatedHours, hourlyRate, storyPoints, parentTaskId, displayOrder, plannedStartDate, plannedEndDate, dependsOnTaskId, ticketId, customerId, jiraIssueKey, gitHubIssueNumber, giteaIssueNumber, applicationId, releaseVersionId, synapseVaultId, synapseNoteId, synapseMarkerId, synapseNoteUrl, customFields } = req.body;
+    const { projectId, taskName, description, status, priority, taskType, assignedTo, dueDate, dueDateMandatory, unscheduledWork, estimatedHours, hourlyRate, storyPoints, parentTaskId, displayOrder, plannedStartDate, plannedEndDate, dependsOnTaskId, ticketId, customerId, jiraIssueKey, gitHubIssueNumber, giteaIssueNumber, applicationId, applicationIds, releaseVersionId, synapseVaultId, synapseNoteId, synapseMarkerId, synapseNoteUrl, customFields } = req.body;
 
     if (!taskName || !projectId) {
       return res.status(400).json({ 
@@ -1228,6 +1266,14 @@ router.post('/', authenticateToken, validateRequest(createTaskSchema), async (re
     const normalizedReleaseVersionId = releaseVersionId === undefined || releaseVersionId === null || releaseVersionId === ''
       ? null
       : Number(releaseVersionId);
+    const versionApplicationId = await resolveApplicationIdForVersion(normalizedReleaseVersionId);
+    const normalizedApplicationId = versionApplicationId
+      || (applicationId === undefined || applicationId === null || applicationId === ''
+        ? null
+        : Number(applicationId));
+    const selectedApplicationIds = applicationIds !== undefined
+      ? normalizeApplicationIds(applicationIds)
+      : normalizeApplicationIds(normalizedApplicationId ? [normalizedApplicationId] : []);
     const finalStoryPointsForInsert =
       (normalizedStoryPoints === null || normalizedStoryPoints === 0) && normalizedEstimatedHours !== null
         ? normalizedEstimatedHours
@@ -1275,7 +1321,7 @@ router.post('/', authenticateToken, validateRequest(createTaskSchema), async (re
         jiraIssueKey || null,
         normalizedGitHubIssueNumber,
         normalizedGiteaIssueNumber,
-        applicationId || null,
+        normalizedApplicationId,
         normalizedReleaseVersionId,
         normalizedSynapseVaultId,
         normalizedSynapseNoteId,
@@ -1289,6 +1335,11 @@ router.post('/', authenticateToken, validateRequest(createTaskSchema), async (re
     if (normalizedReleaseVersionId) {
       await syncTaskReleaseVersionLink(result.insertId, normalizedReleaseVersionId);
     }
+
+    await syncTaskApplicationsForSave(result.insertId, {
+      selectedIds: selectedApplicationIds,
+      primaryApplicationId: normalizedApplicationId,
+    });
 
     // If this task has a parent, recalculate parent's estimated hours
     if (parentTaskId) {
@@ -1434,7 +1485,7 @@ router.put('/:id', authenticateToken, validateRequest(updateTaskBodySchema), asy
   try {
     const userId = req.user?.userId;
     const taskId = req.params.id;
-    const { taskName, description, status, priority, taskType, assignedTo, dueDate, dueDateMandatory, unscheduledWork, estimatedHours, hourlyRate, storyPoints, parentTaskId, displayOrder, plannedStartDate, plannedEndDate, dependsOnTaskId, jiraIssueKey, gitHubIssueNumber, giteaIssueNumber, applicationId, releaseVersionId, customerId, synapseVaultId, synapseNoteId, synapseMarkerId, synapseNoteUrl, clearSynapseLink, syncAllocationHeaderDates, customFields } = req.body;
+    const { taskName, description, status, priority, taskType, assignedTo, dueDate, dueDateMandatory, unscheduledWork, estimatedHours, hourlyRate, storyPoints, parentTaskId, displayOrder, plannedStartDate, plannedEndDate, dependsOnTaskId, jiraIssueKey, gitHubIssueNumber, giteaIssueNumber, applicationId, applicationIds, releaseVersionId, customerId, synapseVaultId, synapseNoteId, synapseMarkerId, synapseNoteUrl, clearSynapseLink, syncAllocationHeaderDates, customFields } = req.body;
 
     // Verify user has access to this task's project through organization membership and has CanManageTasks permission
     const [access] = await pool.execute<RowDataPacket[]>(
@@ -1614,12 +1665,24 @@ router.put('/:id', authenticateToken, validateRequest(updateTaskBodySchema), asy
     const finalGiteaIssueNumber = giteaIssueNumber !== undefined
       ? (giteaIssueNumber === null || giteaIssueNumber === '' ? null : Number(giteaIssueNumber))
       : (oldTask.GiteaIssueNumber ?? null);
-    const finalApplicationId = applicationId !== undefined
-      ? (applicationId === null || applicationId === '' ? null : Number(applicationId))
-      : (oldTask.ApplicationId ?? null);
     const finalReleaseVersionId = releaseVersionId !== undefined
       ? (releaseVersionId === null || releaseVersionId === '' ? null : Number(releaseVersionId))
       : (oldTask.ReleaseVersionId ?? null);
+    const versionApplicationId = await resolveApplicationIdForVersion(finalReleaseVersionId);
+    let finalApplicationId = applicationId !== undefined
+      ? (applicationId === null || applicationId === '' ? null : Number(applicationId))
+      : (oldTask.ApplicationId ?? null);
+    if (versionApplicationId) {
+      finalApplicationId = versionApplicationId;
+    } else if (releaseVersionId !== undefined && !finalReleaseVersionId) {
+      // Cleared primary version: keep ApplicationId only if still among related apps
+      const relatedIds = applicationIds !== undefined
+        ? normalizeApplicationIds(applicationIds)
+        : await listTaskApplicationIds(Number(taskId));
+      if (finalApplicationId && !relatedIds.includes(Number(finalApplicationId))) {
+        finalApplicationId = relatedIds[0] ?? null;
+      }
+    }
 
     const oldStatusId = Number(oldTask.Status);
     const newStatusId = Number(finalStatus);
@@ -1708,6 +1771,20 @@ router.put('/:id', authenticateToken, validateRequest(updateTaskBodySchema), asy
 
     if (releaseVersionId !== undefined && hasEffectiveChange(oldTask.ReleaseVersionId, finalReleaseVersionId)) {
       await syncTaskReleaseVersionLink(Number(taskId), finalReleaseVersionId);
+    }
+
+    if (
+      applicationIds !== undefined ||
+      applicationId !== undefined ||
+      releaseVersionId !== undefined
+    ) {
+      const selectedIds = applicationIds !== undefined
+        ? normalizeApplicationIds(applicationIds)
+        : await listTaskApplicationIds(Number(taskId));
+      await syncTaskApplicationsForSave(Number(taskId), {
+        selectedIds,
+        primaryApplicationId: finalApplicationId,
+      });
     }
 
     // Optional Synapse link: clear all refs, or one-way backfill (COALESCE never clears via null)
@@ -2095,6 +2172,185 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
   } catch (error) {
     logger.error('Error fetching task by id:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch task' });
+  }
+});
+
+// GET /:id/applications – related applications for this task
+router.get('/:id/applications', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const taskId = Number(req.params.id);
+
+    if (!Number.isFinite(taskId) || taskId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid task id' });
+    }
+
+    const [accessRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT t.Id, t.ApplicationId
+       FROM Tasks t
+       INNER JOIN Projects p ON p.Id = t.ProjectId
+       INNER JOIN OrganizationMembers om ON om.OrganizationId = p.OrganizationId AND om.UserId = ?
+       WHERE t.Id = ?
+       LIMIT 1`,
+      [userId, taskId]
+    );
+
+    if (!accessRows.length) {
+      return res.status(404).json({ success: false, message: 'Task not found or access denied' });
+    }
+
+    let applicationIds = await listTaskApplicationIds(taskId);
+    if (applicationIds.length === 0) {
+      // Legacy tasks: seed from primary ApplicationId + version links
+      await syncTaskApplicationsForSave(taskId, {
+        selectedIds: [],
+        primaryApplicationId: accessRows[0].ApplicationId ?? null,
+      });
+      applicationIds = await listTaskApplicationIds(taskId);
+    }
+
+    if (applicationIds.length === 0) {
+      return res.json({ success: true, applications: [], applicationIds: [] });
+    }
+
+    const placeholders = applicationIds.map(() => '?').join(',');
+    const [apps] = await pool.execute<RowDataPacket[]>(
+      `SELECT a.Id, a.Name, a.Description, a.RepositoryUrl, a.OrganizationId
+       FROM Applications a
+       WHERE a.Id IN (${placeholders}) AND a.IsActive = 1
+       ORDER BY a.Name ASC`,
+      applicationIds
+    );
+
+    return res.json({
+      success: true,
+      applications: apps,
+      applicationIds: apps.map((row) => Number(row.Id)),
+    });
+  } catch (error) {
+    logger.error('Error fetching task applications:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch task applications' });
+  }
+});
+
+// GET /:id/release-associations – application versions + product versions linked to this task
+router.get('/:id/release-associations', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const taskId = Number(req.params.id);
+
+    if (!Number.isFinite(taskId) || taskId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid task id' });
+    }
+
+    const [accessRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT t.Id, t.ApplicationId, t.ReleaseVersionId
+       FROM Tasks t
+       INNER JOIN Projects p ON p.Id = t.ProjectId
+       INNER JOIN OrganizationMembers om ON om.OrganizationId = p.OrganizationId AND om.UserId = ?
+       WHERE t.Id = ?
+       LIMIT 1`,
+      [userId, taskId]
+    );
+
+    if (!accessRows.length) {
+      return res.status(404).json({ success: false, message: 'Task not found or access denied' });
+    }
+
+    const primaryVersionId =
+      accessRows[0].ReleaseVersionId != null ? Number(accessRows[0].ReleaseVersionId) : null;
+
+    const [versionRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT av.Id as VersionId, av.VersionNumber, av.VersionName, av.Status,
+              a.Id as ApplicationId, a.Name as ApplicationName,
+              CASE WHEN t.ReleaseVersionId = av.Id THEN 1 ELSE 0 END as IsPrimary
+       FROM ApplicationVersionTasks avt
+       INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+       INNER JOIN Applications a ON a.Id = av.ApplicationId AND a.IsActive = 1
+       INNER JOIN Tasks t ON t.Id = avt.TaskId
+       WHERE avt.TaskId = ?
+       ORDER BY IsPrimary DESC, a.Name ASC, av.CreatedAt DESC, av.Id DESC`,
+      [taskId]
+    );
+
+    // Ensure primary ReleaseVersionId appears even if AVT row is missing
+    let applicationVersions = versionRows.slice();
+    if (primaryVersionId && Number.isFinite(primaryVersionId) && primaryVersionId > 0) {
+      const hasPrimary = applicationVersions.some((row) => Number(row.VersionId) === primaryVersionId);
+      if (!hasPrimary) {
+        const [primaryRows] = await pool.execute<RowDataPacket[]>(
+          `SELECT av.Id as VersionId, av.VersionNumber, av.VersionName, av.Status,
+                  a.Id as ApplicationId, a.Name as ApplicationName,
+                  1 as IsPrimary
+           FROM ApplicationVersions av
+           INNER JOIN Applications a ON a.Id = av.ApplicationId AND a.IsActive = 1
+           WHERE av.Id = ?
+           LIMIT 1`,
+          [primaryVersionId]
+        );
+        if (primaryRows.length) {
+          applicationVersions = [primaryRows[0], ...applicationVersions];
+        }
+      }
+    }
+
+    const versionIds = Array.from(
+      new Set(
+        applicationVersions
+          .map((row) => Number(row.VersionId))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      )
+    );
+
+    let productVersions: RowDataPacket[] = [];
+    if (versionIds.length > 0) {
+      const placeholders = versionIds.map(() => '?').join(',');
+      const [productRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT DISTINCT pv.Id as ProductVersionId, pv.VersionNumber, pv.VersionName, pv.Status,
+                p.Id as ProductId, p.Name as ProductName,
+                av.Id as ApplicationVersionId, av.VersionNumber as ApplicationVersionNumber,
+                a.Id as ApplicationId, a.Name as ApplicationName
+         FROM ProductVersionApplicationVersions pvav
+         INNER JOIN ProductVersions pv ON pv.Id = pvav.ProductVersionId
+         INNER JOIN Products p ON p.Id = pv.ProductId
+         INNER JOIN ApplicationVersions av ON av.Id = pvav.ApplicationVersionId
+         INNER JOIN Applications a ON a.Id = av.ApplicationId AND a.IsActive = 1
+         WHERE pvav.ApplicationVersionId IN (${placeholders})
+         ORDER BY p.Name ASC, pv.CreatedAt DESC, pv.Id DESC`,
+        versionIds
+      );
+      productVersions = productRows;
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        applicationVersions: applicationVersions.map((row) => ({
+          VersionId: Number(row.VersionId),
+          VersionNumber: String(row.VersionNumber || ''),
+          VersionName: row.VersionName ?? null,
+          Status: String(row.Status || ''),
+          ApplicationId: Number(row.ApplicationId),
+          ApplicationName: String(row.ApplicationName || ''),
+          IsPrimary: Number(row.IsPrimary) === 1,
+        })),
+        productVersions: productVersions.map((row) => ({
+          ProductVersionId: Number(row.ProductVersionId),
+          VersionNumber: String(row.VersionNumber || ''),
+          VersionName: row.VersionName ?? null,
+          Status: String(row.Status || ''),
+          ProductId: Number(row.ProductId),
+          ProductName: String(row.ProductName || ''),
+          ApplicationVersionId: Number(row.ApplicationVersionId),
+          ApplicationVersionNumber: String(row.ApplicationVersionNumber || ''),
+          ApplicationId: Number(row.ApplicationId),
+          ApplicationName: String(row.ApplicationName || ''),
+        })),
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching task release associations:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch release associations' });
   }
 });
 

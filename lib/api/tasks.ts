@@ -80,6 +80,7 @@ export interface Task {
   SynapseMarkerId?: string | null;
   SynapseNoteUrl?: string | null;
   ApplicationId?: number | null;
+  ApplicationIds?: number[];
   ApplicationName?: string | null;
   ReleaseVersionId?: number | null;
   ReleaseVersionNumber?: string | null;
@@ -123,6 +124,7 @@ export interface CreateTaskData {
   gitHubIssueNumber?: number | null;
   giteaIssueNumber?: number | null;
   applicationId?: number | null;
+  applicationIds?: number[];
   releaseVersionId?: number | null;
   synapseVaultId?: number | null;
   synapseNoteId?: number | null;
@@ -135,7 +137,7 @@ export interface CreateTaskData {
 export type UpdateTaskData = Omit<Partial<CreateTaskData>,
   'assignedTo' | 'estimatedHours' | 'storyPoints' | 'parentTaskId' | 'dependsOnTaskId' |
   'customerId' | 'gitHubIssueNumber' | 'giteaIssueNumber' | 'applicationId' |
-  'releaseVersionId' | 'jiraIssueKey'
+  'applicationIds' | 'releaseVersionId' | 'jiraIssueKey'
 > & {
   assignedTo?: number | null;
   estimatedHours?: number | null;
@@ -146,6 +148,7 @@ export type UpdateTaskData = Omit<Partial<CreateTaskData>,
   gitHubIssueNumber?: number | null;
   giteaIssueNumber?: number | null;
   applicationId?: number | null;
+  applicationIds?: number[];
   releaseVersionId?: number | null;
   jiraIssueKey?: string | null;
 };

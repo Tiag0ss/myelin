@@ -1,0 +1,25 @@
+{
+  "TableName": "TaskApplications",
+  "PrimaryKeyFields": "TaskId,ApplicationId",
+  "Fields": [
+    {
+      "FieldName": "TaskId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Tasks.Id"
+    },
+    {
+      "FieldName": "ApplicationId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Applications.Id"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "When this relationship was created"
+    }
+  ]
+}

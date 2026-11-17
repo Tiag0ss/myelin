@@ -6,6 +6,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
 import { useEffect, useRef, useState } from 'react';
 import ConfirmAlertModal from '@/components/ConfirmAlertModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +46,8 @@ export default function RichTextEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [alertModal, setAlertModal] = useState<{ title: string; message: string } | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('https://');
   const { token } = useAuth();
 
   const editor = useEditor({
@@ -56,6 +59,16 @@ export default function RichTextEditor({
       }),
       Placeholder.configure({
         placeholder: placeholderResolved,
+      }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class: 'text-blue-600 dark:text-blue-400 underline underline-offset-2',
+          rel: 'noopener noreferrer',
+          target: '_blank',
+        },
       }),
       Image.configure({
         inline: true,
@@ -146,6 +159,28 @@ export default function RichTextEditor({
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const openLinkDialog = () => {
+    if (!editor) return;
+    const existing = editor.getAttributes('link').href;
+    setLinkUrl(typeof existing === 'string' && existing ? existing : 'https://');
+    setLinkDialogOpen(true);
+  };
+
+  const applyLink = () => {
+    if (!editor) return;
+    const trimmed = linkUrl.trim();
+    if (!trimmed || trimmed === 'https://' || trimmed === 'http://') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      setLinkDialogOpen(false);
+      return;
+    }
+    const href = /^(https?:\/\/|mailto:|tel:)/i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed.replace(/^\/\//, '')}`;
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+    setLinkDialogOpen(false);
   };
 
   if (!editor) {
@@ -299,6 +334,33 @@ export default function RichTextEditor({
           </button>
           
           <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+
+          <button
+            type="button"
+            onClick={openLinkDialog}
+            className={`px-2 py-1 rounded text-sm transition-colors ${
+              editor.isActive('link')
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+            title={t('lit.insertLink') || 'Insert link'}
+            aria-label={t('lit.insertLink') || 'Insert link'}
+          >
+            🔗
+          </button>
+          {editor.isActive('link') && (
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().extendMarkRange('link').unsetLink().run()}
+              className="px-2 py-1 rounded text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              title={t('lit.removeLink') || 'Remove link'}
+              aria-label={t('lit.removeLink') || 'Remove link'}
+            >
+              ⛓︎
+            </button>
+          )}
+          
+          <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
           
           <button
             type="button"
@@ -349,6 +411,57 @@ export default function RichTextEditor({
         message={alertModal?.message || ''}
         onClose={() => setAlertModal(null)}
       />
+
+      {linkDialogOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rich-text-link-title"
+            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-gray-800"
+          >
+            <h3
+              id="rich-text-link-title"
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+            >
+              {t('lit.insertLink') || 'Insert link'}
+            </h3>
+            <label className="mt-3 block text-sm text-gray-700 dark:text-gray-300">
+              {t('lit.url') || 'URL'}
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyLink();
+                  }
+                }}
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                placeholder="https://"
+                autoFocus
+              />
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkDialogOpen(false)}
+                className="rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={applyLink}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                {t('common.save') || 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

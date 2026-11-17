@@ -16,6 +16,8 @@ export interface StatusValue {
   IsCancelled?: number;
   IsInProgress?: number;
   HideFromPlanningAndStatistics?: number;
+  IsReleased?: number;
+  TaskStatusId?: number | null;
   CreatedAt: string;
 }
 
@@ -31,6 +33,8 @@ export interface CreateStatusValueData {
   isCancelled?: boolean;
   isInProgress?: boolean;
   hideFromPlanningAndStatistics?: boolean;
+  isReleased?: boolean;
+  taskStatusId?: number | null;
 }
 
 export const statusValuesApi = {
@@ -179,6 +183,81 @@ export const statusValuesApi = {
     
     if (!response.ok) {
       throw new Error(data.message || 'Failed to delete task status');
+    }
+
+    return data;
+  },
+
+  // Application Version Status Values
+  async getApplicationVersionStatuses(orgId: number, token: string): Promise<{ success: boolean; statuses: StatusValue[] }> {
+    const response = await fetch(`${API_BASE_URL}/api/status-values/application-version/${orgId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch application version statuses');
+    }
+
+    return data;
+  },
+
+  async createApplicationVersionStatus(statusData: CreateStatusValueData, token: string): Promise<{ success: boolean; statusId: number }> {
+    const response = await fetch(`${API_BASE_URL}/api/status-values/application-version`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(statusData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to create application version status');
+    }
+
+    return data;
+  },
+
+  async updateApplicationVersionStatus(id: number, statusData: Partial<CreateStatusValueData>, token: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/status-values/application-version/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(statusData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update application version status');
+    }
+
+    return data;
+  },
+
+  async deleteApplicationVersionStatus(id: number, token: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/status-values/application-version/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete application version status');
     }
 
     return data;

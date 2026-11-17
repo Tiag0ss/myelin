@@ -1,0 +1,83 @@
+{
+  "TableName": "ApplicationVersionStatusValues",
+  "PrimaryKeyFields": "Id",
+  "Fields": [
+    {
+      "FieldName": "Id",
+      "DataType": "int",
+      "NotNullable": true,
+      "AutoIncrement": true,
+      "Comment": "Primary key - unique application version status value identifier"
+    },
+    {
+      "FieldName": "OrganizationId",
+      "DataType": "int",
+      "NotNullable": true,
+      "Comment": "Foreign key - reference to Organizations.Id for organization-specific statuses"
+    },
+    {
+      "FieldName": "StatusName",
+      "DataType": "varchar(100)",
+      "NotNullable": true,
+      "Comment": "Display name of the application version status"
+    },
+    {
+      "FieldName": "ColorCode",
+      "DataType": "varchar(7)",
+      "NotNullable": false,
+      "Comment": "Color code in hex format (e.g., #FF5733) for UI display"
+    },
+    {
+      "FieldName": "SortOrder",
+      "DataType": "int",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Order for displaying status values in lists"
+    },
+    {
+      "FieldName": "IsDefault",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Whether this is the default status for new application versions"
+    },
+    {
+      "FieldName": "IsReleased",
+      "DataType": "tinyint(1)",
+      "NotNullable": true,
+      "DefaultValue": "0",
+      "Comment": "Whether this status indicates the version has been released"
+    },
+    {
+      "FieldName": "TaskStatusId",
+      "DataType": "int",
+      "NotNullable": false,
+      "Comment": "Optional foreign key - reference to TaskStatusValues.Id for linked task workflow"
+    },
+    {
+      "FieldName": "CreatedAt",
+      "DataType": "timestamp",
+      "NotNullable": true,
+      "DefaultValue": "CURRENT_TIMESTAMP",
+      "Comment": "Date and time when status value was created"
+    }
+  ],
+  "Relationships": [
+    {
+      "Name": "ApplicationVersionStatusOrganization",
+      "Description": "Application version status belongs to an Organization",
+      "FromField": "OrganizationId",
+      "ToTable": "Organizations",
+      "ToField": "Id",
+      "Type": "ManyToOne"
+    },
+    {
+      "Name": "ApplicationVersionStatusTaskStatus",
+      "Description": "Optional link to a task status in the same organization",
+      "FromField": "TaskStatusId",
+      "ToTable": "TaskStatusValues",
+      "ToField": "Id",
+      "Type": "ManyToOne"
+    }
+  ]
+}

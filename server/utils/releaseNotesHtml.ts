@@ -2,6 +2,8 @@ export type InlineRun = {
   text: string;
   bold?: boolean;
   italic?: boolean;
+  /** Absolute or app-relative URL when this run came from an <a href>. */
+  href?: string;
 };
 
 export type PatchTextLine = { text: string; bullet: boolean };
@@ -51,13 +53,25 @@ function tokenizeHtml(html: string): HtmlToken[] {
   return tokens;
 }
 
-function pushRun(runs: InlineRun[], text: string, bold: boolean, italic: boolean): void {
+function pushRun(
+  runs: InlineRun[],
+  text: string,
+  bold: boolean,
+  italic: boolean,
+  href?: string | null
+): void {
   const cleaned = text.replace(/\s+/g, ' ');
   if (!cleaned) return;
   // Preserve intentional leading/trailing spaces when merging mid-sentence.
   const value = cleaned;
+  const link = href ? String(href).trim() : '';
   const last = runs[runs.length - 1];
-  if (last && Boolean(last.bold) === bold && Boolean(last.italic) === italic) {
+  if (
+    last &&
+    Boolean(last.bold) === bold &&
+    Boolean(last.italic) === italic &&
+    String(last.href || '') === link
+  ) {
     last.text = `${last.text}${value}`.replace(/\s+/g, ' ');
     return;
   }
@@ -65,6 +79,7 @@ function pushRun(runs: InlineRun[], text: string, bold: boolean, italic: boolean
     text: value,
     ...(bold ? { bold: true } : {}),
     ...(italic ? { italic: true } : {}),
+    ...(link ? { href: link } : {}),
   });
 }
 
@@ -82,6 +97,7 @@ function cloneRuns(runs: InlineRun[]): InlineRun[] {
       text: run.text,
       ...(run.bold ? { bold: true } : {}),
       ...(run.italic ? { italic: true } : {}),
+      ...(run.href ? { href: run.href } : {}),
     }))
     .filter((run) => run.text.trim().length > 0 || run.text.includes(' '));
 }
@@ -96,6 +112,7 @@ export function parsePatchBlocks(html: string): PatchBlock[] {
 
   let bold = false;
   let italic = false;
+  let linkHref: string | null = null;
   let headingLevel: number | null = null;
   let inParagraph = false;
   let inListItem = false;
@@ -137,14 +154,14 @@ export function parsePatchBlocks(html: string): PatchBlock[] {
       if (!decoded.trim() && !inParagraph && !inListItem && headingLevel == null) {
         continue;
       }
-      pushRun(currentRuns, decoded, bold, italic);
+      pushRun(currentRuns, decoded, bold, italic, linkHref);
       continue;
     }
 
     const { name, closing, selfClosing, attrs } = token;
 
     if (name === 'br') {
-      pushRun(currentRuns, ' ', bold, italic);
+      pushRun(currentRuns, ' ', bold, italic, linkHref);
       continue;
     }
 
@@ -167,6 +184,16 @@ export function parsePatchBlocks(html: string): PatchBlock[] {
     }
     if (name === 'em' || name === 'i') {
       italic = !closing;
+      continue;
+    }
+
+    if (name === 'a') {
+      if (!closing) {
+        const href = attrValue(attrs, 'href');
+        linkHref = href || null;
+      } else {
+        linkHref = null;
+      }
       continue;
     }
 
@@ -224,7 +251,7 @@ export function parsePatchBlocks(html: string): PatchBlock[] {
       continue;
     }
 
-    // Ignore other tags (span, a, u, …); their text content is still captured.
+    // Ignore other tags (span, u, …); their text content is still captured.
     if (selfClosing) continue;
   }
 

@@ -14,7 +14,143 @@ export type PatchNoteTaskInput = {
   Id: number;
   TaskName: string;
   ProjectName?: string | null;
+  /** Ticket / board key for display, e.g. PROJ-12 or #41 */
+  issueKey?: string | null;
+  /** When set, the key is rendered as an HTML link in generated patch notes */
+  issueUrl?: string | null;
 };
+
+export type PatchNoteIssueRefInput = {
+  issueKey?: string | null;
+  issueUrl?: string | null;
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  TicketId?: string | number | null;
+  TicketNumber?: string | number | null;
+  /** Jira issue/site base (used for JiraIssueKey). */
+  JiraUrl?: string | null;
+  /** Jira board/projects base (preferred for ExternalIssueId). */
+  JiraProjectsUrl?: string | null;
+  GitHubIssueNumber?: string | number | null;
+  GiteaIssueNumber?: string | number | null;
+};
+
+export type PatchNoteIssueRef = {
+  key: string;
+  url: string | null;
+  source: 'jira' | 'external' | 'ticket' | 'github' | 'gitea' | 'direct';
+};
+
+function normalizeJiraBase(raw: string | null | undefined): string {
+  return String(raw || '')
+    .trim()
+    .replace(/\/$/, '');
+}
+
+function jiraBrowseUrl(base: string, key: string): string | null {
+  if (!base || !key) return null;
+  return `${base}/browse/${encodeURIComponent(key)}`;
+}
+
+/**
+ * Resolve display key + matching URL together so board/Jira keys never link to
+ * internal tickets (and vice versa).
+ * Priority: JiraIssueKey → ExternalIssueId → internal ticket → GitHub → Gitea →
+ * precomputed issueKey/issueUrl (last, so stale mismatched pairs cannot win).
+ */
+export function resolvePatchNoteIssueRef(input: PatchNoteIssueRefInput): PatchNoteIssueRef | null {
+  const jiraKey = String(input.JiraIssueKey || '').trim();
+  if (jiraKey) {
+    const base = normalizeJiraBase(input.JiraUrl) || normalizeJiraBase(input.JiraProjectsUrl);
+    return {
+      key: jiraKey,
+      url: jiraBrowseUrl(base, jiraKey),
+      source: 'jira',
+    };
+  }
+
+  const externalKey = String(input.ExternalIssueId || '').trim();
+  if (externalKey) {
+    const base =
+      normalizeJiraBase(input.JiraProjectsUrl) || normalizeJiraBase(input.JiraUrl);
+    return {
+      key: externalKey,
+      url: jiraBrowseUrl(base, externalKey),
+      source: 'external',
+    };
+  }
+
+  const ticketId = Number(input.TicketId);
+  const ticketNumber = input.TicketNumber;
+  const hasTicketNumber =
+    ticketNumber !== null && ticketNumber !== undefined && String(ticketNumber).trim() !== '';
+  if ((Number.isFinite(ticketId) && ticketId > 0) || hasTicketNumber) {
+    const n = hasTicketNumber
+      ? String(ticketNumber).trim().replace(/^#/, '')
+      : String(ticketId);
+    return {
+      key: `#${n}`,
+      url: Number.isFinite(ticketId) && ticketId > 0 ? `/tickets/${ticketId}` : null,
+      source: 'ticket',
+    };
+  }
+
+  const gh = input.GitHubIssueNumber;
+  if (gh !== null && gh !== undefined && String(gh).trim() !== '') {
+    const n = String(gh).trim().replace(/^#/, '');
+    if (n) return { key: `#${n}`, url: null, source: 'github' };
+  }
+
+  const gitea = input.GiteaIssueNumber;
+  if (gitea !== null && gitea !== undefined && String(gitea).trim() !== '') {
+    const n = String(gitea).trim().replace(/^#/, '');
+    if (n) return { key: `#${n}`, url: null, source: 'gitea' };
+  }
+
+  const directKey = String(input.issueKey || '').trim();
+  const directUrl = String(input.issueUrl || '').trim();
+  if (directKey) {
+    return { key: directKey, url: directUrl || null, source: 'direct' };
+  }
+
+  return null;
+}
+
+/** Prefer Jira → External → #TicketNumber → #GitHub/#Gitea. */
+export function resolvePatchNoteIssueKey(input: PatchNoteIssueRefInput): string | null {
+  return resolvePatchNoteIssueRef(input)?.key ?? null;
+}
+
+/** `[KEY] Task name` when a key exists; otherwise the task name alone. */
+export function formatPatchNoteTaskLabel(task: PatchNoteTaskInput & PatchNoteIssueRefInput): string {
+  const name = String(task.TaskName || '').trim();
+  const key = resolvePatchNoteIssueKey(task);
+  if (key && name) return `[${key}] ${name}`;
+  if (key) return `[${key}]`;
+  return name;
+}
+
+/** Safe HTML for one task bullet (linked key when a matching issue URL is present). */
+export function formatPatchNoteTaskBulletHtml(task: PatchNoteTaskInput & PatchNoteIssueRefInput): string {
+  const name = escapeHtml(String(task.TaskName || '').trim());
+  const ref = resolvePatchNoteIssueRef(task);
+  const key = ref?.key ?? null;
+  const rawUrl = String(ref?.url || '').trim();
+  const href = rawUrl && /^(https?:\/\/|mailto:|tel:|\/)/i.test(rawUrl) ? rawUrl : '';
+
+  if (key && href) {
+    const keyHtml = `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">[${escapeHtml(key)}]</a>`;
+    return name ? `${keyHtml} ${name}` : keyHtml;
+  }
+  if (key && name) return `[${escapeHtml(key)}] ${name}`;
+  if (key) return `[${escapeHtml(key)}]`;
+  return name;
+}
+
+/** URL matching the same source as {@link resolvePatchNoteIssueKey}. */
+export function resolvePatchNoteIssueUrl(input: PatchNoteIssueRefInput): string | null {
+  return resolvePatchNoteIssueRef(input)?.url ?? null;
+}
 
 export type PatchNoteCommitInput = {
   sha: string;
@@ -51,6 +187,12 @@ function bulletList(items: string[]): string {
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
 }
 
+/** Items are already escaped / trusted HTML fragments (e.g. with &lt;a&gt;). */
+function bulletListHtml(items: string[]): string {
+  if (items.length === 0) return '';
+  return `<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+}
+
 /**
  * Build patch notes HTML from selected tasks and commits.
  * - One bullet per selected task (grouped by project when multiple projects).
@@ -74,8 +216,8 @@ export function buildPatchNotesFromTasksAndCommits(options: {
   for (const task of tasks) {
     const proj = String(task.ProjectName || '').trim() || generalLabel;
     if (!byProject[proj]) byProject[proj] = [];
-    const name = String(task.TaskName || '').trim();
-    if (name) byProject[proj].push(name);
+    const label = formatPatchNoteTaskBulletHtml(task);
+    if (label) byProject[proj].push(label);
   }
 
   const orphanSubjects: string[] = [];
@@ -104,11 +246,11 @@ export function buildPatchNotesFromTasksAndCommits(options: {
 
   if (hasTasks) {
     if (projects.length === 1) {
-      html += bulletList(byProject[projects[0]]);
+      html += bulletListHtml(byProject[projects[0]]);
     } else {
       for (const proj of projects.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))) {
         html += `<p><strong>${escapeHtml(proj)}</strong></p>`;
-        html += bulletList(byProject[proj]);
+        html += bulletListHtml(byProject[proj]);
       }
     }
   }
@@ -189,4 +331,67 @@ export function normalizeCommitSha(raw: unknown): string | null {
     .toLowerCase();
   if (!/^[0-9a-f]{7,64}$/.test(sha)) return null;
   return sha;
+}
+
+function stripTags(value: string): string {
+  return String(value || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+/**
+ * Re-apply issue/ticket `<a href>` links from original HTML onto improved HTML
+ * when the model dropped anchors but kept the same visible link text (e.g. `[PROJ-12]`).
+ */
+export function reapplyPatchNoteIssueLinks(originalHtml: string, improvedHtml: string): string {
+  const original = String(originalHtml || '');
+  let improved = String(improvedHtml || '');
+  if (!original || !improved) return improved;
+
+  const linkRe = /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi;
+  const links: Array<{ href: string; text: string }> = [];
+  let match: RegExpExecArray | null;
+  while ((match = linkRe.exec(original)) !== null) {
+    const href = String(match[2] || '').trim();
+    const text = stripTags(match[3] || '');
+    if (!href || !text) continue;
+    if (!/^(https?:\/\/|mailto:|tel:|\/)/i.test(href)) continue;
+    links.push({ href, text });
+  }
+
+  if (links.length === 0) return improved;
+
+  const presentHrefs = new Set<string>();
+  const presentHrefRe = /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1/gi;
+  while ((match = presentHrefRe.exec(improved)) !== null) {
+    presentHrefs.add(String(match[2] || '').trim().toLowerCase());
+  }
+
+  for (const link of links) {
+    if (presentHrefs.has(link.href.toLowerCase())) continue;
+
+    const escapedText = link.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const textRe = new RegExp(escapedText, 'i');
+    const found = textRe.exec(improved);
+    if (!found || found.index == null) continue;
+
+    // Skip if this match sits inside an existing <a>...</a>
+    const before = improved.slice(0, found.index);
+    const lastOpen = before.toLowerCase().lastIndexOf('<a');
+    const lastClose = before.toLowerCase().lastIndexOf('</a>');
+    if (lastOpen > lastClose) continue;
+
+    const anchor = `<a href="${escapeHtml(link.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.text)}</a>`;
+    improved =
+      improved.slice(0, found.index) + anchor + improved.slice(found.index + found[0].length);
+    presentHrefs.add(link.href.toLowerCase());
+  }
+
+  return improved;
 }

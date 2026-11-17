@@ -162,7 +162,7 @@ export default function TaskDetailModal({
     }
   }, [organizationId, token]);
   const { permissions } = usePermissions();
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'comments' | 'attachments' | 'hours' | 'checklist' | 'commits'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'comments' | 'attachments' | 'hours' | 'checklist' | 'commits' | 'applications'>('details');
   
   // Form data for editing
   const [formData, setFormData] = useState<CreateTaskData>(() => ({
@@ -195,6 +195,10 @@ export default function TaskDetailModal({
     gitHubIssueNumber: task?.GitHubIssueNumber ?? initialCreateData?.gitHubIssueNumber ?? null,
     giteaIssueNumber: task?.GiteaIssueNumber ?? initialCreateData?.giteaIssueNumber ?? null,
     applicationId: task?.ApplicationId ?? initialCreateData?.applicationId ?? null,
+    applicationIds:
+      task?.ApplicationIds
+      || initialCreateData?.applicationIds
+      || (task?.ApplicationId ? [task.ApplicationId] : (initialCreateData?.applicationId ? [initialCreateData.applicationId] : [])),
     releaseVersionId: task?.ReleaseVersionId ?? initialCreateData?.releaseVersionId ?? null,
   }));
   const [customFields, setCustomFields] = useState<CustomFieldValues>(() => extractCustomFieldValues(task));
@@ -234,7 +238,39 @@ export default function TaskDetailModal({
   
   // Application & Version state
   const [applications, setApplications] = useState<{ Id: number; Name: string }[]>([]);
-  const [applicationVersions, setApplicationVersions] = useState<{ Id: number; VersionNumber: string; VersionName: string | null; Status: string }[]>([]);
+  const [applicationVersions, setApplicationVersions] = useState<{
+    Id: number;
+    VersionNumber: string;
+    VersionName: string | null;
+    Status: string;
+    ApplicationId: number;
+    ApplicationName: string;
+  }[]>([]);
+  const [releaseAssociations, setReleaseAssociations] = useState<{
+    applicationVersions: {
+      VersionId: number;
+      VersionNumber: string;
+      VersionName: string | null;
+      Status: string;
+      ApplicationId: number;
+      ApplicationName: string;
+      IsPrimary: boolean;
+    }[];
+    productVersions: {
+      ProductVersionId: number;
+      VersionNumber: string;
+      VersionName: string | null;
+      Status: string;
+      ProductId: number;
+      ProductName: string;
+      ApplicationVersionId: number;
+      ApplicationVersionNumber: string;
+      ApplicationId: number;
+      ApplicationName: string;
+    }[];
+  }>({ applicationVersions: [], productVersions: [] });
+  const [releaseAssociationsLoading, setReleaseAssociationsLoading] = useState(false);
+  const [releaseAssociationsError, setReleaseAssociationsError] = useState('');
 
   // UI states
   const [error, setError] = useState('');
@@ -561,6 +597,89 @@ export default function TaskDetailModal({
     }
   };
 
+  const loadRelatedApplicationVersions = async (
+    appIds: number[],
+    appList?: { Id: number; Name: string }[]
+  ) => {
+    const uniqueIds = Array.from(new Set(appIds.map(Number).filter((id) => Number.isFinite(id) && id > 0)));
+    if (uniqueIds.length === 0) {
+      setApplicationVersions([]);
+      return;
+    }
+    const lookup = appList || applications;
+    try {
+      const results = await Promise.all(
+        uniqueIds.map(async (appId) => {
+          const appName = lookup.find((a) => a.Id === appId)?.Name || `App #${appId}`;
+          const res = await fetch(`${getApiUrl()}/api/applications/${appId}/versions`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            return [] as {
+              Id: number;
+              VersionNumber: string;
+              VersionName: string | null;
+              Status: string;
+              ApplicationId: number;
+              ApplicationName: string;
+            }[];
+          }
+          const data = await res.json();
+          return (data.versions || []).map((v: {
+            Id: number;
+            VersionNumber: string;
+            VersionName: string | null;
+            Status: string;
+          }) => ({
+            Id: v.Id,
+            VersionNumber: v.VersionNumber,
+            VersionName: v.VersionName,
+            Status: v.Status,
+            ApplicationId: appId,
+            ApplicationName: appName,
+          }));
+        })
+      );
+      setApplicationVersions(results.flat());
+    } catch {
+      setApplicationVersions([]);
+    }
+  };
+
+  const loadTaskRelatedApplications = async (appList?: { Id: number; Name: string }[]) => {
+    if (!task?.Id || !token) {
+      const seed =
+        (initialCreateData?.applicationIds && initialCreateData.applicationIds.length > 0)
+          ? initialCreateData.applicationIds
+          : (initialCreateData?.applicationId
+            ? [initialCreateData.applicationId]
+            : (task?.ApplicationId ? [task.ApplicationId] : []));
+      if (seed.length) {
+        setFormData((prev) => ({ ...prev, applicationIds: seed }));
+        void loadRelatedApplicationVersions(seed, appList);
+      }
+      return;
+    }
+    try {
+      const res = await fetch(`${getApiUrl()}/api/tasks/${task.Id}/applications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ids: number[] = Array.isArray(data.applicationIds)
+        ? data.applicationIds.map(Number).filter((id: number) => Number.isFinite(id) && id > 0)
+        : [];
+      setFormData((prev) => ({
+        ...prev,
+        applicationIds: ids,
+        applicationId: prev.applicationId || ids[0] || null,
+      }));
+      void loadRelatedApplicationVersions(ids, appList);
+    } catch {
+      // silently skip
+    }
+  };
+
   const loadApplications = async () => {
     try {
       const res = await fetch(`${getApiUrl()}/api/applications?organizationId=${organizationId}`, {
@@ -568,29 +687,12 @@ export default function TaskDetailModal({
       });
       if (res.ok) {
         const data = await res.json();
-        setApplications(data.applications || []);
-        // Pre-load versions if task already has an application
-        const existingAppId = task?.ApplicationId;
-        if (existingAppId) {
-          loadApplicationVersions(existingAppId);
-        }
+        const list = data.applications || [];
+        setApplications(list);
+        await loadTaskRelatedApplications(list);
       }
     } catch {
       // silently skip
-    }
-  };
-
-  const loadApplicationVersions = async (appId: number) => {
-    try {
-      const res = await fetch(`${getApiUrl()}/api/applications/${appId}/versions`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setApplicationVersions(data.versions || []);
-      }
-    } catch {
-      setApplicationVersions([]);
     }
   };
 
@@ -840,6 +942,7 @@ export default function TaskDetailModal({
           gitHubIssueNumber: normalizedGitHubIssueNumber ?? null,
           giteaIssueNumber: normalizedGiteaIssueNumber ?? null,
           applicationId: formData.applicationId ?? null,
+          applicationIds: formData.applicationIds || [],
           releaseVersionId: formData.releaseVersionId ?? null,
           customFields,
         };
@@ -883,6 +986,7 @@ export default function TaskDetailModal({
           gitHubIssueNumber: normalizedGitHubIssueNumber ?? null,
           giteaIssueNumber: normalizedGiteaIssueNumber ?? null,
           applicationId: formData.applicationId ?? null,
+          applicationIds: formData.applicationIds || [],
           releaseVersionId: formData.releaseVersionId ?? null,
           customFields,
         };
@@ -1056,13 +1160,6 @@ export default function TaskDetailModal({
       setErrorWithToast(err.message || t('lit.failedToCreateProjectAndMoveTask'));
       setIsMovingTask(false);
     }
-  };
-
-  const handleRemoveAssignee = (userId: number) => {
-    const updated = taskAssignees.filter((a) => a.UserId !== userId);
-    setTaskAssignees(updated);
-    // Keep legacy single assignedTo in sync
-    setFormData({ ...formData, assignedTo: updated.length > 0 ? updated[0].UserId : undefined });
   };
 
   const handleAssigneesMultiSelectChange = (values: (string | number)[]) => {
@@ -1730,7 +1827,46 @@ export default function TaskDetailModal({
     setCommitsProvider(null);
     setCommitsFetched(false);
     setCommitsLoading(false);
+    setReleaseAssociations({ applicationVersions: [], productVersions: [] });
+    setReleaseAssociationsError('');
+    setReleaseAssociationsLoading(false);
   }, [task?.Id]);
+
+  useEffect(() => {
+    if (activeTab !== 'applications' || !task?.Id || !token) return;
+    let cancelled = false;
+    const loadReleaseAssociations = async () => {
+      setReleaseAssociationsLoading(true);
+      setReleaseAssociationsError('');
+      try {
+        const res = await fetch(`${getApiUrl()}/api/tasks/${task.Id}/release-associations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || t('lit.failedToLoadReleaseAssociations'));
+        }
+        if (!cancelled) {
+          setReleaseAssociations({
+            applicationVersions: data.data?.applicationVersions || [],
+            productVersions: data.data?.productVersions || [],
+          });
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : t('lit.failedToLoadReleaseAssociations');
+          setReleaseAssociationsError(message);
+          setReleaseAssociations({ applicationVersions: [], productVersions: [] });
+        }
+      } finally {
+        if (!cancelled) setReleaseAssociationsLoading(false);
+      }
+    };
+    void loadReleaseAssociations();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, task?.Id, token]);
 
   const loadTaskCommits = async () => {
     if (!task?.Id || !token) return;
@@ -1776,11 +1912,13 @@ export default function TaskDetailModal({
     ? taskCustomerName
     : (taskCustomerName || projectCustomerName);
   const baseTabs = (task?.Id
-    ? (['details', 'checklist', 'hours', 'comments', 'attachments', 'history', 'commits'] as const)
-    : (['details', 'hours'] as const)
+    ? (['details', 'checklist', 'hours', 'comments', 'attachments', 'history', 'applications', 'commits'] as const)
+    : (['details', 'hours', 'applications'] as const)
   );
   const hasAssociatedApplication = Boolean(
-    Number(formData.applicationId) > 0 || Number(task?.ApplicationId) > 0
+    Number(formData.applicationId) > 0
+    || Number(task?.ApplicationId) > 0
+    || (formData.applicationIds || []).some((id) => Number(id) > 0)
   );
   const visibleTabs = baseTabs.filter((tab) => {
     if (!isTabVisible(tab)) return false;
@@ -1825,6 +1963,7 @@ export default function TaskDetailModal({
       tab === 'hours' ? t('lit.plan') :
       tab === 'comments' ? `Comments (${taskComments.length})` :
       tab === 'attachments' ? `Files (${taskAttachments.length})` :
+      tab === 'applications' ? t('lit.applications') :
       tab === 'commits' ? t('lit.commits') :
       t('lit.history'),
   }));
@@ -2961,36 +3100,10 @@ export default function TaskDetailModal({
                   />
                 </div>
 
-                {/* Multi-assignee dropdown and chips (unchanged) */}
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('lit.assignees')}
                 </label>
-                {/* Assigned users chips */}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {taskAssignees.map((a) => (
-                    <span
-                      key={a.UserId}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-full text-sm"
-                    >
-                      👤 {a.Username}{a.FirstName && a.LastName ? ` (${a.FirstName} ${a.LastName})` : ''}
-                      {permissions?.canAssignTasks && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAssignee(a.UserId)}
-                          className="ml-1 text-blue-600 dark:text-blue-400 hover:text-red-500 dark:hover:text-red-400 font-bold leading-none"
-                          title={t('lit.removeAssignee')}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                  {taskAssignees.length === 0 && (
-                    <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('lit.noAssignees')}</span>
-                  )}
-                </div>
-                {/* Searchable multi-assignee selector */}
-                {permissions?.canAssignTasks && (
+                {permissions?.canAssignTasks ? (
                   <SearchableMultiSelect
                     values={taskAssignees.map((assignee) => assignee.UserId)}
                     onChange={handleAssigneesMultiSelectChange}
@@ -3001,6 +3114,19 @@ export default function TaskDetailModal({
                     placeholder={t('lit.selectAssignees')}
                     dropdownMode="portal"
                   />
+                ) : taskAssignees.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {taskAssignees.map((a) => (
+                      <span
+                        key={a.UserId}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-full text-sm"
+                      >
+                        👤 {a.Username}{a.FirstName && a.LastName ? ` (${a.FirstName} ${a.LastName})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t('lit.noAssignees')}</span>
                 )}
                 </>
                 )}
@@ -3115,67 +3241,6 @@ export default function TaskDetailModal({
                 </div>
                 )}
               </div>
-
-              {/* Application */}
-              {showSectionLabels && ((applications.length > 0 && isFieldVisible('application')) || (formData.applicationId && applicationVersions.length > 0 && isFieldVisible('releaseVersion'))) && (
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
-                  {t('lit.releaseTracking')}
-                </h3>
-              )}
-              {applications.length > 0 && isFieldVisible('application') && (
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t('lit.applicationOptional')}
-                    </label>
-                    {typeof formData.applicationId === 'number' && formData.applicationId > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/applications/${formData.applicationId}`)}
-                        className="inline-flex h-7 items-center gap-1 rounded-md bg-indigo-100 px-2 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
-                        title={t('lit.openApplicationPage')}
-                      >
-                        {t('lit.openApplication')}
-                        <span aria-hidden>↗</span>
-                      </button>
-                    )}
-                  </div>
-                  <SearchableSelectComponent
-                    value={formData.applicationId?.toString() ?? ''}
-                    onChange={(val) => {
-                      const appId = val ? parseInt(val) : null;
-                      setFormData({ ...formData, applicationId: appId, releaseVersionId: null });
-                      if (appId) loadApplicationVersions(appId);
-                      else setApplicationVersions([]);
-                    }}
-                    options={applications.map(a => ({ value: a.Id, label: a.Name }))}
-                    placeholder={t('lit.selectApplication')}
-                    emptyText={t('lit.noApplication')}
-                  />
-                </div>
-              )}
-
-              {/* Release Version — only when an application is selected */}
-              {formData.applicationId && applicationVersions.length > 0 && isFieldVisible('releaseVersion') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('lit.releaseVersionOptional')}
-                  </label>
-                  <SearchableSelectComponent
-                    value={formData.releaseVersionId?.toString() ?? ''}
-                    onChange={(val) => setFormData({ ...formData, releaseVersionId: val ? parseInt(val) : null })}
-                    options={applicationVersions.map(v => ({
-                      value: v.Id,
-                      label: `${v.VersionNumber}${v.VersionName ? ` – ${v.VersionName}` : ''} (${v.Status})`
-                    }))}
-                    placeholder={t('lit.selectVersion')}
-                    emptyText={t('lit.notYetReleased')}
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {t('lit.theVersionInWhichThisTaskWasOrWillBeReleased')}
-                  </p>
-                </div>
-              )}
 
               {isFieldVisible('customFields') && (
                 <CustomFieldsFormSection
@@ -4033,6 +4098,147 @@ export default function TaskDetailModal({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Applications Tab */}
+          {activeTab === 'applications' && (
+            <div className="space-y-6">
+              {showSectionLabels && (
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5">
+                  {t('lit.relatedApplications')}
+                </h3>
+              )}
+
+              {applications.length > 0 && isFieldVisible('application') && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('lit.relatedApplications')}
+                    </label>
+                    {(formData.applicationIds || []).length === 1 && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/applications/${formData.applicationIds![0]}`)}
+                        className="inline-flex h-7 items-center gap-1 rounded-md bg-indigo-100 px-2 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                        title={t('lit.openApplicationPage')}
+                      >
+                        {t('lit.openApplication')}
+                        <span aria-hidden>↗</span>
+                      </button>
+                    )}
+                  </div>
+                  <SearchableMultiSelect
+                    values={formData.applicationIds || []}
+                    onChange={(values) => {
+                      const nextIds = (values as number[]).map(Number).filter((id) => Number.isFinite(id) && id > 0);
+                      const selectedVersion = applicationVersions.find(
+                        (v) => v.Id === formData.releaseVersionId
+                      );
+                      const keepVersion = selectedVersion && nextIds.includes(selectedVersion.ApplicationId)
+                        ? formData.releaseVersionId
+                        : null;
+                      const nextPrimary = keepVersion
+                        ? (selectedVersion?.ApplicationId ?? null)
+                        : (formData.applicationId && nextIds.includes(formData.applicationId)
+                          ? formData.applicationId
+                          : (nextIds[0] ?? null));
+                      setFormData({
+                        ...formData,
+                        applicationIds: nextIds,
+                        applicationId: nextPrimary,
+                        releaseVersionId: keepVersion,
+                      });
+                      void loadRelatedApplicationVersions(nextIds, applications);
+                    }}
+                    options={applications.map((a) => ({ value: a.Id, label: a.Name }))}
+                    placeholder={t('lit.selectApplications2')}
+                  />
+                </div>
+              )}
+
+              {(formData.applicationIds || []).length > 0 && isFieldVisible('releaseVersion') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('lit.releaseVersionOptional')}
+                  </label>
+                  <SearchableSelectComponent
+                    value={formData.releaseVersionId?.toString() ?? ''}
+                    onChange={(val) => {
+                      const versionId = val ? parseInt(val) : null;
+                      const selected = applicationVersions.find((v) => v.Id === versionId);
+                      setFormData({
+                        ...formData,
+                        releaseVersionId: versionId,
+                        applicationId: selected?.ApplicationId ?? formData.applicationId ?? null,
+                        applicationIds: selected?.ApplicationId && !(formData.applicationIds || []).includes(selected.ApplicationId)
+                          ? [...(formData.applicationIds || []), selected.ApplicationId]
+                          : (formData.applicationIds || []),
+                      });
+                    }}
+                    options={applicationVersions.map((v) => ({
+                      value: v.Id,
+                      label: `${v.VersionNumber}${v.VersionName ? ` – ${v.VersionName}` : ''} (${v.Status})`,
+                      group: v.ApplicationName,
+                    }))}
+                    placeholder={t('lit.selectVersion')}
+                    emptyText={t('lit.notYetReleased')}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {t('lit.theVersionInWhichThisTaskWasOrWillBeReleased')}
+                  </p>
+                </div>
+              )}
+
+              {applications.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('lit.noApplication')}
+                </p>
+              )}
+
+              {task?.Id && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-3">
+                    {t('lit.linkedProductVersions')} (
+                    {releaseAssociations.productVersions.length})
+                  </h3>
+                  {releaseAssociationsLoading ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">{t('lit.loading')}</p>
+                  ) : releaseAssociationsError ? (
+                    <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded text-sm">
+                      {releaseAssociationsError}
+                    </div>
+                  ) : releaseAssociations.productVersions.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('lit.noLinkedProductVersions')}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {releaseAssociations.productVersions.map((pv) => (
+                        <button
+                          key={`${pv.ProductVersionId}-${pv.ApplicationVersionId}`}
+                          type="button"
+                          onClick={() => router.push(`/products/${pv.ProductId}`)}
+                          className="w-full flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                              {pv.ProductName} · v{pv.VersionNumber}
+                              {pv.VersionName ? ` — ${pv.VersionName}` : ''}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {pv.ApplicationName} v{pv.ApplicationVersionNumber}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+                            {pv.Status}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

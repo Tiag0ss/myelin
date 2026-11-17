@@ -75,14 +75,15 @@ Sidebar/tabs persist in `?tab=` so refresh keeps the panel:
 |-------|--------|
 | Version number | e.g. `1.4.0` |
 | Version name | Optional marketing name |
-| Status | Org/process status |
+| Status | Org-configurable application version statuses (Organization → Status & priorities); optional linked **task status** |
 | Release date | Used in PDFs and sorting |
 | Patch notes | Rich text **with images** |
 | Customer-specific | Optional flag |
 
-3. **Link tasks** to the version. The picker defaults to tasks from projects associated with the application; search can expand to **all organization tasks**. A task linked to one version leaves the available pool for other versions; `ReleaseVersionId` is set on the task.
-4. Build **patch notes** from selected tasks and/or commits when offered (structured HTML: headings, lists, images). Commit pickers can show **membership branches** for each commit.
-5. Unlink or reassign according to your release process before freezing notes.
+3. **Link tasks** to the version. The picker defaults to tasks from projects associated with the application; search can expand to **all organization tasks**. Optionally show tasks already linked to versions. Rows show ticket/board id (opens in a new tab when linked) and current app/version. If a task belongs to another application, confirm before reassigning. `ReleaseVersionId` / `ApplicationId` are set on save.
+4. Build **patch notes** from selected tasks and/or commits when offered (structured HTML: headings, lists, images). Task bullets use `[KEY] Task name` when a ticket/board key exists. Commit pickers can show **membership branches** and optionally commits already linked to other versions.
+5. When Administration enables task-status sync, changing a version status asks whether to update linked tasks to the mapped task status.
+6. Unlink or reassign according to your release process before freezing notes.
 
 ![Release detail](../media/docs-releases-detail.png)
 

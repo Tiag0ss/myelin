@@ -28,6 +28,8 @@ export type VersionPickerCommit = {
 
 const PAGE_SIZE = 25;
 
+type LinkedCommitInfo = { sha: string; versionId: number; versionNumber: string | null };
+
 type VersionCommitsPickerModalProps = {
   isOpen: boolean;
   applicationId: string | number;
@@ -35,6 +37,7 @@ type VersionCommitsPickerModalProps = {
   hasRepositoryUrl: boolean;
   initiallySelected: VersionPickerCommit[];
   selectedTaskIds?: number[];
+  excludeVersionId?: number | null;
   onClose: () => void;
   onConfirm: (commits: VersionPickerCommit[]) => void;
 };
@@ -46,6 +49,7 @@ export default function VersionCommitsPickerModal({
   hasRepositoryUrl,
   initiallySelected,
   selectedTaskIds = [],
+  excludeVersionId = null,
   onClose,
   onConfirm,
 }: VersionCommitsPickerModalProps) {
@@ -60,6 +64,8 @@ export default function VersionCommitsPickerModal({
   const [branches, setBranches] = useState<RemoteBranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [draftBySha, setDraftBySha] = useState<Map<string, VersionPickerCommit>>(new Map());
+  const [includeLinked, setIncludeLinked] = useState(false);
+  const [linkedBySha, setLinkedBySha] = useState<Map<string, LinkedCommitInfo>>(new Map());
 
   const selectedCount = draftBySha.size;
 
@@ -79,8 +85,14 @@ export default function VersionCommitsPickerModal({
   );
 
   const filteredPool = useMemo(() => {
-    return pool.filter((commit) => commitMatchesTextSearch(commit, search, branchFilter));
-  }, [pool, search, branchFilter]);
+    return pool.filter((commit) => {
+      if (!commitMatchesTextSearch(commit, search, branchFilter)) return false;
+      if (includeLinked) return true;
+      const key = commit.sha.toLowerCase();
+      if (draftBySha.has(key)) return true;
+      return !linkedBySha.has(key);
+    });
+  }, [pool, search, branchFilter, includeLinked, linkedBySha, draftBySha]);
 
   const loadBranches = async (): Promise<RemoteBranchOption[]> => {
     if (!token || !applicationId || !hasRepositoryUrl) {
@@ -173,11 +185,33 @@ export default function VersionCommitsPickerModal({
     setDraftBySha(initial);
     setSearch('');
     setBranchFilter(ALL_BRANCHES_VALUE);
+    setIncludeLinked(false);
     setPool([]);
     setPage(1);
     setHasMore(false);
     setError('');
     void (async () => {
+      try {
+        const params = new URLSearchParams();
+        if (excludeVersionId && excludeVersionId > 0) {
+          params.set('excludeVersion', String(excludeVersionId));
+        }
+        const res = await fetch(
+          `${getApiUrl()}/api/applications/${applicationId}/version-commits/linked?${params.toString()}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await res.json().catch(() => ({}));
+        const next = new Map<string, LinkedCommitInfo>();
+        if (res.ok && Array.isArray(data.linked)) {
+          for (const row of data.linked as LinkedCommitInfo[]) {
+            const sha = String(row.sha || '').toLowerCase();
+            if (sha) next.set(sha, { ...row, sha });
+          }
+        }
+        setLinkedBySha(next);
+      } catch {
+        setLinkedBySha(new Map());
+      }
       await loadBranches();
       await loadPage(1, false, ALL_BRANCHES_VALUE);
     })();
@@ -306,6 +340,16 @@ export default function VersionCommitsPickerModal({
                 />
               </svg>
             </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeLinked}
+                onChange={(e) => setIncludeLinked(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              {t('lit.showCommitsAlreadyLinkedToVersions') ||
+                'Show commits already linked to versions'}
+            </label>
           </div>
         )}
 
@@ -352,6 +396,7 @@ export default function VersionCommitsPickerModal({
                   {filteredPool.map((commit) => {
                     const checked = draftBySha.has(commit.sha.toLowerCase());
                     const branchLabels = commitPickerBranchLabels(commit, branchFilter);
+                    const linked = linkedBySha.get(commit.sha.toLowerCase());
                     return (
                       <label
                         key={commit.sha}
@@ -377,6 +422,14 @@ export default function VersionCommitsPickerModal({
                                 {branchName}
                               </span>
                             ))}
+                            {linked?.versionNumber ? (
+                              <span
+                                className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                title={t('lit.linkedToVersion') || 'Linked to version'}
+                              >
+                                v{linked.versionNumber}
+                              </span>
+                            ) : null}
                             {commit.author && (
                               <span className="truncate text-xs text-gray-400 dark:text-gray-500">
                                 {commit.author}

@@ -66,6 +66,39 @@ function pdfFontForRun(run: InlineRun): string {
   return 'Helvetica';
 }
 
+export function resolvePdfLinkHref(href: string | undefined, linkBaseUrl?: string): string | null {
+  const raw = String(href || '').trim();
+  if (!raw) return null;
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(raw)) return raw;
+  if (raw.startsWith('/')) {
+    const base = String(linkBaseUrl || '').replace(/\/$/, '');
+    if (!base) return null;
+    return `${base}${raw}`;
+  }
+  return null;
+}
+
+/** Prefer env, then request Host / X-Forwarded-* headers. */
+export function resolvePdfLinkBaseUrl(req?: {
+  protocol?: string;
+  get?: (name: string) => string | undefined;
+}): string {
+  const fromEnv = String(
+    process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+  ).replace(/\/$/, '');
+  if (fromEnv) return fromEnv;
+  if (!req?.get) return '';
+  const host = req.get('x-forwarded-host') || req.get('host') || '';
+  if (!host) return '';
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+  return `${proto}://${host}`.replace(/\/$/, '');
+}
+
+/**
+ * Render inline runs on one flowing line (wrapping as needed) without PDFKit's
+ * `continued`+`underline` combo, which forces a line break and breaks links.
+ * Clickable areas use `doc.link()` rectangles instead.
+ */
 function renderInlineRuns(
   doc: PDFKit.PDFDocument,
   runs: InlineRun[],
@@ -75,6 +108,8 @@ function renderInlineRuns(
     size: number;
     color: string;
     indent?: number;
+    linkBaseUrl?: string;
+    linkColor?: string;
   }
 ): void {
   const usable = runs
@@ -82,21 +117,123 @@ function renderInlineRuns(
     .filter((run) => run.text.length > 0);
   if (usable.length === 0) return;
 
-  const x = options.x + (options.indent || 0);
-  const width = Math.max(40, options.width - (options.indent || 0));
+  const left = options.x + (options.indent || 0);
+  const maxWidth = Math.max(40, options.width - (options.indent || 0));
+  const right = left + maxWidth;
+  const linkColor = options.linkColor || '#1d4ed8';
+  const lineHeight = options.size * 1.35;
 
-  usable.forEach((run, index) => {
-    const isLast = index === usable.length - 1;
-    doc
-      .fillColor(options.color)
-      .fontSize(options.size)
-      .font(pdfFontForRun(run))
-      .text(run.text, index === 0 ? x : undefined, index === 0 ? doc.y : undefined, {
-        width,
-        lineGap: 2,
-        continued: !isLast,
-      });
-  });
+  let cursorX = left;
+  let cursorY = doc.y;
+
+  const ensureSpace = (needed: number) => {
+    if (cursorX > left && cursorX + needed > right) {
+      cursorX = left;
+      cursorY += lineHeight;
+    }
+  };
+
+  const drawChunk = (
+    text: string,
+    font: string,
+    color: string,
+    link: string | null
+  ) => {
+    if (!text) return;
+    doc.font(font).fontSize(options.size);
+    const width = doc.widthOfString(text);
+    ensureSpace(Math.min(width, maxWidth));
+
+    // Soft-wrap long unbroken chunks.
+    if (width > maxWidth && cursorX === left) {
+      let remaining = text;
+      while (remaining.length > 0) {
+        doc.font(font).fontSize(options.size);
+        let low = 1;
+        let high = remaining.length;
+        let fit = 1;
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          const slice = remaining.slice(0, mid);
+          if (doc.widthOfString(slice) <= maxWidth) {
+            fit = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+        const chunk = remaining.slice(0, fit);
+        remaining = remaining.slice(fit);
+        const chunkWidth = doc.widthOfString(chunk);
+        doc.fillColor(color).text(chunk, cursorX, cursorY, {
+          lineBreak: false,
+          continued: false,
+        });
+        if (link) {
+          doc
+            .save()
+            .strokeColor(color)
+            .lineWidth(0.6)
+            .moveTo(cursorX, cursorY + options.size + 0.5)
+            .lineTo(cursorX + chunkWidth, cursorY + options.size + 0.5)
+            .stroke()
+            .restore();
+          doc.link(cursorX, cursorY, chunkWidth, options.size + 2, link);
+        }
+        if (remaining.length > 0) {
+          cursorX = left;
+          cursorY += lineHeight;
+        } else {
+          cursorX += chunkWidth;
+        }
+      }
+      return;
+    }
+
+    doc.fillColor(color).text(text, cursorX, cursorY, {
+      lineBreak: false,
+      continued: false,
+    });
+    if (link) {
+      doc
+        .save()
+        .strokeColor(color)
+        .lineWidth(0.6)
+        .moveTo(cursorX, cursorY + options.size + 0.5)
+        .lineTo(cursorX + width, cursorY + options.size + 0.5)
+        .stroke()
+        .restore();
+      doc.link(cursorX, cursorY, width, options.size + 2, link);
+    }
+    cursorX += width;
+  };
+
+  for (const run of usable) {
+    const font = pdfFontForRun(run);
+    const link = resolvePdfLinkHref(run.href, options.linkBaseUrl);
+    const color = link ? linkColor : options.color;
+    doc.font(font).fontSize(options.size);
+
+    // Prefer wrapping on spaces so key + description stay readable.
+    const parts = run.text.split(/(\s+)/);
+    for (const part of parts) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) {
+        const spaceWidth = doc.widthOfString(part);
+        if (cursorX > left && cursorX + spaceWidth > right) {
+          cursorX = left;
+          cursorY += lineHeight;
+          continue; // drop leading spaces after wrap
+        }
+        drawChunk(part, font, color, null);
+        continue;
+      }
+      drawChunk(part, font, color, link);
+    }
+  }
+
+  doc.x = left;
+  doc.y = cursorY + lineHeight;
 }
 
 async function renderImageBlock(
@@ -156,8 +293,15 @@ export async function renderPatchNotesToPdf(
     width: number;
     darkGray: string;
     midGray: string;
+    /** Used to resolve app-relative links like `/tickets/12` in the PDF. */
+    linkBaseUrl?: string;
   }
 ): Promise<void> {
+  const linkBaseUrl =
+    options.linkBaseUrl ||
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    '';
   if (!patchHtml) {
     doc
       .fillColor(options.midGray)
@@ -225,6 +369,7 @@ export async function renderPatchNotesToPdf(
           width: options.width,
           size,
           color: options.darkGray,
+          linkBaseUrl,
         }
       );
       doc.moveDown(0.2);
@@ -243,6 +388,7 @@ export async function renderPatchNotesToPdf(
         width: options.width,
         size: asLabel ? options.textSize + 1 : options.textSize,
         color: options.darkGray,
+        linkBaseUrl,
       });
       isFirstBlock = false;
       continue;
@@ -262,6 +408,7 @@ export async function renderPatchNotesToPdf(
           size: options.textSize,
           color: options.darkGray,
           indent,
+          linkBaseUrl,
         }
       );
       isFirstBlock = false;

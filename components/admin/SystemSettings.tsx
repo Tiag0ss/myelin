@@ -113,6 +113,7 @@ interface SystemSettings {
   internalTicketsEnabled?: string;
   memosEnabled?: string;
   expensesEnabled?: string;
+  syncTaskStatusOnVersionChange?: string;
   autoApproveExpenses?: string;
   autoApproveTimeEntries?: string;
   autoApproveVacations?: string;
@@ -208,6 +209,7 @@ export default function SystemSettings({
     internalTicketsEnabled: 'true',
     memosEnabled: 'true',
     expensesEnabled: 'false',
+    syncTaskStatusOnVersionChange: 'false',
     autoApproveExpenses: 'false',
     autoApproveTimeEntries: 'false',
     autoApproveVacations: 'false',
@@ -296,6 +298,7 @@ export default function SystemSettings({
           internalTicketsEnabled: data.settings.internalTicketsEnabled || 'true',
           memosEnabled: data.settings.memosEnabled || 'true',
           expensesEnabled: data.settings.expensesEnabled || 'false',
+          syncTaskStatusOnVersionChange: data.settings.syncTaskStatusOnVersionChange || 'false',
           autoApproveExpenses: data.settings.autoApproveExpenses || 'false',
           autoApproveTimeEntries: data.settings.autoApproveTimeEntries || 'false',
           autoApproveVacations: data.settings.autoApproveVacations || 'false',
@@ -1025,6 +1028,27 @@ export default function SystemSettings({
                     </div>
                     <div className="text-[11px] text-[var(--pm-muted)]">
                       {t('lit.showsHidesTheProjectExpensesModuleGloballyWhenDisabledExpenseApisReturn403')}
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex cursor-pointer items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={settings.syncTaskStatusOnVersionChange === 'true'}
+                    onChange={(e) =>
+                      handleChange('syncTaskStatusOnVersionChange', e.target.checked ? 'true' : 'false')
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-[var(--pm-accent)] focus:ring-[var(--pm-accent)]"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-[var(--pm-text)]">
+                      {t('lit.syncTaskStatusOnVersionChange') ||
+                        'Update task statuses when application version status changes'}
+                    </div>
+                    <div className="text-[11px] text-[var(--pm-muted)]">
+                      {t('lit.syncTaskStatusOnVersionChangeHelp') ||
+                        'When enabled, changing an application version status may update linked tasks to the mapped task status after confirmation.'}
                     </div>
                   </div>
                 </label>

@@ -16,7 +16,6 @@ import {
   getProductsAiAvailability,
   improveProductPatchNotes,
   listProductVersions,
-  rebuildProductVersionPatchNotes,
   setProductApplications,
   setProductCustomers,
   setProductVersionApplicationVersions,
@@ -351,37 +350,6 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     } finally {
       setIsSavingVersion(false);
     }
-  };
-
-  const handleRebuildPatchNotes = () => {
-    if (!selectedVersion || !token) return;
-    setConfirmModal({
-      title: t('lit.rebuildFromApplications'),
-      message: t('lit.rebuildPatchNotesConfirm'),
-      confirmLabel: t('lit.rebuildFromApplications'),
-      confirmVariant: 'primary',
-      onConfirm: async () => {
-        try {
-          const result = await rebuildProductVersionPatchNotes(token, id, selectedVersion.Id);
-          setSelectedVersion({
-            ...selectedVersion,
-            PatchNotes: result.patchNotes || selectedVersion.PatchNotes,
-          });
-          setVersionForm((prev) => ({
-            ...prev,
-            PatchNotes: result.patchNotes || prev.PatchNotes,
-          }));
-          setConfirmModal(null);
-          showToast({ type: 'success', message: t('lit.patchNotesRebuilt') });
-        } catch (err) {
-          showToast({
-            type: 'error',
-            message: err instanceof Error ? err.message : t('lit.failedToRebuildPatchNotes'),
-          });
-          setConfirmModal(null);
-        }
-      },
-    });
   };
 
   const runImproveWithAi = async (splitByChangeType: boolean) => {
@@ -905,13 +873,6 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                           </button>
                           <button
                             type="button"
-                            onClick={handleRebuildPatchNotes}
-                            className={pageActionButtonClass.secondary}
-                          >
-                            {t('lit.rebuildFromApplications')}
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => void handleDownloadPdf(selectedVersion)}
                             className={pageActionButtonClass.secondary}
                           >
@@ -1014,20 +975,27 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
       </main>
 
       {showVersionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSaveVersion} className="p-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingVersion ? t('lit.editVersion') : t('lit.newVersion')}
-                </h2>
-                <button type="button" onClick={() => setShowVersionModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <form
+            onSubmit={handleSaveVersion}
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingVersion ? t('lit.editVersion') : t('lit.newVersion')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowVersionModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1">{t('lit.versionNumber')} *</label>
@@ -1173,24 +1141,25 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 />
               </div>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowVersionModal(false)}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingVersion}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
-                >
-                  {isSavingVersion ? t('lit.saving') : t('common.save')}
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
+              <button
+                type="button"
+                onClick={() => setShowVersionModal(false)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingVersion}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg"
+              >
+                {isSavingVersion ? t('lit.saving') : t('common.save')}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

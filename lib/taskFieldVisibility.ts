@@ -7,7 +7,8 @@ export type TaskFormTabKey =
   | 'attachments'
   | 'hours'
   | 'checklist'
-  | 'commits';
+  | 'commits'
+  | 'applications';
 
 export type TaskFormFieldKey =
   | 'taskName'
@@ -74,6 +75,7 @@ export const TASK_FORM_TAB_CATALOG: TaskFieldVisibilityCatalogItem[] = [
   { key: 'attachments', label: 'Attachments', locked: false, hint: 'Files attached to the task.' },
   { key: 'hours', label: 'Hours', locked: false, hint: 'Planning, allocations, and time entries.' },
   { key: 'checklist', label: 'Checklist', locked: false, hint: 'Checklist items for the task.' },
+  { key: 'applications', label: 'Applications', locked: false, hint: 'Primary application/version and linked release + product versions.' },
   { key: 'commits', label: 'Commits', locked: false, hint: 'Remote git commits linked to this task (on-demand). Only shown when the task has an application.' },
 ];
 
@@ -112,8 +114,8 @@ export const TASK_FORM_FIELD_CATALOG: TaskFieldVisibilityCatalogItem[] = [
   { key: 'unscheduledWork', label: 'Unscheduled work', locked: false, section: 'Effort & Completion', hint: 'Unscheduled work checkbox.' },
   { key: 'estimatedHours', label: 'Estimated Hours', locked: false, section: 'Effort & Completion', hint: 'Estimated effort input.' },
   { key: 'storyPoints', label: 'Story Points', locked: false, section: 'Effort & Completion', hint: 'Story points input.' },
-  { key: 'application', label: 'Application', locked: false, section: 'Release Tracking', hint: 'Application selector for release tracking.' },
-  { key: 'releaseVersion', label: 'Release Version', locked: false, section: 'Release Tracking', hint: 'Release version selector.' },
+  { key: 'application', label: 'Related applications', locked: false, section: 'Applications', hint: 'Multi-select of related applications (Applications tab).' },
+  { key: 'releaseVersion', label: 'Release Version', locked: false, section: 'Applications', hint: 'Primary release version from related applications (Applications tab).' },
   { key: 'customFields', label: 'Custom fields block', locked: false, section: 'Custom Fields', hint: 'Org-defined custom fields at the bottom of Details.' },
   // Hours tab
   { key: 'parentTask', label: 'Parent Task', locked: false, section: 'Hours — Planning', hint: 'Hours → Planning: parent task selector.' },
