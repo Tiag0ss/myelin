@@ -228,6 +228,16 @@
         "Multi-select controls show selected names as chips; Jira board import status pills stay readable on yellow and other light colors",
         "Sticky footers on application version create/edit modals for easier save actions"
       ]
+    },
+    {
+      "version": "1.3.1",
+      "date": "2026-11-17",
+      "title": "Version search and task-type patch notes",
+      "items": [
+        "Search applications and products by version number or name from the list pages",
+        "Filter the Versions list on application and product detail pages",
+        "Generate and AI-improve patch notes using organization-configured task type names as section groups"
+      ]
     }
   ]
 }
