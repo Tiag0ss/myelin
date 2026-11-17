@@ -1497,6 +1497,7 @@
   "fieldName": "Field Name *",
   "fieldNameIsRequired": "Field name is required",
   "fieldsInsideTheDetailsTab": "Fields inside the Details tab.",
+  "fieldsInsideTheApplicationsTab": "Fields inside the Applications tab",
   "fileError": "File Error",
   "fileSizeExceeds10mbLimit": "File size exceeds 10MB limit",
   "fileSizeMustBeLessThan10mb": "File size must be less than 10MB",

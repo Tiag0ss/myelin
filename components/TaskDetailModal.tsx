@@ -2651,7 +2651,7 @@ export default function TaskDetailModal({
             <PageTabs
               tabs={mainPageTabs}
               activeId={activeTab}
-              onChange={(id) => setActiveTab(id as 'details' | 'history' | 'comments' | 'attachments' | 'hours' | 'checklist' | 'commits')}
+              onChange={(id) => setActiveTab(id as 'details' | 'history' | 'comments' | 'attachments' | 'hours' | 'checklist' | 'commits' | 'applications')}
             />
           </div>
         </div>
@@ -3132,7 +3132,7 @@ export default function TaskDetailModal({
                 )}
               </div>
 
-              {showSectionLabels && (isFieldVisible('dueDate') || isFieldVisible('dueDateMandatory') || isFieldVisible('unscheduledWork') || isFieldVisible('estimatedHours') || isFieldVisible('storyPoints')) && (
+              {showSectionLabels && (isFieldVisible('dueDate') || isFieldVisible('dueDateMandatory') || isFieldVisible('unscheduledWork') || isFieldVisible('estimatedHours') || isFieldVisible('hourlyRate') || isFieldVisible('storyPoints')) && (
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 pt-1">
                 {t('lit.effortCompletion')}
               </h3>
@@ -3201,7 +3201,7 @@ export default function TaskDetailModal({
                 </div>
                 )}
 
-                {showTaskHourlyRate && (
+                {showTaskHourlyRate && isFieldVisible('hourlyRate') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('lit.hourlyRate')}
@@ -4198,7 +4198,7 @@ export default function TaskDetailModal({
                 </p>
               )}
 
-              {task?.Id && (
+              {task?.Id && isFieldVisible('linkedProductVersions') && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-3">
                     {t('lit.linkedProductVersions')} (

@@ -1497,6 +1497,7 @@
   "fieldName": "Nom du champ *",
   "fieldNameIsRequired": "Le nom du champ est obligatoire",
   "fieldsInsideTheDetailsTab": "Champs à l’intérieur de l’onglet Détails.",
+  "fieldsInsideTheApplicationsTab": "Champs de l’onglet Applications",
   "fileError": "Erreur de fichier",
   "fileSizeExceeds10mbLimit": "La taille du fichier dépasse la limite de 10 Mo",
   "fileSizeMustBeLessThan10mb": "La taille du fichier doit être inférieure à 10 Mo",

@@ -18,7 +18,7 @@ interface TaskFormVisibilityEditorProps {
   disabled?: boolean;
 }
 
-type EditorArea = 'tabs' | 'labels' | 'header' | 'details' | 'hours';
+type EditorArea = 'tabs' | 'labels' | 'header' | 'details' | 'applications' | 'hours';
 
 const AREA_META: { id: EditorArea; label: string; description: string }[] = [
   {
@@ -42,6 +42,11 @@ const AREA_META: { id: EditorArea; label: string; description: string }[] = [
     description: t('lit.fieldsInsideTheDetailsTab'),
   },
   {
+    id: 'applications',
+    label: t('lit.applications'),
+    description: t('lit.fieldsInsideTheApplicationsTab'),
+  },
+  {
     id: 'hours',
     label: t('lit.hoursTab'),
     description: t('lit.planningAllocationsAndTimeEntries'),
@@ -51,6 +56,7 @@ const AREA_META: { id: EditorArea; label: string; description: string }[] = [
 function areaForSection(section: string): Exclude<EditorArea, 'tabs'> {
   if (section === 'Section labels') return 'labels';
   if (section === 'Header') return 'header';
+  if (section === 'Applications') return 'applications';
   if (section === t('lit.hours2') || section.startsWith('Hours ')) return 'hours';
   return 'details';
 }
@@ -226,6 +232,7 @@ export default function TaskFormVisibilityEditor({
       labels: { visible: 0, total: 0 },
       header: { visible: 0, total: 0 },
       details: { visible: 0, total: 0 },
+      applications: { visible: 0, total: 0 },
       hours: { visible: 0, total: 0 },
     };
 

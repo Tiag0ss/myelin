@@ -6,7 +6,9 @@ export type TaskFormTabKey =
   | 'comments'
   | 'attachments'
   | 'hours'
-  | 'checklist';
+  | 'checklist'
+  | 'commits'
+  | 'applications';
 
 export type TaskFormFieldKey =
   | 'taskName'
@@ -20,9 +22,11 @@ export type TaskFormFieldKey =
   | 'dueDateMandatory'
   | 'unscheduledWork'
   | 'estimatedHours'
+  | 'hourlyRate'
   | 'storyPoints'
   | 'application'
   | 'releaseVersion'
+  | 'linkedProductVersions'
   | 'jiraIssueKey'
   | 'gitHubIssueNumber'
   | 'giteaIssueNumber'
@@ -69,9 +73,11 @@ export const ALL_TASK_FORM_FIELD_KEYS: TaskFormFieldKey[] = [
   'dueDateMandatory',
   'unscheduledWork',
   'estimatedHours',
+  'hourlyRate',
   'storyPoints',
   'application',
   'releaseVersion',
+  'linkedProductVersions',
   'jiraIssueKey',
   'gitHubIssueNumber',
   'giteaIssueNumber',
@@ -100,6 +106,8 @@ export const ALL_TASK_FORM_TAB_KEYS: TaskFormTabKey[] = [
   'attachments',
   'hours',
   'checklist',
+  'applications',
+  'commits',
 ];
 
 export function createDefaultTaskFieldVisibility(): TaskFieldVisibilityConfig {

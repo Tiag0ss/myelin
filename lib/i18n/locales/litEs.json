@@ -1497,6 +1497,7 @@
   "fieldName": "Nombre del campo *",
   "fieldNameIsRequired": "El nombre del campo es obligatorio",
   "fieldsInsideTheDetailsTab": "Campos dentro de la pestaña Detalles.",
+  "fieldsInsideTheApplicationsTab": "Campos de la pestaña Applications",
   "fileError": "Error de archivo",
   "fileSizeExceeds10mbLimit": "El tamaño del archivo supera el límite de 10 MB",
   "fileSizeMustBeLessThan10mb": "El tamaño del archivo debe ser inferior a 10 MB.",

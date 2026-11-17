@@ -1,6 +1,9 @@
 import {
+  buildPillStyle,
+  contrastTextForPill,
   mapColorForVision,
   normalizeHex,
+  resolveColorToHex,
   snapToPalette,
   PALETTES,
 } from '@/lib/colorVisionPalettes';
@@ -46,6 +49,28 @@ describe('colorVisionPalettes', () => {
   describe('snapToPalette', () => {
     it('snaps to the nearest palette color', () => {
       expect(snapToPalette('#0072B2', PALETTES.deuteranopia)).toBe('#0072B2');
+    });
+  });
+
+  describe('resolveColorToHex', () => {
+    it('maps Jira statusCategory color names to hex', () => {
+      expect(resolveColorToHex('yellow')).toBe('#ca8a04');
+      expect(resolveColorToHex('green')).toBe('#16a34a');
+      expect(resolveColorToHex('blue-gray')).toBe('#64748b');
+    });
+
+    it('keeps valid hex values', () => {
+      expect(resolveColorToHex('#FFCC00')).toBe('#ffcc00');
+    });
+  });
+
+  describe('buildPillStyle contrast', () => {
+    it('does not use identical yellow text on yellow background', () => {
+      const style = buildPillStyle('yellow', 'default', { alpha: '20' });
+      expect(style?.backgroundColor).toMatch(/^#ca8a04/i);
+      expect(style?.color).not.toBe('yellow');
+      expect(style?.color).not.toBe(style?.backgroundColor);
+      expect(contrastTextForPill('#ca8a04')).not.toBe('#ca8a04');
     });
   });
 });

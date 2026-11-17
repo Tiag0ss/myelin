@@ -173,6 +173,56 @@ export const withAlphaSuffix = (hex: string, suffix: string): string => {
   return `${normalized}${suffix}`;
 };
 
+/** Jira statusCategory.colorName (+ common CSS names) → hex for pill styling. */
+const NAMED_STATUS_COLORS: Record<string, string> = {
+  yellow: '#ca8a04',
+  green: '#16a34a',
+  'blue-gray': '#64748b',
+  'blue-grey': '#64748b',
+  'medium-gray': '#6b7280',
+  'medium-grey': '#6b7280',
+  gray: '#6b7280',
+  grey: '#6b7280',
+  brown: '#a16207',
+  'warm-red': '#dc2626',
+  red: '#dc2626',
+  blue: '#2563eb',
+  purple: '#7c3aed',
+  teal: '#0d9488',
+  orange: '#ea580c',
+};
+
+/** Resolve hex or named color (e.g. Jira "yellow") to a normalized hex. */
+export const resolveColorToHex = (input: string | null | undefined): string | null => {
+  if (!input) return null;
+  const asHex = normalizeHex(input);
+  if (asHex) return asHex;
+  const named = NAMED_STATUS_COLORS[input.trim().toLowerCase()];
+  return named ? named : null;
+};
+
+/** Relative luminance 0–1 (sRGB). */
+export const relativeLuminance = (hex: string): number | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const channel = (value: number) => {
+    const s = value / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+};
+
+/** Foreground that stays readable on a light alpha tint of `hex`. */
+export const contrastTextForPill = (hex: string): string => {
+  const luminance = relativeLuminance(hex);
+  if (luminance === null) return hex;
+  // Yellow/amber and other bright hues need a darker text on translucent pill backgrounds.
+  if (luminance > 0.3) {
+    return darkenHex(hex, Math.min(0.65, 0.3 + luminance * 0.45));
+  }
+  return hex;
+};
+
 export const buildPillStyle = (
   hex: string | null | undefined,
   mode: ColorVisionMode,
@@ -180,11 +230,20 @@ export const buildPillStyle = (
 ): CSSProperties | undefined => {
   if (!hex) return undefined;
 
-  const mapped = mapColorForVision(hex, mode);
+  const resolved = resolveColorToHex(hex) || normalizeHex(hex);
+  if (!resolved) {
+    // Unknown named color: avoid identical bg/text CSS keywords (e.g. yellow on yellow).
+    return {
+      backgroundColor: 'rgba(107, 114, 128, 0.2)',
+      color: '#6b7280',
+    };
+  }
+
+  const mapped = mapColorForVision(resolved, mode) || resolved;
   const alpha = options?.alpha ?? '22';
-  const style: React.CSSProperties = {
+  const style: CSSProperties = {
     backgroundColor: withAlphaSuffix(mapped, alpha),
-    color: mapped,
+    color: contrastTextForPill(mapped),
   };
 
   if (options?.borderAlpha) {

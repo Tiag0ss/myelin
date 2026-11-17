@@ -4,6 +4,7 @@ import { authenticateToken, AuthRequest } from '../../middleware/auth';
 import { pool } from '../../config/database';
 import { encrypt, decrypt } from '../../utils/encryption';
 import logger from '../../utils/logger';
+import { resolveColorToHex } from '../../../lib/colorVisionPalettes';
 
 const router = express.Router();
 
@@ -734,7 +735,8 @@ router.get('/project/:projectId/issues', authenticateToken, async (req: AuthRequ
         summary: issue.fields?.summary,
         description,
         status: issue.fields?.status?.name,
-        statusColor: issue.fields?.status?.statusCategory?.colorName,
+        statusColor:
+          resolveColorToHex(issue.fields?.status?.statusCategory?.colorName) || '#6b7280',
         priority: issue.fields?.priority?.name,
         issueType: issue.fields?.issuetype?.name,
         assignee: issue.fields?.assignee?.displayName,

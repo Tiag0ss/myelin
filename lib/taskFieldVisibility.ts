@@ -22,9 +22,11 @@ export type TaskFormFieldKey =
   | 'dueDateMandatory'
   | 'unscheduledWork'
   | 'estimatedHours'
+  | 'hourlyRate'
   | 'storyPoints'
   | 'application'
   | 'releaseVersion'
+  | 'linkedProductVersions'
   | 'jiraIssueKey'
   | 'gitHubIssueNumber'
   | 'giteaIssueNumber'
@@ -75,7 +77,7 @@ export const TASK_FORM_TAB_CATALOG: TaskFieldVisibilityCatalogItem[] = [
   { key: 'attachments', label: 'Attachments', locked: false, hint: 'Files attached to the task.' },
   { key: 'hours', label: 'Hours', locked: false, hint: 'Planning, allocations, and time entries.' },
   { key: 'checklist', label: 'Checklist', locked: false, hint: 'Checklist items for the task.' },
-  { key: 'applications', label: 'Applications', locked: false, hint: 'Primary application/version and linked release + product versions.' },
+  { key: 'applications', label: 'Applications', locked: false, hint: 'Related applications, release version, and linked product versions.' },
   { key: 'commits', label: 'Commits', locked: false, hint: 'Remote git commits linked to this task (on-demand). Only shown when the task has an application.' },
 ];
 
@@ -86,7 +88,7 @@ export const TASK_FORM_FIELD_CATALOG: TaskFieldVisibilityCatalogItem[] = [
     label: 'Section labels',
     locked: false,
     section: 'Section labels',
-    hint: 'Show headings like Basic Information, Linked Tickets & Jira, Task Setup, Assignment, Effort & Completion, Release Tracking, Plan & Dependencies. Hide to save space; fields stay visible.',
+    hint: 'Show headings like Basic Information, Linked Tickets & Jira, Task Setup, Assignment, Effort & Completion, Applications, Plan & Dependencies. Hide to save space; fields stay visible.',
   },
   // Header
   { key: 'headerProject', label: 'Project pill', locked: false, section: 'Header', hint: 'Under the title — opens the project.' },
@@ -113,9 +115,11 @@ export const TASK_FORM_FIELD_CATALOG: TaskFieldVisibilityCatalogItem[] = [
   { key: 'dueDateMandatory', label: 'Due date is mandatory', locked: false, section: 'Effort & Completion', hint: 'Checkbox requiring a due date.' },
   { key: 'unscheduledWork', label: 'Unscheduled work', locked: false, section: 'Effort & Completion', hint: 'Unscheduled work checkbox.' },
   { key: 'estimatedHours', label: 'Estimated Hours', locked: false, section: 'Effort & Completion', hint: 'Estimated effort input.' },
+  { key: 'hourlyRate', label: 'Hourly rate (budget)', locked: false, section: 'Effort & Completion', hint: 'Task hourly rate override. Only shown when the project has a budget and the user can view budget info.' },
   { key: 'storyPoints', label: 'Story Points', locked: false, section: 'Effort & Completion', hint: 'Story points input.' },
   { key: 'application', label: 'Related applications', locked: false, section: 'Applications', hint: 'Multi-select of related applications (Applications tab).' },
   { key: 'releaseVersion', label: 'Release Version', locked: false, section: 'Applications', hint: 'Primary release version from related applications (Applications tab).' },
+  { key: 'linkedProductVersions', label: 'Linked product versions', locked: false, section: 'Applications', hint: 'Read-only list of product versions that include the task’s application versions.' },
   { key: 'customFields', label: 'Custom fields block', locked: false, section: 'Custom Fields', hint: 'Org-defined custom fields at the bottom of Details.' },
   // Hours tab
   { key: 'parentTask', label: 'Parent Task', locked: false, section: 'Hours — Planning', hint: 'Hours → Planning: parent task selector.' },
