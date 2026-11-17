@@ -329,6 +329,34 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         product.Applications = applications;
       }
 
+      // Version numbers/names for list search (assembled in TS for MySQL + MSSQL)
+      const productIds = productRows
+        .map((product) => Number(product.Id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+      const versionLabelsByProductId = new Map<number, string[]>();
+      if (productIds.length > 0) {
+        const placeholders = productIds.map(() => '?').join(',');
+        const [versionRows] = await pool.execute<RowDataPacket[]>(
+          `SELECT ProductId, VersionNumber, VersionName
+           FROM ProductVersions
+           WHERE ProductId IN (${placeholders})`,
+          productIds
+        );
+        for (const row of versionRows) {
+          const productId = Number(row.ProductId);
+          if (!Number.isFinite(productId)) continue;
+          const labels = versionLabelsByProductId.get(productId) || [];
+          const versionNumber = String(row.VersionNumber || '').trim();
+          const versionName = String(row.VersionName || '').trim();
+          if (versionNumber) labels.push(versionNumber);
+          if (versionName) labels.push(versionName);
+          versionLabelsByProductId.set(productId, labels);
+        }
+      }
+      for (const product of productRows) {
+        product.VersionLabels = versionLabelsByProductId.get(Number(product.Id)) || [];
+      }
+
       return productRows;
     });
 

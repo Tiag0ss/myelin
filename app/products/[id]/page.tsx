@@ -23,7 +23,8 @@ import {
   updateProductVersion,
 } from '@/lib/api/products';
 import { mergeProductPatchNotesByApplication } from '@/lib/productPatchNotes';
-import { useState, useEffect, use, Suspense } from 'react';
+import { versionRowMatchesSearch } from '@/lib/versionSearch';
+import { useState, useEffect, use, useMemo, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -94,6 +95,7 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
   const [isEditingCatalog, setIsEditingCatalog] = useState(false);
 
   const [selectedVersion, setSelectedVersion] = useState<ProductVersion | null>(null);
+  const [versionListSearch, setVersionListSearch] = useState('');
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [editingVersion, setEditingVersion] = useState<ProductVersion | null>(null);
   const [isSavingVersion, setIsSavingVersion] = useState(false);
@@ -549,6 +551,11 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     });
   };
 
+  const filteredProductVersions = useMemo(
+    () => versions.filter((v) => versionRowMatchesSearch(v, versionListSearch)),
+    [versions, versionListSearch]
+  );
+
   if (authLoading || isLoading) return <PageLoadingSkeleton />;
   if (!user) return null;
   if (!product) {
@@ -818,28 +825,39 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <p className="text-sm text-gray-500">{t('lit.noVersionsYet')}</p>
               ) : (
                 <div className="space-y-2">
-                  {versions.map((version) => (
-                    <button
-                      key={version.Id}
-                      type="button"
-                      onClick={() => void loadVersionDetail(version.Id)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        selectedVersion?.Id === version.Id
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-gray-900 dark:text-white">{version.VersionNumber}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[version.Status] || STATUS_COLORS.Planning}`}>
-                          {version.Status}
-                        </span>
-                      </div>
-                      {version.VersionName && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">{version.VersionName}</p>
-                      )}
-                    </button>
-                  ))}
+                  <input
+                    type="text"
+                    value={versionListSearch}
+                    onChange={(e) => setVersionListSearch(e.target.value)}
+                    placeholder={t('lit.searchVersions')}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {filteredProductVersions.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-4 text-center">{t('lit.noResultsFound')}</p>
+                  ) : (
+                    filteredProductVersions.map((version) => (
+                      <button
+                        key={version.Id}
+                        type="button"
+                        onClick={() => void loadVersionDetail(version.Id)}
+                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                          selectedVersion?.Id === version.Id
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-gray-900 dark:text-white">{version.VersionNumber}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[version.Status] || STATUS_COLORS.Planning}`}>
+                            {version.Status}
+                          </span>
+                        </div>
+                        {version.VersionName && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">{version.VersionName}</p>
+                        )}
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>

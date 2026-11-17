@@ -325,6 +325,32 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       app.Customers = customers;
     }
 
+    // Version numbers/names for list search (assembled in TS for MySQL + MSSQL)
+    const appIds = appRows.map((app) => Number(app.Id)).filter((id) => Number.isFinite(id) && id > 0);
+    const versionLabelsByAppId = new Map<number, string[]>();
+    if (appIds.length > 0) {
+      const placeholders = appIds.map(() => '?').join(',');
+      const [versionRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT ApplicationId, VersionNumber, VersionName
+         FROM ApplicationVersions
+         WHERE ApplicationId IN (${placeholders})`,
+        appIds
+      );
+      for (const row of versionRows) {
+        const applicationId = Number(row.ApplicationId);
+        if (!Number.isFinite(applicationId)) continue;
+        const labels = versionLabelsByAppId.get(applicationId) || [];
+        const versionNumber = String(row.VersionNumber || '').trim();
+        const versionName = String(row.VersionName || '').trim();
+        if (versionNumber) labels.push(versionNumber);
+        if (versionName) labels.push(versionName);
+        versionLabelsByAppId.set(applicationId, labels);
+      }
+    }
+    for (const app of appRows) {
+      app.VersionLabels = versionLabelsByAppId.get(Number(app.Id)) || [];
+    }
+
     return appRows;
     });
 
@@ -411,20 +437,25 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     );
     record.Versions = versions;
 
-    // Product versions that include any version of this application
-    const [productVersions] = await pool.execute<RowDataPacket[]>(
-      `SELECT pv.Id, pv.VersionNumber, pv.VersionName, pv.Status, pv.ReleaseDate,
-              p.Id as ProductId, p.Name as ProductName,
-              av.Id as ApplicationVersionId, av.VersionNumber as ApplicationVersionNumber
-       FROM ProductVersionApplicationVersions pvav
-       INNER JOIN ApplicationVersions av ON av.Id = pvav.ApplicationVersionId
-       INNER JOIN ProductVersions pv ON pv.Id = pvav.ProductVersionId
-       INNER JOIN Products p ON p.Id = pv.ProductId
-       WHERE av.ApplicationId = ?
-       ORDER BY p.Name ASC, pv.CreatedAt DESC, pv.Id DESC`,
-      [id]
+    // Distinct products linked to this application (catalog and/or via product versions)
+    const [products] = await pool.execute<RowDataPacket[]>(
+      `SELECT p.Id, p.Name, p.Description
+       FROM Products p
+       WHERE EXISTS (
+         SELECT 1 FROM ProductApplications pa
+         WHERE pa.ProductId = p.Id AND pa.ApplicationId = ?
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM ProductVersionApplicationVersions pvav
+         INNER JOIN ProductVersions pv ON pv.Id = pvav.ProductVersionId
+         INNER JOIN ApplicationVersions av ON av.Id = pvav.ApplicationVersionId
+         WHERE pv.ProductId = p.Id AND av.ApplicationId = ?
+       )
+       ORDER BY p.Name ASC`,
+      [id, id]
     );
-    record.ProductVersions = productVersions;
+    record.Products = products;
 
     return record;
     });
@@ -1343,6 +1374,18 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
       [versionId]
     );
     version.Commits = commits;
+
+    const [productVersions] = await pool.execute<RowDataPacket[]>(
+      `SELECT pv.Id, pv.VersionNumber, pv.VersionName, pv.Status, pv.ReleaseDate,
+              p.Id as ProductId, p.Name as ProductName
+       FROM ProductVersionApplicationVersions pvav
+       INNER JOIN ProductVersions pv ON pv.Id = pvav.ProductVersionId
+       INNER JOIN Products p ON p.Id = pv.ProductId
+       WHERE pvav.ApplicationVersionId = ?
+       ORDER BY p.Name ASC, pv.CreatedAt DESC, pv.Id DESC`,
+      [versionId]
+    );
+    version.ProductVersions = productVersions;
 
     res.json({ success: true, version });
   } catch (error) {

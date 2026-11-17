@@ -19,6 +19,7 @@ import { usePersistedFilters } from '@/hooks/usePersistedFilters';
 import { Pin, PinOff, Search } from 'lucide-react';
 import { downloadCsv, parseBooleanLike, parseCsv, toCsv } from '@/lib/csv';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { versionLabelsMatchSearch } from '@/lib/versionSearch';
 
 interface Application {
   Id: number;
@@ -32,6 +33,7 @@ interface Application {
   ProjectCount: number;
   CustomerCount: number;
   VersionCount: number;
+  VersionLabels?: string[];
   Customers: { Id: number; Name: string }[];
   CreatedAt: string;
   GitHubIntegrationId?: number | null;
@@ -295,6 +297,10 @@ export default function ApplicationsPage() {
 
     const rowMatchesSearch = (app: Application, search: string): boolean => {
       const record = app as unknown as Record<string, unknown>;
+
+      if (versionLabelsMatchSearch(app.VersionLabels, search)) {
+        return true;
+      }
 
       for (const [key, rawValue] of Object.entries(record)) {
         if (rawValue === null || rawValue === undefined) continue;

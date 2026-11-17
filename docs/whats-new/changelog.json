@@ -219,7 +219,7 @@
       "items": [
         "New Applications tab on the task modal: related applications (multi-select), release version grouped by app with search, and linked product versions",
         "Linking a task to an application version also updates its related applications; primary release version stays clear across apps",
-        "Application overview shows product versions that include this application’s releases",
+        "Application overview lists associated products; each application version detail uses tabs for tasks, commits, and linked product versions",
         "Safer cross-app version task linking: keep changelog associations without forcing a primary app change, with explicit reassign when needed",
         "Release task and commit pickers can include work already linked to other apps, with clearer badges and filters",
         "Configurable application version statuses (org settings) instead of silent status sync",

@@ -19,6 +19,8 @@ export type Product = {
   ApplicationCount?: number;
   CustomerCount?: number;
   VersionCount?: number;
+  /** Version numbers/names for client-side list search */
+  VersionLabels?: string[];
   Customers?: ProductCustomer[];
   Applications?: ProductApplication[];
   CreatedAt?: string;

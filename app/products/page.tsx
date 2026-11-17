@@ -25,6 +25,7 @@ import { usePinnedListItems } from '@/hooks/usePinnedListItems';
 import { usePersistedFilters } from '@/hooks/usePersistedFilters';
 import { Pin, PinOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { versionLabelsMatchSearch } from '@/lib/versionSearch';
 
 interface Organization {
   Id: number;
@@ -213,7 +214,8 @@ export default function ProductsPage() {
         (p) =>
           p.Name.toLowerCase().includes(q) ||
           (p.Description || '').toLowerCase().includes(q) ||
-          (p.OrganizationName || '').toLowerCase().includes(q)
+          (p.OrganizationName || '').toLowerCase().includes(q) ||
+          versionLabelsMatchSearch(p.VersionLabels, q)
       );
     }
     if (filterOrg) {

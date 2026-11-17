@@ -34,6 +34,7 @@ import {
   buildPatchNotesFromTasksAndCommits,
   resolvePatchNoteIssueRef,
 } from '@/lib/releasePatchNotes';
+import { versionRowMatchesSearch } from '@/lib/versionSearch';
 import { statusValuesApi, type StatusValue } from '@/lib/api/statusValues';
 import VersionCommitsPickerModal from './_components/VersionCommitsPickerModal';
 import VersionTasksPickerModal from './_components/VersionTasksPickerModal';
@@ -91,16 +92,10 @@ interface Application {
   Customers: { Id: number; Name: string; Email?: string }[];
   Projects: { Id: number; ProjectName: string; StatusName?: string; StatusColor?: string }[];
   Versions: AppVersion[];
-  ProductVersions?: {
+  Products?: {
     Id: number;
-    VersionNumber: string;
-    VersionName: string | null;
-    Status: string;
-    ReleaseDate: string | null;
-    ProductId: number;
-    ProductName: string;
-    ApplicationVersionId: number;
-    ApplicationVersionNumber: string;
+    Name: string;
+    Description: string | null;
   }[];
 }
 
@@ -257,8 +252,19 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
   // Version detail panel
   const [selectedVersion, setSelectedVersion] = useState<AppVersion | null>(null);
+  const [versionListSearch, setVersionListSearch] = useState('');
+  const [versionDetailTab, setVersionDetailTab] = useState<'tasks' | 'commits' | 'versions'>('tasks');
   const [versionTasks, setVersionTasks] = useState<VersionTask[]>([]);
   const [versionCommits, setVersionCommits] = useState<RemoteCommit[]>([]);
+  const [versionProductVersions, setVersionProductVersions] = useState<{
+    Id: number;
+    VersionNumber: string;
+    VersionName: string | null;
+    Status: string;
+    ReleaseDate: string | null;
+    ProductId: number;
+    ProductName: string;
+  }[]>([]);
   const [availableTasks, setAvailableTasks] = useState<AvailableTask[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [showCommitsPickerModal, setShowCommitsPickerModal] = useState(false);
@@ -330,6 +336,11 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       (task): task is AvailableTask => Boolean(task)
     );
   }, [availableTasks, versionTasks, versionForm.TaskIds]);
+
+  const filteredApplicationVersions = useMemo(() => {
+    const versions = application?.Versions || [];
+    return versions.filter((v) => versionRowMatchesSearch(v, versionListSearch));
+  }, [application?.Versions, versionListSearch]);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -582,8 +593,10 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
   const loadVersionDetail = async (version: AppVersion) => {
     setSelectedVersion(version);
+    setVersionDetailTab('tasks');
     setShowPatchNotes(false);
     setIsLoadingTasks(true);
+    setVersionProductVersions([]);
     try {
       const res = await fetch(`${getApiUrl()}/api/applications/${id}/versions/${version.Id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -600,6 +613,9 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           url: String(c.url || ''),
         }));
         setVersionCommits(linkedCommits.filter((c: RemoteCommit) => c.sha));
+        setVersionProductVersions(
+          Array.isArray(data.version.ProductVersions) ? data.version.ProductVersions : []
+        );
       }
     } finally {
       setIsLoadingTasks(false);
@@ -1435,33 +1451,30 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
 
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
-                  {t('lit.associatedProductVersions')} (
-                  {application.ProductVersions?.length ?? 0})
+                  {t('lit.associatedProducts')} ({application.Products?.length ?? 0})
                 </h2>
-                {(application.ProductVersions?.length ?? 0) === 0 ? (
+                {(application.Products?.length ?? 0) === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {t('lit.noProductVersionsLinkedYet')}
+                    {t('lit.noProductsAssociatedYet')}
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {(application.ProductVersions || []).map((pv) => (
+                    {(application.Products || []).map((product) => (
                       <div
-                        key={`${pv.ProductId}-${pv.Id}-${pv.ApplicationVersionId}`}
+                        key={product.Id}
                         className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                        onClick={() => router.push(`/products/${pv.ProductId}`)}
+                        onClick={() => router.push(`/products/${product.Id}`)}
                       >
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 dark:text-white truncate">
-                            {pv.ProductName} · v{pv.VersionNumber}
-                            {pv.VersionName ? ` — ${pv.VersionName}` : ''}
+                            {product.Name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {t('lit.includesAppVersion')} v{pv.ApplicationVersionNumber}
-                          </p>
+                          {product.Description ? (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                              {product.Description}
+                            </p>
+                          ) : null}
                         </div>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
-                          {pv.Status}
-                        </span>
                       </div>
                     ))}
                   </div>
@@ -1579,38 +1592,51 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {application.Versions.map((v) => (
-                    <div
-                      key={v.Id}
-                      onClick={() => loadVersionDetail(v)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                        selectedVersion?.Id === v.Id
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm">{v.VersionNumber}</p>
-                          {v.VersionName && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{v.VersionName}</p>
-                          )}
-                        </div>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[v.Status] ?? STATUS_COLORS.Planning}`}>
-                          {v.Status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        {v.TaskCount} task{v.TaskCount !== 1 ? 's' : ''}
-                        {v.ReleaseDate && ` · ${new Date(v.ReleaseDate).toLocaleDateString()}`}
-                      </p>
-                      {Boolean(v.IsCustomerSpecific) && (
-                        <p className="text-xs text-violet-600 dark:text-violet-400 mt-1">
-                          Customer-specific{v.CustomerName ? ` · ${v.CustomerName}` : ''}
-                        </p>
-                      )}
+                  <input
+                    type="text"
+                    value={versionListSearch}
+                    onChange={(e) => setVersionListSearch(e.target.value)}
+                    placeholder={t('lit.searchVersions')}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {filteredApplicationVersions.length === 0 ? (
+                    <div className="text-center py-6 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-500 dark:text-gray-400">
+                      {t('lit.noResultsFound')}
                     </div>
-                  ))}
+                  ) : (
+                    filteredApplicationVersions.map((v) => (
+                      <div
+                        key={v.Id}
+                        onClick={() => loadVersionDetail(v)}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                          selectedVersion?.Id === v.Id
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{v.VersionNumber}</p>
+                            {v.VersionName && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{v.VersionName}</p>
+                            )}
+                          </div>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_COLORS[v.Status] ?? STATUS_COLORS.Planning}`}>
+                            {v.Status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          {v.TaskCount} task{v.TaskCount !== 1 ? 's' : ''}
+                          {v.ReleaseDate && ` · ${new Date(v.ReleaseDate).toLocaleDateString()}`}
+                        </p>
+                        {Boolean(v.IsCustomerSpecific) && (
+                          <p className="text-xs text-violet-600 dark:text-violet-400 mt-1">
+                            Customer-specific{v.CustomerName ? ` · ${v.CustomerName}` : ''}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -1716,11 +1742,20 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     )}
                   </div>
 
-                  {/* Tasks */}
+                  <div className="px-6 pt-4">
+                    <PageTabs
+                      tabs={[
+                        { id: 'tasks', label: `${t('lit.tasks')} (${versionTasks.length})` },
+                        { id: 'commits', label: `${t('lit.commits')} (${versionCommits.length})` },
+                        { id: 'versions', label: `${t('lit.productVersions')} (${versionProductVersions.length})` },
+                      ]}
+                      activeId={versionDetailTab}
+                      onChange={(id) => setVersionDetailTab(id as 'tasks' | 'commits' | 'versions')}
+                    />
+                  </div>
+
+                  {versionDetailTab === 'tasks' && (
                   <div className="p-6">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                      Tasks in this version ({versionTasks.length})
-                    </h3>
                     {isLoadingTasks ? (
                       <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -1814,20 +1849,18 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       </div>
                     )}
                   </div>
+                  )}
 
-                  {/* Commits */}
-                  <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                      Commits in this version ({versionCommits.length})
-                    </h3>
+                  {versionDetailTab === 'commits' && (
+                  <div className="p-6">
                     {isLoadingTasks ? (
                       <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        Loading commits…
+                        {t('lit.loading')}
                       </div>
                     ) : versionCommits.length === 0 ? (
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No commits linked to this version yet.
+                        {t('lit.noCommitsLinkedToThisVersionYet')}
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -1869,6 +1902,47 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                       </div>
                     )}
                   </div>
+                  )}
+
+                  {versionDetailTab === 'versions' && (
+                  <div className="p-6">
+                    {isLoadingTasks ? (
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        {t('lit.loading')}
+                      </div>
+                    ) : versionProductVersions.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('lit.noProductVersionsLinkedToThisAppVersion')}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {versionProductVersions.map((pv) => (
+                          <div
+                            key={`${pv.ProductId}-${pv.Id}`}
+                            className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            onClick={() => router.push(`/products/${pv.ProductId}`)}
+                          >
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">
+                                {pv.ProductName} · v{pv.VersionNumber}
+                                {pv.VersionName ? ` — ${pv.VersionName}` : ''}
+                              </p>
+                              {pv.ReleaseDate ? (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {new Date(pv.ReleaseDate).toLocaleDateString()}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
+                              {pv.Status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  )}
                 </div>
               )}
             </div>
