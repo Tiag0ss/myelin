@@ -211,6 +211,23 @@
         "Release commit picker: filter by branch and show membership branches on commits",
         "Refresh FEATURES, Synapse end-user manual (v1.4.0), Remote MCP guide and Products notes"
       ]
+    },
+    {
+      "version": "1.3.0",
+      "date": "2026-11-17",
+      "title": "Task applications, release linking, and version workflows",
+      "items": [
+        "New Applications tab on the task modal: related applications (multi-select), release version grouped by app with search, and linked product versions",
+        "Linking a task to an application version also updates its related applications; primary release version stays clear across apps",
+        "Application overview shows product versions that include this application’s releases",
+        "Safer cross-app version task linking: keep changelog associations without forcing a primary app change, with explicit reassign when needed",
+        "Release task and commit pickers can include work already linked to other apps, with clearer badges and filters",
+        "Configurable application version statuses (org settings) instead of silent status sync",
+        "Patch notes resolve board/ticket links more reliably when notes are generated",
+        "Task field visibility covers Applications tab fields, hourly rate (budget), and linked product versions",
+        "Multi-select controls show selected names as chips; Jira board import status pills stay readable on yellow and other light colors",
+        "Sticky footers on application version create/edit modals for easier save actions"
+      ]
     }
   ]
 }
