@@ -2307,6 +2307,7 @@ router.get('/:id/release-associations', authenticateToken, async (req: AuthReque
       const placeholders = versionIds.map(() => '?').join(',');
       const [productRows] = await pool.execute<RowDataPacket[]>(
         `SELECT DISTINCT pv.Id as ProductVersionId, pv.VersionNumber, pv.VersionName, pv.Status,
+                pv.CreatedAt as ProductVersionCreatedAt,
                 p.Id as ProductId, p.Name as ProductName,
                 av.Id as ApplicationVersionId, av.VersionNumber as ApplicationVersionNumber,
                 a.Id as ApplicationId, a.Name as ApplicationName
