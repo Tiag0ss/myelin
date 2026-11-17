@@ -165,7 +165,20 @@ interface AvailableTask {
   IsLinkedToOtherApplication?: boolean | number;
 }
 
-function withResolvedIssueLinks<T extends VersionTask | AvailableTask>(task: T): T {
+type IssueLinkTaskFields = {
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  TicketId?: number | null;
+  TicketNumber?: string | number | null;
+  GitHubIssueNumber?: string | number | null;
+  GiteaIssueNumber?: string | number | null;
+  JiraUrl?: string | null;
+  JiraProjectsUrl?: string | null;
+  IssueKey?: string | null;
+  IssueUrl?: string | null;
+};
+
+function withResolvedIssueLinks<T extends IssueLinkTaskFields>(task: T): T {
   const ref = resolvePatchNoteIssueRef({
     JiraIssueKey: task.JiraIssueKey,
     ExternalIssueId: task.ExternalIssueId,

@@ -68,7 +68,6 @@ export function ReportingSummaryPanel({
   const visibleTasks = useMemo(() => {
     if (!filtersActive) return tasks;
     return tasks.filter((task) => taskMatches(task) || hasMatchingDescendant(task.Id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers close over current filter state
   }, [tasks, search, statusId, assigneeId, filtersActive]);
 
   const toggleExpand = (taskId: number) => {

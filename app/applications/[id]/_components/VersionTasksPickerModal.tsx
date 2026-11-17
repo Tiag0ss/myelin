@@ -136,7 +136,6 @@ export default function VersionTasksPickerModal({
           .filter((id) => Number.isFinite(id) && id > 0)
       )
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset draft only when modal opens
   }, [isOpen]);
 
   useEffect(() => {
@@ -177,7 +176,6 @@ export default function VersionTasksPickerModal({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, includeLinked, applicationId, token, excludeVersionId]);
 
   useEffect(() => {
@@ -218,7 +216,6 @@ export default function VersionTasksPickerModal({
       cancelled = true;
       window.clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, search, applicationId, token, excludeVersionId, includeLinked]);
 
   const listedTasks = search.trim() ? searchResults ?? [] : listedDefault;

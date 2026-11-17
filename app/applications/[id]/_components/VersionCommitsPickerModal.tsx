@@ -215,7 +215,6 @@ export default function VersionCommitsPickerModal({
       await loadBranches();
       await loadPage(1, false, ALL_BRANCHES_VALUE);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when modal opens
   }, [isOpen]);
 
   if (!isOpen) return null;
