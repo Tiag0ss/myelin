@@ -125,6 +125,8 @@ interface VersionTask {
   StatusColor: string | null;
   PriorityName: string | null;
   PriorityColor: string | null;
+  TaskType?: number | null;
+  TaskTypeName?: string | null;
   ProjectName: string | null;
   AssigneeFN: string | null;
   AssigneeLN: string | null;
@@ -150,6 +152,8 @@ interface AvailableTask {
   TaskName: string;
   ProjectName: string;
   StatusName: string | null;
+  TaskType?: number | null;
+  TaskTypeName?: string | null;
   IssueKey?: string | null;
   IssueUrl?: string | null;
   JiraIssueKey?: string | null;
@@ -333,6 +337,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         TaskName: task.TaskName,
         ProjectName: task.ProjectName || existing?.ProjectName || '',
         StatusName: task.StatusName ?? existing?.StatusName ?? null,
+        TaskType: task.TaskType ?? existing?.TaskType ?? null,
+        TaskTypeName: task.TaskTypeName ?? existing?.TaskTypeName ?? null,
         IssueKey: task.IssueKey ?? existing?.IssueKey,
         IssueUrl: task.IssueUrl ?? existing?.IssueUrl,
         JiraIssueKey: task.JiraIssueKey ?? existing?.JiraIssueKey,
@@ -1187,6 +1193,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
         TaskName: task.TaskName,
         ProjectName: task.ProjectName || existing?.ProjectName || '',
         StatusName: task.StatusName ?? existing?.StatusName ?? null,
+        TaskType: task.TaskType ?? existing?.TaskType ?? null,
+        TaskTypeName: task.TaskTypeName ?? existing?.TaskTypeName ?? null,
         IssueKey: task.IssueKey ?? existing?.IssueKey,
         IssueUrl: task.IssueUrl ?? existing?.IssueUrl,
         JiraIssueKey: task.JiraIssueKey ?? existing?.JiraIssueKey,
@@ -1209,6 +1217,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
           Id: resolved.Id,
           TaskName: resolved.TaskName,
           ProjectName: resolved.ProjectName,
+          TaskTypeName: resolved.TaskTypeName,
           issueKey: resolved.IssueKey,
           issueUrl: resolved.IssueUrl,
           JiraIssueKey: resolved.JiraIssueKey,
@@ -1223,6 +1232,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       }),
       commits: versionForm.Commits.map((c) => ({ sha: c.sha, message: c.message })),
       generalProjectLabel: t('lit.general'),
+      untypedLabel: t('lit.other'),
+      groupByTaskType: true,
     });
   };
 
@@ -2544,6 +2555,8 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                 TaskName: resolved.TaskName,
                 ProjectName: resolved.ProjectName || '',
                 StatusName: resolved.StatusName ?? null,
+                TaskType: resolved.TaskType ?? null,
+                TaskTypeName: resolved.TaskTypeName ?? null,
                 IssueKey: resolved.IssueKey,
                 IssueUrl: resolved.IssueUrl,
                 JiraIssueKey: resolved.JiraIssueKey,

@@ -14,6 +14,8 @@ export type PatchNoteTaskInput = {
   Id: number;
   TaskName: string;
   ProjectName?: string | null;
+  /** Org-configured task type name — used as section heading when grouping by type */
+  TaskTypeName?: string | null;
   /** Ticket / board key for display, e.g. PROJ-12 or #41 */
   issueKey?: string | null;
   /** When set, the key is rendered as an HTML link in generated patch notes */
@@ -195,7 +197,10 @@ function bulletListHtml(items: string[]): string {
 
 /**
  * Build patch notes HTML from selected tasks and commits.
- * - One bullet per selected task (grouped by project when multiple projects).
+ * - One bullet per selected task.
+ * - When `groupByTaskType` is true (default when any task has TaskTypeName),
+ *   group under the org-configured task type names (not hardcoded categories).
+ * - Otherwise group by project when multiple projects.
  * - Commits that reference any selected task id are skipped (task name wins).
  * - Orphan commits (no selected-task overlap) contribute their cleaned subject.
  */
@@ -203,22 +208,29 @@ export function buildPatchNotesFromTasksAndCommits(options: {
   tasks: PatchNoteTaskInput[];
   commits: PatchNoteCommitInput[];
   generalProjectLabel?: string;
+  /** Section title for tasks without a type / orphan commits. */
+  untypedLabel?: string;
+  /** Group by org TaskTypeName. Default: true when any task has a type. */
+  groupByTaskType?: boolean;
+  /** @deprecated Use groupByTaskType */
+  groupByChangeType?: boolean;
 }): string {
   const tasks = Array.isArray(options.tasks) ? options.tasks : [];
   const commits = Array.isArray(options.commits) ? options.commits : [];
   const generalLabel = options.generalProjectLabel || 'General';
+  const untypedLabel =
+    String(options.untypedLabel || '').trim() || 'Other changes';
+  const hasAnyTaskType = tasks.some((t) => String(t.TaskTypeName || '').trim().length > 0);
+  const groupByTaskType =
+    options.groupByTaskType !== undefined
+      ? options.groupByTaskType
+      : options.groupByChangeType !== undefined
+        ? options.groupByChangeType
+        : hasAnyTaskType;
 
   const selectedTaskIds = new Set(
     tasks.map((t) => Number(t.Id)).filter((id) => Number.isFinite(id) && id > 0)
   );
-
-  const byProject: Record<string, string[]> = {};
-  for (const task of tasks) {
-    const proj = String(task.ProjectName || '').trim() || generalLabel;
-    if (!byProject[proj]) byProject[proj] = [];
-    const label = formatPatchNoteTaskBulletHtml(task);
-    if (label) byProject[proj].push(label);
-  }
 
   const orphanSubjects: string[] = [];
   const seenSubjects = new Set<string>();
@@ -236,9 +248,62 @@ export function buildPatchNotesFromTasksAndCommits(options: {
     orphanSubjects.push(subject);
   }
 
+  const hasOrphans = orphanSubjects.length > 0;
+
+  if (groupByTaskType) {
+    const byType = new Map<string, string[]>();
+    const typeOrder: string[] = [];
+
+    const ensureType = (typeName: string) => {
+      if (!byType.has(typeName)) {
+        byType.set(typeName, []);
+        typeOrder.push(typeName);
+      }
+    };
+
+    for (const task of tasks) {
+      const label = formatPatchNoteTaskBulletHtml(task);
+      if (!label) continue;
+      const typeName = String(task.TaskTypeName || '').trim() || untypedLabel;
+      ensureType(typeName);
+      byType.get(typeName)!.push(label);
+    }
+
+    if (hasOrphans) {
+      ensureType(untypedLabel);
+      for (const subject of orphanSubjects) {
+        byType.get(untypedLabel)!.push(escapeHtml(subject));
+      }
+    }
+
+    const nonEmptyTypes = typeOrder.filter((typeName) => (byType.get(typeName) || []).length > 0);
+    if (nonEmptyTypes.length === 0) return '';
+
+    // Stable: configured types in first-seen order, then untyped last if present mid-list.
+    const sortedTypes = [...nonEmptyTypes].sort((a, b) => {
+      if (a === untypedLabel && b !== untypedLabel) return 1;
+      if (b === untypedLabel && a !== untypedLabel) return -1;
+      return 0; // keep first-seen order among real types
+    });
+
+    let html = '';
+    for (const typeName of sortedTypes) {
+      html += `<p><strong>${escapeHtml(typeName)}</strong></p>`;
+      html += bulletListHtml(byType.get(typeName) || []);
+    }
+    return html;
+  }
+
+  const byProject: Record<string, string[]> = {};
+  for (const task of tasks) {
+    const proj = String(task.ProjectName || '').trim() || generalLabel;
+    if (!byProject[proj]) byProject[proj] = [];
+    const label = formatPatchNoteTaskBulletHtml(task);
+    if (label) byProject[proj].push(label);
+  }
+
   const projects = Object.keys(byProject).filter((p) => (byProject[p] || []).length > 0);
   const hasTasks = projects.length > 0;
-  const hasOrphans = orphanSubjects.length > 0;
 
   if (!hasTasks && !hasOrphans) return '';
 
@@ -257,7 +322,7 @@ export function buildPatchNotesFromTasksAndCommits(options: {
 
   if (hasOrphans) {
     if (hasTasks) {
-      html += `<p><strong>Other changes</strong></p>`;
+      html += `<p><strong>${escapeHtml(untypedLabel)}</strong></p>`;
     }
     html += bulletList(orphanSubjects);
   }

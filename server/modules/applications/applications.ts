@@ -1103,11 +1103,12 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
         dbProvider === 'mssql' ? 'CAST(t.Id AS NVARCHAR(50))' : 'CAST(t.Id AS CHAR)';
 
       const selectSql = `
-      SELECT t.Id, t.TaskName, t.Description, t.Status, t.Priority, t.ProjectId,
+      SELECT t.Id, t.TaskName, t.Description, t.Status, t.Priority, t.TaskType, t.ProjectId,
              t.ApplicationId, t.ReleaseVersionId,
              t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
              tsv.StatusName, tsv.ColorCode as StatusColor,
              tpv.PriorityName, tpv.ColorCode as PriorityColor,
+             ttv.TypeName as TaskTypeName,
              p.ProjectName,
              u.FirstName as AssigneeFN, u.LastName as AssigneeLN,
              tk.TicketNumber,
@@ -1127,6 +1128,7 @@ router.get('/:id/tasks', authenticateToken, async (req: AuthRequest, res: Respon
       const joinsSql = `
       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
       LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+      LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
       LEFT JOIN Users u ON t.AssignedTo = u.Id
       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
       LEFT JOIN Applications la ON t.ApplicationId = la.Id
@@ -1331,11 +1333,12 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
     // Load tasks in this version (includes changelog-only links where ApplicationId
     // / ReleaseVersionId still point at another application/version).
     const [tasks] = await pool.execute<RowDataPacket[]>(
-      `SELECT t.Id, t.ProjectId, t.TaskName, t.Description, t.Status, t.Priority,
+      `SELECT t.Id, t.ProjectId, t.TaskName, t.Description, t.Status, t.Priority, t.TaskType,
               t.ApplicationId, t.ReleaseVersionId,
               t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
               tsv.StatusName, tsv.ColorCode as StatusColor,
               tpv.PriorityName, tpv.ColorCode as PriorityColor,
+              ttv.TypeName as TaskTypeName,
               p.ProjectName,
               u.FirstName as AssigneeFN, u.LastName as AssigneeLN,
               tk.TicketNumber,
@@ -1352,6 +1355,7 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
        INNER JOIN ApplicationVersionTasks avt ON t.Id = avt.TaskId
        LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
        LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+       LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
        LEFT JOIN Projects p ON t.ProjectId = p.Id
        LEFT JOIN Users u ON t.AssignedTo = u.Id
        LEFT JOIN Tickets tk ON t.TicketId = tk.Id
@@ -2083,17 +2087,19 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       id: number;
       name: string;
       project: string;
+      taskType: string | null;
       issueKey: string | null;
       issueUrl: string | null;
     }> = [];
     if (taskIds.length > 0) {
       const placeholders = taskIds.map(() => '?').join(',');
       const [taskRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT t.Id, t.TaskName, p.ProjectName,
+        `SELECT t.Id, t.TaskName, p.ProjectName, ttv.TypeName as TaskTypeName,
                 t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
                 tk.TicketNumber, oji.JiraUrl, oji.JiraProjectsUrl
          FROM Tasks t
          INNER JOIN Projects p ON p.Id = t.ProjectId
+         LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
          LEFT JOIN Tickets tk ON t.TicketId = tk.Id
          LEFT JOIN OrganizationJiraIntegrations oji
            ON oji.OrganizationId = p.OrganizationId AND oji.IsEnabled = 1
@@ -2120,6 +2126,7 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
           id: Number(row.Id),
           name: String(row.TaskName || ''),
           project: String(row.ProjectName || ''),
+          taskType: row.TaskTypeName ? String(row.TaskTypeName) : null,
           issueKey: resolvePatchNoteIssueKey(ref),
           issueUrl: resolvePatchNoteIssueUrl(ref),
         };
@@ -2137,16 +2144,20 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       '- Preserve every existing HTML hyperlink: keep <a href="...">...</a> tags (including href, target="_blank", rel="noopener noreferrer").',
       '- When a bullet mentions a ticket/board key such as [PROJ-12] or #41 that has a matching issueUrl in selectedTasks, keep or restore that key as an <a> link.',
       '- Do not strip, unwrap, or convert links to plain text.',
+      '- selectedTasks.taskType values are organization-configured labels (do not assume fixed names like Feature/Bug/Improvement).',
       ...(splitByChangeType
         ? [
             '- You MUST organize all bullets under these sections in this exact order: Added, Changed, Fixed.',
             '- For each non-empty section use: <p><strong>Added</strong></p><ul><li>...</li></ul> (same pattern for Changed and Fixed).',
             '- Omit a section entirely when it has no items.',
-            '- Classify each item into the best-fitting category; do not invent items to fill a section.',
+            '- Classify each item using the bullet meaning and the org-configured selectedTasks.taskType as a hint (do not hardcode mappings from specific type names).',
+            '- Do not invent items to fill a section.',
             '- Do not use other section titles.',
           ]
         : [
-            '- If grouping helps, you may use <p><strong>Group</strong></p> before bullet lists.',
+            '- Prefer grouping bullets under the organization-configured taskType labels from selectedTasks when grouping helps.',
+            '- Use <p><strong>{taskType}</strong></p> before each bullet list, using the exact taskType string from selectedTasks.',
+            '- Tasks without taskType (and orphan commits) may share one untyped group.',
           ]),
     ].join('\n');
 
@@ -2156,8 +2167,8 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       selectedCommits: commitContext,
       splitByChangeType,
       instruction: splitByChangeType
-        ? 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Separate every item into Added, Changed, or Fixed sections as required by the system rules. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.'
-        : 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Keep bullets in the final result. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.',
+        ? 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Separate every item into Added, Changed, or Fixed sections as required by the system rules. Use each selected task taskType (org-configured) only as a classification hint — do not assume fixed type names. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.'
+        : 'Improve clarity and readability while preserving meaning and all existing <a> hyperlinks. Prefer grouping by the exact org-configured taskType labels from selectedTasks. Use selected tasks and selected commits as factual sources; prefer task titles over commit subjects when both cover the same Task # id; include orphan commit subjects that are not covered by selected tasks.',
     });
 
     let improved = '';

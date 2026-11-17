@@ -13,6 +13,8 @@ export type VersionPickerTask = {
   TaskName: string;
   ProjectName?: string | null;
   StatusName?: string | null;
+  TaskType?: number | null;
+  TaskTypeName?: string | null;
   JiraIssueKey?: string | null;
   ExternalIssueId?: string | null;
   TicketId?: number | null;
@@ -60,6 +62,8 @@ function mapApiTask(task: VersionPickerTask): VersionPickerTask {
     TaskName: String(task.TaskName || ''),
     ProjectName: task.ProjectName ?? null,
     StatusName: task.StatusName ?? null,
+    TaskType: task.TaskType ?? null,
+    TaskTypeName: task.TaskTypeName ?? null,
     IssueKey: ref?.key ?? null,
     IssueUrl: ref?.url ?? null,
     LinkedApplicationName: task.LinkedApplicationName ?? null,

@@ -209,11 +209,36 @@ describe('buildPatchNotesFromTasksAndCommits', () => {
         { Id: 2, TaskName: 'Beta', ProjectName: 'Proj A' },
       ],
       commits: [],
+      groupByTaskType: false,
     });
 
     expect(html).toContain('<p><strong>Proj A</strong></p>');
     expect(html).toContain('<p><strong>Proj B</strong></p>');
     expect(html.indexOf('Proj A')).toBeLessThan(html.indexOf('Proj B'));
+  });
+
+  it('groups by org-configured TaskTypeName when present', () => {
+    const html = buildPatchNotesFromTasksAndCommits({
+      tasks: [
+        { Id: 1, TaskName: 'New dashboard', ProjectName: 'App', TaskTypeName: 'Nova Funcionalidade' },
+        { Id: 2, TaskName: 'Tweak copy', ProjectName: 'App', TaskTypeName: 'Melhoria' },
+        { Id: 3, TaskName: 'Fix crash', ProjectName: 'App', TaskTypeName: 'Defeito' },
+        { Id: 4, TaskName: 'No type task', ProjectName: 'App' },
+      ],
+      commits: [{ sha: 'abc', message: 'Misc tooling' }],
+      untypedLabel: 'Outros',
+    });
+
+    expect(html).toContain('<p><strong>Nova Funcionalidade</strong></p>');
+    expect(html).toContain('<p><strong>Melhoria</strong></p>');
+    expect(html).toContain('<p><strong>Defeito</strong></p>');
+    expect(html).toContain('<p><strong>Outros</strong></p>');
+    expect(html).not.toContain('<p><strong>Added</strong></p>');
+    expect(html).not.toContain('<p><strong>Fixed</strong></p>');
+    expect(html).toContain('New dashboard');
+    expect(html).toContain('Fix crash');
+    expect(html).toContain('No type task');
+    expect(html).toContain('Misc tooling');
   });
 });
 
