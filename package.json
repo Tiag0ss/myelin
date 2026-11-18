@@ -1,6 +1,6 @@
 {
   "name": "myelin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "main": "extras/desktop/main.js",
   "private": true,
   "scripts": {

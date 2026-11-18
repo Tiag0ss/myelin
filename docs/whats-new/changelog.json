@@ -5,29 +5,40 @@
       "date": "2026-09-06",
       "title": "Initial release",
       "items": [
-        "Project and task management with Kanban, Gantt, parent/subtasks, dependencies, tags, and custom statuses, priorities, and types",
-        "Resource planning Gantt with drag-and-drop allocations, availability, intelligent replanning, recurring blocks, and Outlook calendar overlay",
-        "Time tracking with daily and weekly timesheets, per-task entries, active timers, and CSV export",
-        "Approvals center for time entries, vacations, and expenses (including partial reimbursement)",
-        "Vacations, out-of-office requests, and country holiday calendars with non-working-day awareness",
-        "Multi-tenant organizations with members, teams, and permission groups",
-        "Role-based permissions (Developer, Support, Manager) with granular control",
-        "Ticket system with auto-numbering, auto-assignment, task conversion, attachments, SLA rules, and per-organization statuses/priorities",
-        "Customer management and customer portal for constrained ticket collaboration",
-        "Call records with participants, notes, and optional task/project linkage",
-        "Application lifecycle: registry, versions, releases with PDF export, and task-to-release linking",
-        "Integrations for Jira, GitHub, Gitea, and Outlook calendar (credentials encrypted at rest)",
-        "Outlook email task queue via Cloudflare Email Routing, with import as tasks from the project UI",
-        "Personal API tokens (pt_…) for webhooks, Workers, and integrations",
-        "Rich text editor (Tiptap) with image uploads; memos with visibility controls and tags",
-        "Recurring tasks/time blocks for meetings, standups, and fixed schedules",
-        "Email notifications (assignment, status/priority, @mentions, due-date reminders) and password recovery",
-        "RAG project health score and configurable dashboard KPI widgets",
-        "Reporting hub with organization/portfolio/delivery/capacity packs, CSV extract, and Explore pivots",
-        "Optional expenses module with invoice attachments, approval, and category caps",
-        "Global search, real-time Socket.io updates, dark mode, and responsive UI",
-        "Optional desktop Electron app, IDE Kanban extensions, install wizard, and Redis read-through cache",
-        "Synapse companion vaults (SSO) and optional SQL-backed AI assistant views"
+        "Project and task management — Kanban boards, Gantt view, parent/subtasks, dependencies, custom statuses/priorities/types, and quick navigation between tasks and projects",
+        "Resource planning — drag-and-drop Gantt allocations, availability, intelligent replanning, recurring blocks, Outlook calendar overlay, and split planning",
+        "Time tracking — daily and weekly timesheets, per-task entries, timers, and CSV export",
+        "Approvals center — approve time entries, vacations, and expenses (including partial reimbursement)",
+        "Vacations and holidays — annual leave, out-of-office requests, and country holiday calendars that respect non-working days",
+        "Multi-tenant organizations — multiple organizations, teams, and permission groups",
+        "Role-based permissions — Developer, Support, and Manager roles with granular control",
+        "Ticket system — auto-numbering, auto-assignment, conversion to tasks, attachments, SLA rules, and per-organization statuses/priorities",
+        "Customer portal — customers see tickets and projects and can create tickets within constraints",
+        "Customer management — customer database with organization links and default support user assignment",
+        "Call records — log calls with time, participants, notes, and optional task or project links",
+        "Application lifecycle — application registry, versions, releases with PDF export, and task-to-release linking",
+        "Integrations — Jira, GitHub, Gitea, and Outlook calendar (credentials stored encrypted)",
+        "Outlook email task queue — route emails into a personal queue and import them as tasks from the project view",
+        "Personal API tokens — create tokens for webhooks, workers, and other integrations",
+        "Rich text editor — formatting and image uploads across descriptions and notes",
+        "Memos — calendar-based notes with private, organization, or public visibility, plus tags",
+        "Recurring tasks — recurring time blocks for meetings, standups, and fixed schedules",
+        "Email notifications — assignments, status/priority changes, @mentions, and due-date reminders",
+        "Password recovery — reset access with a temporary email link",
+        "RAG health score — automatic red / amber / green project health indicator",
+        "Dashboard KPIs and statistics — configurable widgets and aggregate reporting",
+        "Reporting hub — organization, portfolio, delivery, and capacity packs, CSV extract, and Explore pivots",
+        "Expenses (optional) — project or internal costs, invoice attachments, approval, reimbursement, and category caps",
+        "Global search — find work across the app, including people and profile pages",
+        "Real-time updates — live notifications and UI refresh while you work",
+        "Dark mode — full dark theme across the interface",
+        "Responsive design — mobile-friendly layout with grouped navigation",
+        "Desktop app — optional Electron wrapper for running Myelin on the desktop",
+        "IDE extensions — Kanban sidebar in VS Code / Cursor for linked tasks",
+        "Install wizard — guided first-time setup",
+        "Optional Redis cache — faster page loads when enabled",
+        "Synapse companion vaults — Markdown vaults with single sign-on and optional checkbox-to-task push",
+        "AI assistant (optional) — SQL-backed assistant views for supported setups"
       ]
     },
     {
@@ -35,27 +46,15 @@
       "date": "2026-09-21",
       "title": "Session, reporting, and navigation",
       "items": [
-        "Enhance session management and token handling",
-        "Enhance authentication handling in AuthContext and session management",
-        "Refactor Woodpecker CI configuration and update TypeScript settings",
-        "Enhance CSV export functionality in ReportingHub",
-        "Enhance Woodpecker CI configuration with additional steps for versioning and linting",
-        "Add Woodpecker CI configuration for Docker build and push",
-        "Implement theme palette selection and application functionality",
-        "Refactor task assignment notification logic",
-        "Implement commit branch metadata and enhance commit history visualization",
-        "Implement commit graph layout and branch management features",
-        "Implement unplanned tasks filtering and drag auto-scroll functionality",
-        "Enhance application documentation and update integration testing scenarios",
-        "Refactor navigation links in AppChromeTools component",
-        "Refactor various components for improved layout and consistency",
-        "Update filter behavior in ProjectsTab component to show completed projects by default",
-        "Implement pinned navigation project metadata functionality",
-        "Refactor filter clearing functionality in ProjectsTab component",
-        "Enhance filter functionality across multiple pages",
-        "Implement new project management tabs and enhance reporting features",
-        "Refactor applications, customers, memos, planning, and projects pages to implement persisted filters and pinned item functionality",
-        "Refactor Dockerfile and update .dockerignore for release artifacts"
+        "More reliable sign-in and session handling",
+        "Improved CSV export from reporting",
+        "Choose and apply a theme palette",
+        "Clearer task assignment notifications",
+        "Richer commit history with branch information and a commit graph",
+        "Filter unplanned work in planning, with smoother drag scrolling",
+        "Pin projects in navigation for quicker access",
+        "Better filters across projects and related pages, including completed projects by default",
+        "More consistent layout and navigation across the app"
       ]
     },
     {
@@ -63,11 +62,9 @@
       "date": "2026-10-03",
       "title": "Myelin branding and multi-language UI",
       "items": [
-        "Add UI i18n for pt/en/es/fr across the live app",
-        "Add status badge to README",
-        "Refactor project references and update naming conventions to Myelin",
-        "Update Woodpecker CI configuration to support tagging and streamline version extraction",
-        "Enhance silent access token handling in session management"
+        "Use the app in Portuguese, English, Spanish, or French",
+        "Product renamed and branded as Myelin throughout the experience",
+        "More reliable background session refresh while you work"
       ]
     },
     {
@@ -75,18 +72,18 @@
       "date": "2026-10-04",
       "title": "Organization analytics",
       "items": [
-        "Update Portuguese translations for consistency in the i18n locale files, correcting the term for \"sprints\" from \"Corridas\" to \"Sprints\"",
-        "Implement organization detail analytics component and enhance reporting page with new metrics and visualizations. Introduce multi-series charting for tasks by status, user, and type, and update UI elements for improved user experience",
-        "Refactor i18n handling by removing unused imports and functions, and implement a new server-side loading mechanism for locale literals. Update the I18nProvider to utilize the new loading method and streamline locale management across components",
-        "Remove unused i18n imports and related functions from various components and pages to streamline code and improve maintainability"
+        "See organization analytics with charts for tasks by status, person, and type",
+        "Clearer Portuguese wording (including “Sprints”)",
+        "Faster and more reliable language loading in the interface"
       ]
     },
     {
       "version": "1.1.2",
       "date": "2026-10-06",
-      "title": "Runtime locales and proxy support",
+      "title": "Language packs and proxy support",
       "items": [
-        "Enhance Dockerfile to include runtime locale files and improve error handling for missing locale files in the server-side loading mechanism. Implement trust proxy settings in the server configuration for better handling of client IPs behind Docker and reverse proxies"
+        "Language files load correctly in container deployments",
+        "More accurate client IP handling behind proxies and Docker"
       ]
     },
     {
@@ -94,7 +91,8 @@
       "date": "2026-10-06",
       "title": "Container health checks",
       "items": [
-        "Implement liveness check endpoint and update health check logic in Docker configuration. Update version to 1.1.3 in package.json and enhance Portuguese translations for consistency"
+        "Clearer health checks for container deployments",
+        "Small Portuguese translation improvements"
       ]
     },
     {
@@ -102,9 +100,9 @@
       "date": "2026-10-13",
       "title": "Manual and ops polish",
       "items": [
-        "Add Myelin manual and navigation documentation, including sections on user roles, first login, global search, and email preferences. Update .gitignore to include generated documentation ZIP file",
-        "Update Docker configuration to use dynamic port for health check, ensuring alignment with runtime PORT environment variable. Enhance README to clarify health check behavior and internal port usage",
-        "Refine Portuguese translations in i18n files for improved clarity and consistency, updating terms for \"organization switcher\" and \"out of office\""
+        "In-app manual covering roles, first login, search, and email preferences",
+        "Health checks follow the configured port in deployments",
+        "Clearer Portuguese labels for the organization switcher and out of office"
       ]
     },
     {
@@ -112,19 +110,20 @@
       "date": "2026-10-17",
       "title": "Remote MCP, agent docs, and What's New",
       "items": [
-        "Bump version to 1.2.0 and update changelog with new features and enhancements, including settings tab integration, improved navigation, and enhanced session management",
-        "Implement settings tab in application and organization detail views, allowing users to edit application and organization details directly within the UI. Enhance navigation by adding settings to the existing tab structure",
-        "Enhance application UI by integrating Agent Docs panel and PageTabs for improved navigation in organization and application detail views. Update .gitignore to exclude cursor configuration files. Add MCP preferences management in user profile settings. Add MCP server to read, update and create tasks in Myelin",
-        "Implement \"What's New\" feature to display changelog entries in the dashboard and app chrome tools. Add API endpoints for fetching changelog data and marking versions as seen. Update Dockerfile to include changelog documentation and enhance localization for new UI elements"
+        "Edit application and organization details from a dedicated Settings tab",
+        "Manage agent documentation for applications and organizations",
+        "Connect Remote MCP to read, update, and create tasks from compatible AI tools",
+        "Control MCP preferences from your user profile",
+        "See What's New in the dashboard and app chrome, with versions marked as seen"
       ]
     },
     {
       "version": "1.2.1",
       "date": "2026-10-17",
-      "title": "MCP sprints and HTTP method labels",
+      "title": "MCP sprints and API labels",
       "items": [
-        "Add MCP sprint tools to list, read, and update sprints, with optional sprint assignment on tasks and sprint details in task responses",
-        "Show the literal HTTP method POST in API/token UI instead of a localized mistranslation"
+        "List, open, and update sprints through MCP, including sprint details on tasks",
+        "API and token screens show the HTTP method POST correctly"
       ]
     },
     {
@@ -132,11 +131,11 @@
       "date": "2026-10-22",
       "title": "Customer tasks, reporting filters, and grid prefs",
       "items": [
-        "Add a Tasks tab on customer detail with filters, CSV export, and a completed-by-user overview chart",
-        "Add a customer filter across Reporting Hub packs and Extract, and switch reporting filter dropdowns to the searchable combo",
-        "Fix global and project-tasks column preferences so saved visibility/order is restored without needing Reset",
-        "Log TaskHistory and ActivityLogs for MCP task create/update writes",
-        "Woodpecker/Docker release builds now produce Windows desktop NSIS, VS Code/Cursor VSIX, and Rider plugin ZIP alongside the Linux AppImage (Visual Studio VSIX still needs a Windows MSBuild host)"
+        "Customer detail now has a Tasks tab with filters, CSV export, and a completed-by-user chart",
+        "Filter Reporting Hub and Extract by customer, with searchable filter dropdowns",
+        "Saved column visibility and order restore correctly on task grids",
+        "Task changes made through MCP appear in history and activity logs",
+        "Desktop and IDE extension packages are produced with Linux releases"
       ]
     },
     {
@@ -144,10 +143,10 @@
       "date": "2026-10-22",
       "title": "Jira links, overview pending, and companion branding",
       "items": [
-        "Show Jira issue key with open-in-Jira on customer Tasks, overview pending tasks, and project task Jira columns (when visible)",
-        "Exclude cancelled statuses from customer overview pending, overdue, and upcoming lists",
-        "Fix Downloads product-name translations and the customer External Name label",
-        "Rename IDE Kanban tool window labels from PM Kanban to Myelin Kanban (VS Code/Cursor, Rider, Visual Studio)"
+        "Open Jira issues from customer tasks, overview pending work, and project task columns",
+        "Cancelled work no longer appears in customer overview pending, overdue, and upcoming lists",
+        "Clearer Downloads product names and customer External Name label",
+        "IDE board extensions are branded Myelin Kanban"
       ]
     },
     {
@@ -155,13 +154,13 @@
       "date": "2026-11-11",
       "title": "Unassigned time, task filters, and release notes",
       "items": [
-        "Allow time entries without a task (organization required, description required), with correct display and edit in calendar, timesheet, and work summary",
-        "Split Hide closed and Hide cancelled on project and customer task filters; both on by default, with Clear restoring those defaults",
-        "Ask for confirmation before clearing planning when a planned task is marked as unscheduled work",
-        "Align organization overview / portfolio RAG health with the projects list formula",
-        "Export combined release notes PDF for multiple applications in a date range",
-        "Fix release notes PDF bullets so TipTap list items keep text beside the bullet",
-        "Fix organization overview reporting query parameter mismatch that broke CreatedAt trend series"
+        "Log time without a task when needed (organization and description required), including calendar, timesheet, and work summary",
+        "Hide closed and hide cancelled are separate task filters, both on by default",
+        "Confirm before clearing planning when a planned task is marked as unscheduled",
+        "Organization overview health matches the projects list health formula",
+        "Export a combined release notes PDF for several applications in a date range",
+        "Release notes PDFs keep list text aligned with bullets",
+        "Organization overview trends load correctly again"
       ]
     },
     {
@@ -169,82 +168,82 @@
       "date": "2026-11-11",
       "title": "Products, patch notes, and OpenRouter AI",
       "items": [
-        "Add Products with CRUD, navigation, and permission gating",
-        "Build application version patch notes from selected tasks and commits, with structured HTML (headings, lists, images) in PDF export",
-        "Add OpenRouter as an AI provider alongside OpenAI and Ollama",
-        "Deny OpenRouter/OpenAI training use by default, with an optional OpenRouter Zero Data Retention (ZDR) toggle in System Settings",
-        "Carry organization, project, and custom fields when creating timesheet entries"
+        "Manage Products with create, edit, navigation, and permissions",
+        "Build application release notes from selected tasks and commits, with structured PDF export",
+        "Use OpenRouter as an AI provider alongside OpenAI and Ollama",
+        "AI providers default to no training use, with an optional OpenRouter zero-retention setting",
+        "Timesheet entries keep organization, project, and custom fields when created"
       ]
     },
     {
       "version": "1.2.6",
       "date": "2026-11-12",
-      "title": "Release task picker and build fix",
+      "title": "Release task picker improvements",
       "items": [
-        "Show release-linked tasks from projects associated with the application by default",
-        "Search across all organization tasks when linking work to a release (ignores project↔application association)",
-        "Fix server TypeScript build so shared release/patch-notes libraries compile in Docker"
+        "When linking work to a release, tasks from related projects appear by default",
+        "Search all organization tasks when adding work to a release",
+        "More reliable release packaging for deployments"
       ]
     },
     {
       "version": "1.2.7",
       "date": "2026-11-12",
-      "title": "Planning All Tasks and grid column stability",
+      "title": "Planning All Tasks and stable columns",
       "items": [
-        "Add an All Tasks tab in Planning with project-style filters (status multi-select, priority, assignee, type, tags, hide closed/cancelled, unplanned, unscheduled)",
-        "Default Planning task filters hide closed, cancelled, and unplanned work; show an active-filter count badge",
-        "Keep Planning task filters and table headers sticky while scrolling the grid",
-        "Open the task from Planning allocation rows; keep Gantt-only amber banners off the All Tasks tab",
-        "Fix grid column visibility and order after filter remounts in the global enhancer and the project Tasks local enhancer",
-        "Handle null application StatusName values without breaking the application detail page"
+        "New All Tasks tab in Planning with filters for status, priority, assignee, type, tags, and more",
+        "Planning filters hide closed, cancelled, and unplanned work by default, with an active-filter count",
+        "Planning filters and table headers stay visible while you scroll",
+        "Open a task directly from Planning allocation rows",
+        "Saved grid column layout stays stable after changing filters",
+        "Application detail stays usable when a status name is missing"
       ]
     },
     {
       "version": "1.2.8",
       "date": "2026-11-13",
-      "title": "Milestone alerts, MCP agent docs, and filters",
+      "title": "Milestone alerts, agent docs, and filters",
       "items": [
-        "Optional milestone assignee with dashboard alerts on the due day and every day while overdue (open milestones only; no notification table)",
-        "MCP create/update/archive for organization and application agent skills and rules; archived docs stay out of MCP list/get",
-        "Agent docs UI: archive, unarchive, and permanent delete, with archived badge in the list",
-        "Project Kanban and Reporting filters (including assignee/user searchable selects and collapsible reporting filter panels)",
-        "Release commit picker: filter by branch and show membership branches on commits",
-        "Refresh FEATURES, Synapse end-user manual (v1.4.0), Remote MCP guide and Products notes"
+        "Assign a person to a milestone and see dashboard alerts on the due day and while it is overdue",
+        "Create, update, and archive agent skills and rules for organizations and applications",
+        "Archive, restore, or permanently delete agent docs, with a clear archived badge",
+        "Richer filters on project boards and reporting, including searchable people selectors",
+        "Filter release commits by branch and see which branches include each commit",
+        "Updated product documentation and end-user manual"
       ]
     },
     {
       "version": "1.3.0",
       "date": "2026-11-17",
-      "title": "Task applications, release linking, and version workflows",
+      "title": "Task applications and release linking",
       "items": [
-        "New Applications tab on the task modal: related applications (multi-select), release version grouped by app with search, and linked product versions",
-        "Linking a task to an application version also updates its related applications; primary release version stays clear across apps",
-        "Application overview lists associated products; each application version detail uses tabs for tasks, commits, and linked product versions",
-        "Safer cross-app version task linking: keep changelog associations without forcing a primary app change, with explicit reassign when needed",
-        "Release task and commit pickers can include work already linked to other apps, with clearer badges and filters",
-        "Configurable application version statuses (org settings) instead of silent status sync",
-        "Patch notes resolve board/ticket links more reliably when notes are generated",
-        "Task field visibility covers Applications tab fields, hourly rate (budget), and linked product versions",
-        "Multi-select controls show selected names as chips; Jira board import status pills stay readable on yellow and other light colors",
-        "Sticky footers on application version create/edit modals for easier save actions"
+        "Tasks have an Applications tab for related apps, release version, and linked product versions",
+        "Linking a task to an app version also updates its related applications",
+        "Application overview shows associated products; each version has tabs for tasks, commits, and product versions",
+        "Link tasks across apps without forcing a primary app change unless you choose to reassign",
+        "Release pickers can include work already linked elsewhere, with clearer badges and filters",
+        "Configure application version statuses in organization settings",
+        "Generated release notes keep ticket and board links more reliably",
+        "Task field visibility includes Applications fields, hourly rate, and linked product versions",
+        "Multi-select fields show selected names as chips; status colors stay readable on light backgrounds",
+        "Easier save actions with sticky footers on application version create and edit"
       ]
     },
     {
       "version": "1.3.1",
       "date": "2026-11-17",
-      "title": "Version search and task-type patch notes",
+      "title": "Version search and clearer patch notes",
       "items": [
         "Search applications and products by version number or name from the list pages",
         "Filter the Versions list on application and product detail pages",
-        "Generate and AI-improve patch notes using organization-configured task type names as section groups"
+        "Generate and improve release notes grouped by your organization's task types"
       ]
     },
     {
       "version": "1.3.2",
       "date": "2026-11-17",
-      "title": "Task product-version associations fix",
+      "title": "Task product versions fix",
       "items": [
-        "Fix loading linked product versions on a task"
+        "Linked product versions on a task load correctly again"
       ]
     },
     {
@@ -252,14 +251,23 @@
       "date": "2026-11-18",
       "title": "Product release wizard",
       "items": [
-        "New product release wizard: create or link application versions, pick tasks with an Applications-style selector, and review patch notes before save",
-        "Optional project filter scopes catalog apps and candidate tasks; tasks from projects linked to product apps appear even without a prior version",
-        "Product patch notes list related application versions, then a task changelog with ticket/board links (same format as application releases)",
-        "When linking an existing application version, optionally recreate that version’s patch notes from the selected tasks (off by default)",
-        "Improve with AI keeps the Related application versions section and restores ticket/board links after rewriting",
-        "Product version detail splits Patch notes and Tasks tabs, with status and ticket/board keys on each task",
-        "Product release task picker shows ticket/board keys with links, matching application release selection",
-        "Deep links open the exact product or application version (`?tab=versions&versionId=`), including from tasks and cross-links"
+        "Create a product release in a guided wizard: set up or reuse app versions, choose the tasks, and review the notes before saving",
+        "Optionally filter by project so you only see the apps and tasks that matter for that release",
+        "Product notes start with the related app versions, then list the tasks with ticket or board links",
+        "When reusing an existing app version, you can choose to rebuild its notes from the selected tasks",
+        "Improve with AI keeps the related-apps list and ticket/board links intact",
+        "Each product version has separate tabs for patch notes and for the tasks in that release (with status)",
+        "When picking tasks for a product release, ticket and board numbers are shown with links"
+      ]
+    },
+    {
+      "version": "1.4.1",
+      "date": "2026-11-18",
+      "title": "Open the right version directly",
+      "items": [
+        "Links to a product or application version open that version straight away",
+        "From a task, or between product and application versions, you land on the version you clicked",
+        "Refreshing the page keeps the same version open"
       ]
     }
   ]
