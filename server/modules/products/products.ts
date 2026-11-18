@@ -25,9 +25,20 @@ import {
 } from '../../utils/llmProvider';
 import {
   mergeProductPatchNotesByApplication,
+  prependRelatedApplicationVersionsSection,
+  splitRelatedApplicationVersionsSection,
   validateProductVersionAppLinks,
   ProductAppVersionNoteSource,
 } from '../../utils/productPatchNotes';
+import { reapplyPatchNoteIssueLinks } from '../../utils/releasePatchNotes';
+import { validateRequest, productReleaseWizardSchema } from '../../utils/validation';
+import {
+  loadProductReleaseWizardState,
+  runProductReleaseWizardCreate,
+  runProductReleaseWizardUpdate,
+  type WizardPayload,
+} from './releaseWizardService';
+import { defaultApplicationIdsForTask } from '../../../lib/productReleaseWizard';
 
 const router = Router();
 
@@ -857,8 +868,8 @@ router.post('/:id/versions', authenticateToken, async (req: AuthRequest, res: Re
     }
 
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO ProductVersions (ProductId, VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId, CreatedBy, CreatedAt, UpdatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      `INSERT INTO ProductVersions (ProductId, VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId, CreatedVia, CreatedBy, CreatedAt, UpdatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         productId,
         VersionNumber,
@@ -1104,20 +1115,36 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       return res.status(400).json({ success: false, message: llmNotConfiguredMessage(llmConfig) });
     }
 
+    // Keep the wizard "Related application versions" list out of the LLM rewrite.
+    const { relatedSection, body } = splitRelatedApplicationVersionsSection(patchNotes);
+    const changelogHtml = body || patchNotes;
+
+    const hasPerAppSections = /<h2\b/i.test(changelogHtml);
     const systemPrompt = [
-      'You improve product release notes that aggregate patch notes from multiple applications.',
+      'You improve product release notes changelog HTML.',
       'Mandatory output format rules:',
       '- Return HTML only (no markdown, no code fences).',
-      '- The input contains one <h2> heading per linked application version; you MUST keep exactly one <h2> section per application.',
-      '- Do not merge, remove, reorder, or flatten the <h2> sections into a single section.',
-      '- Only improve the content beneath each <h2> heading; keep the heading text unchanged.',
-      '- Use concise, clear bullet points (<ul><li>...</li></ul>) within each section.',
+      '- Do not invent a "Related application versions" section; that list is managed separately.',
       '- Preserve factual meaning; do not invent features.',
+      '- Preserve every existing HTML hyperlink: keep <a href="...">...</a> tags (including href, target="_blank", rel="noopener noreferrer").',
+      '- When a bullet mentions a ticket/board key such as [PROJ-12] or #41 that is already linked, keep that key as an <a> link.',
+      '- Use concise, clear bullet points (<ul><li>...</li></ul>).',
+      ...(hasPerAppSections
+        ? [
+            '- The input may contain one <h2> heading per linked application version; keep those headings unchanged.',
+            '- Do not merge, remove, reorder, or flatten those <h2> sections into a single section.',
+            '- Only improve the content beneath each <h2> heading.',
+          ]
+        : [
+            '- Keep existing task-type / project subsection labels (<p><strong>...</strong></p>) when present.',
+          ]),
       ...(splitByChangeType
         ? [
-            '- Inside EACH application <h2> section, organize bullets under these subsections in this exact order: Added, Changed, Fixed.',
+            hasPerAppSections
+              ? '- Inside EACH application <h2> section, organize bullets under these subsections in this exact order: Added, Changed, Fixed.'
+              : '- Organize bullets under these subsections in this exact order: Added, Changed, Fixed.',
             '- For each non-empty subsection use: <p><strong>Added</strong></p><ul><li>...</li></ul> (same pattern for Changed and Fixed).',
-            '- Omit a subsection entirely when it has no items for that application.',
+            '- Omit a subsection entirely when it has no items.',
             '- Classify each item into the best-fitting category; do not invent items to fill a subsection.',
             '- Do not use other subsection titles.',
           ]
@@ -1125,11 +1152,11 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
     ].join('\n');
 
     const userPrompt = JSON.stringify({
-      currentPatchNotesHtml: prepareHtmlForLlm(patchNotes),
+      currentPatchNotesHtml: prepareHtmlForLlm(changelogHtml),
       splitByChangeType,
       instruction: splitByChangeType
-        ? 'Improve clarity and readability while preserving meaning and the per-application h2 section structure. Within each application section, separate items into Added, Changed, and Fixed as required by the system rules.'
-        : 'Improve clarity and readability while preserving meaning and the per-application h2 section structure.',
+        ? 'Improve clarity and readability while preserving meaning and structure. Separate items into Added, Changed, and Fixed as required by the system rules.'
+        : 'Improve clarity and readability while preserving meaning and structure.',
     });
 
     let improved = '';
@@ -1153,7 +1180,10 @@ router.post('/:id/versions/improve-patch-notes', authenticateToken, async (req: 
       return res.status(500).json({ success: false, message: 'AI returned empty patch notes.' });
     }
 
-    return res.json({ success: true, patchNotes: improved });
+    const withLinks = reapplyPatchNoteIssueLinks(changelogHtml, improved);
+    const withRelated = prependRelatedApplicationVersionsSection(relatedSection, withLinks);
+
+    return res.json({ success: true, patchNotes: withRelated });
   } catch (error: any) {
     logger.error('Improve product patch notes error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Failed to improve patch notes' });
@@ -1256,5 +1286,464 @@ router.get('/:id/versions/:versionId/pdf', authenticateToken, async (req: AuthRe
     }
   }
 });
+
+// GET /api/products/:id/release-candidate-tasks — wizard task picker pool
+router.get('/:id/release-candidate-tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const organizationId = await getActiveProductOrganizationId(productId);
+    if (organizationId === null) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    if (!(await userCanManageProductReleases(userId!, organizationId))) {
+      return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to manage product releases.' });
+    }
+
+    const [catalogRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT pa.ApplicationId, a.Name as ApplicationName
+       FROM ProductApplications pa
+       INNER JOIN Applications a ON a.Id = pa.ApplicationId
+       WHERE pa.ProductId = ?
+       ORDER BY a.Name ASC`,
+      [productId]
+    );
+    const catalogApplicationIds = catalogRows.map((row) => Number(row.ApplicationId));
+    if (catalogApplicationIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          tasks: [],
+          catalogApplicationIds: [],
+          projectCatalogApplicationIds: [],
+          catalogApplications: [],
+        },
+      });
+    }
+
+    const projectIdsRaw = String(req.query.projectIds || '')
+      .split(',')
+      .map((part) => Number(part.trim()))
+      .filter((id) => Number.isInteger(id) && id > 0);
+    const projectIds = [...new Set(projectIdsRaw)];
+
+    let projectCatalogApplicationIds = catalogApplicationIds.slice();
+    if (projectIds.length > 0) {
+      const projectPlaceholders = projectIds.map(() => '?').join(',');
+      const [projAppRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT DISTINCT ap.ApplicationId
+         FROM ApplicationProjects ap
+         INNER JOIN Projects p ON p.Id = ap.ProjectId
+         WHERE ap.ProjectId IN (${projectPlaceholders}) AND p.OrganizationId = ?`,
+        [...projectIds, organizationId]
+      );
+      const projectAppSet = new Set(projAppRows.map((row) => Number(row.ApplicationId)));
+      projectCatalogApplicationIds = catalogApplicationIds.filter((id) => projectAppSet.has(id));
+    }
+
+    const includeLinked =
+      req.query.includeLinked === '1' ||
+      req.query.includeLinked === 'true' ||
+      req.query.includeLinked === 'yes';
+    const keepSelectedIds = String(req.query.keepSelectedIds || '')
+      .split(',')
+      .map((part) => Number(part.trim()))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    const catalogPlaceholders = catalogApplicationIds.map(() => '?').join(',');
+    // Match Applications release picker: include tasks from projects linked to catalog apps
+    // (ApplicationProjects), not only tasks that already have ApplicationId / TaskApplications set.
+    const params: Array<string | number> = [
+      organizationId,
+      ...catalogApplicationIds,
+      ...catalogApplicationIds,
+      ...catalogApplicationIds,
+    ];
+
+    let projectScopeSql = '';
+    if (projectIds.length > 0) {
+      const projectPlaceholders = projectIds.map(() => '?').join(',');
+      // Explicit project filter: all tasks in those org projects (checkbox defaults still use catalog ∩ project apps).
+      projectScopeSql = ` AND t.ProjectId IN (${projectPlaceholders})`;
+      params.push(...projectIds);
+    }
+
+    let exclusionSql = '';
+    if (!includeLinked) {
+      exclusionSql = `
+        AND (
+          (
+            NOT EXISTS (
+              SELECT 1 FROM ApplicationVersionTasks avt WHERE avt.TaskId = t.Id
+            )
+            AND t.ReleaseVersionId IS NULL
+          )
+          ${keepSelectedIds.length > 0 ? `OR t.Id IN (${keepSelectedIds.map(() => '?').join(',')})` : ''}
+        )`;
+      if (keepSelectedIds.length > 0) {
+        params.push(...keepSelectedIds);
+      }
+    }
+
+    const [taskRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DISTINCT t.Id, t.TaskName, t.ProjectId, t.ApplicationId, t.ReleaseVersionId,
+              p.ProjectName, tsv.StatusName, tsv.ColorCode as StatusColor,
+              ttv.TypeName as TaskTypeName,
+              t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
+              tk.TicketNumber, oji.JiraUrl, oji.JiraProjectsUrl,
+              la.Name as PrimaryApplicationName,
+              lav.VersionNumber as PrimaryVersionNumber
+       FROM Tasks t
+       INNER JOIN Projects p ON p.Id = t.ProjectId AND p.OrganizationId = ?
+       LEFT JOIN TaskStatusValues tsv ON tsv.Id = t.Status
+       LEFT JOIN TaskTypeValues ttv ON ttv.Id = t.TaskType
+       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+       LEFT JOIN OrganizationJiraIntegrations oji
+         ON oji.OrganizationId = p.OrganizationId AND oji.IsEnabled = 1
+       LEFT JOIN TaskApplications ta ON ta.TaskId = t.Id
+       LEFT JOIN ApplicationProjects ap
+         ON ap.ProjectId = t.ProjectId AND ap.ApplicationId IN (${catalogPlaceholders})
+       LEFT JOIN Applications la ON la.Id = t.ApplicationId
+       LEFT JOIN ApplicationVersions lav ON lav.Id = t.ReleaseVersionId
+       WHERE (
+           t.ApplicationId IN (${catalogPlaceholders})
+           OR ta.ApplicationId IN (${catalogPlaceholders})
+           OR ap.ApplicationId IS NOT NULL
+         )
+         ${projectScopeSql}
+         ${exclusionSql}
+       ORDER BY p.ProjectName ASC, t.TaskName ASC`,
+      params
+    );
+
+    const taskIds = taskRows.map((row) => Number(row.Id)).filter((id) => Number.isFinite(id) && id > 0);
+    const relatedByTask = new Map<number, number[]>();
+    const linkedVersionsByTask = new Map<
+      number,
+      Array<{
+        applicationId: number;
+        applicationName: string;
+        versionId: number;
+        versionNumber: string;
+      }>
+    >();
+    if (taskIds.length > 0) {
+      const taskPlaceholders = taskIds.map(() => '?').join(',');
+      const [relatedRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT TaskId, ApplicationId FROM TaskApplications WHERE TaskId IN (${taskPlaceholders})`,
+        taskIds
+      );
+      for (const row of relatedRows) {
+        const taskId = Number(row.TaskId);
+        const applicationId = Number(row.ApplicationId);
+        if (!relatedByTask.has(taskId)) relatedByTask.set(taskId, []);
+        relatedByTask.get(taskId)!.push(applicationId);
+      }
+
+      const [linkedRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT avt.TaskId, av.Id as VersionId, av.VersionNumber, a.Id as ApplicationId, a.Name as ApplicationName
+         FROM ApplicationVersionTasks avt
+         INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+         INNER JOIN Applications a ON a.Id = av.ApplicationId
+         WHERE avt.TaskId IN (${taskPlaceholders})
+         ORDER BY a.Name ASC, av.VersionNumber ASC`,
+        taskIds
+      );
+      for (const row of linkedRows) {
+        const taskId = Number(row.TaskId);
+        if (!linkedVersionsByTask.has(taskId)) linkedVersionsByTask.set(taskId, []);
+        linkedVersionsByTask.get(taskId)!.push({
+          applicationId: Number(row.ApplicationId),
+          applicationName: String(row.ApplicationName || ''),
+          versionId: Number(row.VersionId),
+          versionNumber: String(row.VersionNumber || ''),
+        });
+      }
+    }
+
+    const tasks = taskRows.map((row) => {
+      const taskId = Number(row.Id);
+      const relatedApplicationIds = relatedByTask.get(taskId) || [];
+      const linkedVersions = linkedVersionsByTask.get(taskId) || [];
+      const defaultApplicationIds = defaultApplicationIdsForTask(
+        {
+          taskId,
+          primaryApplicationId: row.ApplicationId != null ? Number(row.ApplicationId) : null,
+          relatedApplicationIds,
+        },
+        catalogApplicationIds,
+        projectCatalogApplicationIds
+      );
+
+      const primaryAppName = row.PrimaryApplicationName ? String(row.PrimaryApplicationName) : null;
+      const primaryVersionNumber = row.PrimaryVersionNumber
+        ? String(row.PrimaryVersionNumber)
+        : null;
+      const linkedLabels = linkedVersions.map(
+        (link) => `${link.applicationName} v${link.versionNumber}`
+      );
+      if (
+        primaryAppName &&
+        primaryVersionNumber &&
+        !linkedLabels.some((label) => label === `${primaryAppName} v${primaryVersionNumber}`)
+      ) {
+        linkedLabels.unshift(`${primaryAppName} v${primaryVersionNumber}`);
+      }
+
+      const isLinkedToVersion =
+        linkedVersions.length > 0 ||
+        (row.ReleaseVersionId != null && Number(row.ReleaseVersionId) > 0);
+
+      return {
+        Id: taskId,
+        TaskName: row.TaskName,
+        ProjectId: row.ProjectId != null ? Number(row.ProjectId) : null,
+        ProjectName: row.ProjectName ?? null,
+        ApplicationId: row.ApplicationId != null ? Number(row.ApplicationId) : null,
+        ReleaseVersionId: row.ReleaseVersionId != null ? Number(row.ReleaseVersionId) : null,
+        StatusName: row.StatusName ?? null,
+        StatusColor: row.StatusColor ?? null,
+        TaskTypeName: row.TaskTypeName ?? null,
+        JiraIssueKey: row.JiraIssueKey ?? null,
+        ExternalIssueId: row.ExternalIssueId ?? null,
+        TicketId: row.TicketId != null ? Number(row.TicketId) : null,
+        TicketNumber: row.TicketNumber ?? null,
+        GitHubIssueNumber: row.GitHubIssueNumber ?? null,
+        GiteaIssueNumber: row.GiteaIssueNumber ?? null,
+        JiraUrl: row.JiraUrl ?? null,
+        JiraProjectsUrl: row.JiraProjectsUrl ?? null,
+        relatedApplicationIds,
+        defaultApplicationIds,
+        linkedVersions,
+        LinkedApplicationName: primaryAppName || linkedVersions[0]?.applicationName || null,
+        LinkedVersionNumber: primaryVersionNumber || linkedVersions[0]?.versionNumber || null,
+        LinkedAssociationsLabel: linkedLabels.join(' · ') || null,
+        IsLinkedToVersion: isLinkedToVersion,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        tasks,
+        catalogApplicationIds,
+        projectCatalogApplicationIds,
+        catalogApplications: catalogRows.map((row) => ({
+          Id: Number(row.ApplicationId),
+          Name: String(row.ApplicationName || ''),
+        })),
+      },
+    });
+  } catch (error) {
+    logger.error('Error fetching release candidate tasks:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch candidate tasks' });
+  }
+});
+
+// GET /api/products/:id/release-seed-tasks?applicationVersionIds=1,2
+router.get('/:id/release-seed-tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const productId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const organizationId = await getActiveProductOrganizationId(productId);
+    if (organizationId === null) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    if (!(await userCanManageProductReleases(userId!, organizationId))) {
+      return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to manage product releases.' });
+    }
+
+    const versionIds = String(req.query.applicationVersionIds || '')
+      .split(',')
+      .map((part) => Number(part.trim()))
+      .filter((id) => Number.isInteger(id) && id > 0);
+    if (versionIds.length === 0) {
+      return res.json({ success: true, data: { tasks: [] } });
+    }
+
+    const [catalogRows] = await pool.execute<RowDataPacket[]>(
+      'SELECT ApplicationId FROM ProductApplications WHERE ProductId = ?',
+      [productId]
+    );
+    const catalogSet = new Set(catalogRows.map((row) => Number(row.ApplicationId)));
+
+    const placeholders = versionIds.map(() => '?').join(',');
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT avt.TaskId, av.ApplicationId, av.Id as ApplicationVersionId,
+              t.TaskName, t.ProjectId, t.ApplicationId as PrimaryApplicationId,
+              p.ProjectName, av.PatchNotes, av.VersionNumber, a.Name as ApplicationName,
+              ttv.TypeName as TaskTypeName,
+              t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
+              tk.TicketNumber, oji.JiraUrl, oji.JiraProjectsUrl
+       FROM ApplicationVersionTasks avt
+       INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+       INNER JOIN Applications a ON a.Id = av.ApplicationId
+       INNER JOIN Tasks t ON t.Id = avt.TaskId
+       LEFT JOIN Projects p ON p.Id = t.ProjectId
+       LEFT JOIN TaskTypeValues ttv ON ttv.Id = t.TaskType
+       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+       LEFT JOIN OrganizationJiraIntegrations oji
+         ON oji.OrganizationId = p.OrganizationId AND oji.IsEnabled = 1
+       WHERE avt.VersionId IN (${placeholders})`,
+      versionIds
+    );
+
+    const tasks = rows
+      .filter((row) => catalogSet.has(Number(row.ApplicationId)))
+      .map((row) => ({
+        taskId: Number(row.TaskId),
+        applicationId: Number(row.ApplicationId),
+        applicationVersionId: Number(row.ApplicationVersionId),
+        TaskName: String(row.TaskName || ''),
+        ProjectId: row.ProjectId != null ? Number(row.ProjectId) : null,
+        ProjectName: row.ProjectName ?? null,
+        ApplicationId: row.PrimaryApplicationId != null ? Number(row.PrimaryApplicationId) : null,
+        TaskTypeName: row.TaskTypeName ?? null,
+        JiraIssueKey: row.JiraIssueKey ?? null,
+        ExternalIssueId: row.ExternalIssueId ?? null,
+        TicketId: row.TicketId != null ? Number(row.TicketId) : null,
+        TicketNumber: row.TicketNumber ?? null,
+        GitHubIssueNumber: row.GitHubIssueNumber ?? null,
+        GiteaIssueNumber: row.GiteaIssueNumber ?? null,
+        JiraUrl: row.JiraUrl ?? null,
+        JiraProjectsUrl: row.JiraProjectsUrl ?? null,
+        PatchNotes: row.PatchNotes ?? null,
+        VersionNumber: row.VersionNumber ?? null,
+        ApplicationName: row.ApplicationName ?? null,
+      }));
+
+    res.json({ success: true, data: { tasks } });
+  } catch (error) {
+    logger.error('Error fetching release seed tasks:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch seed tasks' });
+  }
+});
+
+// GET /api/products/:id/versions/:versionId/release-wizard-state
+router.get(
+  '/:id/versions/:versionId/release-wizard-state',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const productId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      const versionId = Number(
+        Array.isArray(req.params.versionId) ? req.params.versionId[0] : req.params.versionId
+      );
+      const context = await getProductVersionContext(productId, versionId);
+      if (!context) {
+        return res.status(404).json({ success: false, message: 'Version not found' });
+      }
+      if (!(await userCanManageProductReleases(userId!, context.organizationId))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not have permission to manage product releases.',
+        });
+      }
+
+      const state = await loadProductReleaseWizardState({
+        productId,
+        productVersionId: versionId,
+      });
+      if (!state) {
+        return res.status(404).json({ success: false, message: 'Version not found' });
+      }
+      res.json({ success: true, data: state });
+    } catch (error) {
+      logger.error('Error loading release wizard state:', error);
+      res.status(500).json({ success: false, message: 'Failed to load wizard state' });
+    }
+  }
+);
+
+// POST /api/products/:id/release-wizard
+router.post(
+  '/:id/release-wizard',
+  authenticateToken,
+  validateRequest(productReleaseWizardSchema),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const productId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      const organizationId = await getActiveProductOrganizationId(productId);
+      if (organizationId === null) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+      if (!(await userCanManageProductReleases(userId!, organizationId))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not have permission to manage product releases.',
+        });
+      }
+
+      const payload = req.body as WizardPayload;
+      const { productVersionId } = await runProductReleaseWizardCreate({
+        productId,
+        organizationId,
+        userId: userId!,
+        payload,
+      });
+      await invalidateProductCaches(productId, organizationId);
+      res.status(201).json({
+        success: true,
+        id: productVersionId,
+        message: 'Product release created',
+      });
+    } catch (error) {
+      const status = (error as { status?: number })?.status || 500;
+      const message =
+        error instanceof Error ? error.message : 'Failed to create product release';
+      if (status >= 500) {
+        logger.error('Error creating product release via wizard:', error);
+      }
+      res.status(status).json({ success: false, message });
+    }
+  }
+);
+
+// PUT /api/products/:id/versions/:versionId/release-wizard
+router.put(
+  '/:id/versions/:versionId/release-wizard',
+  authenticateToken,
+  validateRequest(productReleaseWizardSchema),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const productId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      const versionId = Number(
+        Array.isArray(req.params.versionId) ? req.params.versionId[0] : req.params.versionId
+      );
+      const context = await getProductVersionContext(productId, versionId);
+      if (!context) {
+        return res.status(404).json({ success: false, message: 'Version not found' });
+      }
+      if (!(await userCanManageProductReleases(userId!, context.organizationId))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not have permission to manage product releases.',
+        });
+      }
+
+      const payload = req.body as WizardPayload;
+      await runProductReleaseWizardUpdate({
+        productId,
+        productVersionId: versionId,
+        organizationId: context.organizationId,
+        userId: userId!,
+        payload,
+      });
+      await invalidateProductCaches(productId, context.organizationId);
+      res.json({ success: true, message: 'Product release updated' });
+    } catch (error) {
+      const status = (error as { status?: number })?.status || 500;
+      const message =
+        error instanceof Error ? error.message : 'Failed to update product release';
+      if (status >= 500) {
+        logger.error('Error updating product release via wizard:', error);
+      }
+      res.status(status).json({ success: false, message });
+    }
+  }
+);
 
 export default router;

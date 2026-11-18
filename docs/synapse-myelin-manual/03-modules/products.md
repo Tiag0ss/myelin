@@ -33,9 +33,15 @@ flowchart LR
 ## 3 — Product versions
 
 1. Open the product → **Versions**.
-2. Create a product version: number, name, status, release date, patch notes.
-3. Pick **application versions** from the product’s catalog (snapshot for that release).
-4. Export / print when your process uses product-level release PDFs (see Applications for single-app patch notes).
+2. Click **New version** — choose **Use wizard** or **Normal form**.
+3. Wizard flow (full product ship):
+   1. Enter product version metadata and optionally filter by **projects** (uses each project’s linked apps to narrow tasks).
+   2. For each catalog application: include it, **create a new** application version or **link an existing** one.
+   3. Select tasks; each task card has checkboxes for the included apps (a task can ship in more than one app). Linking an existing app version pre-selects its current tasks.
+   4. Review product patch notes (Related application versions + per-app sections). Use **Reset** to rebuild from the associated apps, or **Improve with AI** when configured, then create.
+4. Normal form keeps the previous single modal (metadata + pick existing application versions).
+5. Versions created via the wizard show a **Wizard** badge. Editing one asks whether to reopen the wizard (prefilled) or use normal edit.
+6. Export / print product-level release PDFs when needed (see Applications for single-app patch notes).
 
 ## 4 — Permissions (summary)
 

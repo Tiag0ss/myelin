@@ -99,6 +99,7 @@ flowchart LR
 ## Related
 
 - [[03-modules/applications-and-releases]]
+- [[03-modules/products]] — multi-app product release wizard
 - [[04-workflows/task-first-delivery]]
 - [[04-workflows/ticket-to-delivery]]
 - [[04-workflows/jira-sync]]

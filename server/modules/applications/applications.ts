@@ -1483,8 +1483,8 @@ router.post('/:id/versions', authenticateToken, async (req: AuthRequest, res: Re
     }
 
     const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO ApplicationVersions (ApplicationId, VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId, CreatedBy, CreatedAt, UpdatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      `INSERT INTO ApplicationVersions (ApplicationId, VersionNumber, VersionName, Status, ReleaseDate, PatchNotes, IsCustomerSpecific, CustomerId, CreatedVia, CreatedBy, CreatedAt, UpdatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [applicationId, VersionNumber, VersionName || null, Status || 'Planning', normalizedReleaseDate, PatchNotes || null, isCustomerSpecific, isCustomerSpecific === 1 ? normalizedCustomerId : null, userId]
     );
 

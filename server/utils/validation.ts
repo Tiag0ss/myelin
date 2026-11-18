@@ -221,6 +221,58 @@ export const expenseApprovalSchema = z.object({
   status: z.enum(['approved', 'rejected', 'pending']),
 }).passthrough();
 
+export const productReleaseWizardApplicationSchema = z.object({
+  applicationId: z.coerce.number().int().positive(),
+  mode: z.enum(['create', 'link']),
+  versionNumber: z.string().max(50).optional().nullable(),
+  versionName: z.string().max(255).optional().nullable(),
+  applicationVersionId: z.coerce.number().int().positive().optional().nullable(),
+  /** When linking an existing version, rebuild and replace its PatchNotes from wizard tasks. Default false. */
+  recreatePatchNotes: z.boolean().optional().default(false),
+  taskIds: z.array(z.coerce.number().int().positive()).default([]),
+});
+
+export const productReleaseWizardSchema = z
+  .object({
+    VersionNumber: z.string().min(1).max(50),
+    VersionName: z.string().max(255).optional().nullable(),
+    Status: z.string().max(50).optional().nullable(),
+    ReleaseDate: optionalDateString,
+    PatchNotes: z.string().max(MEDIUMTEXT_MAX).optional().nullable(),
+    IsCustomerSpecific: z.union([z.boolean(), z.coerce.number()]).optional(),
+    CustomerId: optionalPositiveInt,
+    projectIds: z.array(z.coerce.number().int().positive()).optional().default([]),
+    applications: z.array(productReleaseWizardApplicationSchema).min(1),
+  })
+  .superRefine((data, ctx) => {
+    const seenApps = new Set<number>();
+    for (const app of data.applications) {
+      if (seenApps.has(app.applicationId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Only one entry is allowed per catalog application',
+          path: ['applications'],
+        });
+      }
+      seenApps.add(app.applicationId);
+      if (app.mode === 'create' && !String(app.versionNumber || '').trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'VersionNumber is required when creating an application version',
+          path: ['applications'],
+        });
+      }
+      if (app.mode === 'link' && !(Number(app.applicationVersionId) > 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'applicationVersionId is required when linking an application version',
+          path: ['applications'],
+        });
+      }
+    }
+  })
+  .passthrough();
+
 export const expenseReimbursementSchema = z.object({
   amount: z.coerce.number().positive(),
   notes: z.string().max(2000).optional().nullable(),

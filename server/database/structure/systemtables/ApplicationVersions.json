@@ -60,6 +60,13 @@
       "Comment": "Optional customer association for customer-specific versions"
     },
     {
+      "FieldName": "CreatedVia",
+      "DataType": "varchar(32)",
+      "NotNullable": true,
+      "DefaultValue": "manual",
+      "Comment": "Origin of the version: manual or product_wizard"
+    },
+    {
       "FieldName": "CreatedBy",
       "DataType": "int",
       "NotNullable": true,

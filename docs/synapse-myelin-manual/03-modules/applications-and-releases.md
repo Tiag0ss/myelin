@@ -6,7 +6,7 @@
 **When disabled / missing:** Missing menu = permissions/nav — not a module toggle.
 
 
-Applications are the software products you build or maintain (distinct from org **Products** bundles — [[03-modules/products]]). **Versions (releases)** hold patch notes, dates, and linked tasks. Export PDFs for release communication.
+Applications are the software products you build or maintain (distinct from org **Products** bundles — [[03-modules/products]]). **Versions (releases)** hold patch notes, dates, and linked tasks. Export PDFs for release communication. When several apps ship together, use the product **release wizard** on [[03-modules/products]] to create or link application versions and assign tasks in one flow.
 
 ```mermaid
 flowchart TD

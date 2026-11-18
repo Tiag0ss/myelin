@@ -40,6 +40,7 @@ import { NavModuleIcon } from '@/lib/navIcons';
 import PageTabs from '@/components/PageTabs';
 import PageStickyChrome from '@/components/PageStickyChrome';
 import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
+import ProductReleaseWizardModal from './_components/ProductReleaseWizardModal';
 
 type Tab = 'overview' | 'versions' | 'settings';
 const PRODUCT_DETAIL_TABS = ['overview', 'versions', 'settings'] as const;
@@ -129,6 +130,10 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     onConfirm: () => void;
     onCancel?: () => void;
   } | null>(null);
+
+  const [showReleaseWizard, setShowReleaseWizard] = useState(false);
+  const [wizardMode, setWizardMode] = useState<'create' | 'edit'>('create');
+  const [wizardVersionId, setWizardVersionId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -278,6 +283,28 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     setShowVersionModal(true);
   };
 
+  const openCreateReleaseWizard = () => {
+    setWizardMode('create');
+    setWizardVersionId(null);
+    setShowReleaseWizard(true);
+  };
+
+  const handleNewVersionClick = () => {
+    setConfirmModal({
+      title: t('lit.newVersion'),
+      message:
+        t('lit.newVersionCreateHelp') ||
+        'Create this product version with the release wizard, or use the normal form?',
+      confirmLabel: t('lit.useWizard') || 'Use wizard',
+      cancelLabel: t('lit.useClassicForm') || 'Normal form',
+      confirmVariant: 'primary',
+      onConfirm: () => openCreateReleaseWizard(),
+      onCancel: () => {
+        void openCreateVersionModal();
+      },
+    });
+  };
+
   const openEditVersionModal = async (version: ProductVersion) => {
     setEditingVersion(version);
     setVersionForm({
@@ -293,6 +320,30 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     await loadAppVersionsForCatalog(catalogIds);
     await loadAiAvailability();
     setShowVersionModal(true);
+  };
+
+  const handleEditVersionClick = (version: ProductVersion) => {
+    if (String(version.CreatedVia || '') === 'product_wizard') {
+      setConfirmModal({
+        title: t('lit.wizardCreatedVersion') || 'Wizard-created version',
+        message:
+          t('lit.wizardCreatedVersionEditHelp') ||
+          'This product version was created with the release wizard. Reopen the wizard with the previous options, or use normal edit?',
+        confirmLabel: t('lit.reopenWizard') || 'Reopen wizard',
+        cancelLabel: t('lit.normalEdit') || 'Normal edit',
+        confirmVariant: 'primary',
+        onConfirm: () => {
+          setWizardMode('edit');
+          setWizardVersionId(version.Id);
+          setShowReleaseWizard(true);
+        },
+        onCancel: () => {
+          void openEditVersionModal(version);
+        },
+      });
+      return;
+    }
+    void openEditVersionModal(version);
   };
 
   const buildLinksPayload = () =>
@@ -814,7 +865,7 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 {permissions?.canManageProductReleases && (
                   <button
                     type="button"
-                    onClick={openCreateVersionModal}
+                    onClick={handleNewVersionClick}
                     className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded"
                   >
                     + {t('lit.newVersion')}
@@ -847,7 +898,14 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-gray-900 dark:text-white">{version.VersionNumber}</span>
+                          <span className="font-medium text-gray-900 dark:text-white inline-flex items-center gap-1.5">
+                            {version.VersionNumber}
+                            {String(version.CreatedVia || '') === 'product_wizard' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                {t('lit.wizardBadge') || 'Wizard'}
+                              </span>
+                            )}
+                          </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[version.Status] || STATUS_COLORS.Planning}`}>
                             {version.Status}
                           </span>
@@ -869,9 +927,14 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white inline-flex items-center gap-2 flex-wrap">
                         {selectedVersion.VersionNumber}
                         {selectedVersion.VersionName ? ` — ${selectedVersion.VersionName}` : ''}
+                        {String(selectedVersion.CreatedVia || '') === 'product_wizard' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 font-medium">
+                            {t('lit.wizardBadge') || 'Wizard'}
+                          </span>
+                        )}
                       </h3>
                       <p className="text-sm text-gray-500">
                         {selectedVersion.ReleaseDate
@@ -884,7 +947,7 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         <>
                           <button
                             type="button"
-                            onClick={() => void openEditVersionModal(selectedVersion)}
+                            onClick={() => handleEditVersionClick(selectedVersion)}
                             className={pageActionButtonClass.secondary}
                           >
                             {t('common.edit')}
@@ -1200,6 +1263,31 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
           cancel?.();
         }}
       />
+
+      {token && product && (
+        <ProductReleaseWizardModal
+          isOpen={showReleaseWizard}
+          mode={wizardMode}
+          productId={id}
+          productVersionId={wizardVersionId}
+          organizationId={product.OrganizationId}
+          token={token}
+          customers={orgCustomers}
+          onClose={() => setShowReleaseWizard(false)}
+          onSaved={async (versionId) => {
+            setShowReleaseWizard(false);
+            showToast({
+              type: 'success',
+              message:
+                wizardMode === 'edit'
+                  ? t('lit.versionUpdatedSuccessfully')
+                  : t('lit.versionCreatedSuccessfully'),
+            });
+            await loadAll();
+            await loadVersionDetail(versionId);
+          }}
+        />
+      )}
 
       <ScrollToTopButton />
     </div>

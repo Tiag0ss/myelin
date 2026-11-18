@@ -1,8 +1,16 @@
+import {
+  buildPatchNotesFromTasksAndCommits,
+  type PatchNoteCommitInput,
+  type PatchNoteIssueRefInput,
+  type PatchNoteTaskInput,
+} from './releasePatchNotes';
+
 export type ProductAppVersionNoteSource = {
   applicationId: number;
   applicationName: string;
   applicationVersionId: number;
   versionNumber: string;
+  versionName?: string | null;
   patchNotes: string | null | undefined;
 };
 
@@ -29,6 +37,93 @@ export function mergeProductPatchNotesByApplication(
       return `<h2>${escapeHtml(title)}</h2>\n${bodyHtml}`;
     })
     .join('\n');
+}
+
+/** Known heading for the wizard related-apps list (also matched case-insensitively). */
+export const RELATED_APPLICATION_VERSIONS_HEADING = 'Related application versions';
+
+/**
+ * Split out the leading "Related application versions" block so AI improve can
+ * edit only the changelog body, then reattach this section unchanged.
+ */
+export function splitRelatedApplicationVersionsSection(html: string): {
+  relatedSection: string;
+  body: string;
+} {
+  const source = String(html || '').trim();
+  if (!source) {
+    return { relatedSection: '', body: '' };
+  }
+
+  const re =
+    /(<h2[^>]*>\s*Related application versions\s*<\/h2>\s*(?:<ul[\s\S]*?<\/ul>)?)/i;
+  const match = re.exec(source);
+  if (!match || match.index == null) {
+    return { relatedSection: '', body: source };
+  }
+
+  const relatedSection = String(match[1] || '').trim();
+  const body = `${source.slice(0, match.index)}${source.slice(match.index + match[1].length)}`.trim();
+  return { relatedSection, body };
+}
+
+/** Prepend a previously extracted related section ahead of improved body HTML. */
+export function prependRelatedApplicationVersionsSection(
+  relatedSection: string,
+  bodyHtml: string
+): string {
+  const related = String(relatedSection || '').trim();
+  const body = String(bodyHtml || '').trim();
+  if (!related) return body;
+  if (!body) return related;
+  // Drop a duplicate related block if the model kept/rewrote one.
+  const withoutDup = splitRelatedApplicationVersionsSection(body).body;
+  return withoutDup ? `${related}\n${withoutDup}` : related;
+}
+
+/**
+ * Wizard product PatchNotes baseline:
+ * 1) Related application versions list
+ * 2) Changelog from associated tasks (same bullet/link format as application releases)
+ */
+export function buildWizardProductPatchNotes(
+  sources: ProductAppVersionNoteSource[],
+  options?: {
+    relatedHeading?: string;
+    tasks?: Array<PatchNoteTaskInput & PatchNoteIssueRefInput>;
+    commits?: PatchNoteCommitInput[];
+    generalProjectLabel?: string;
+    untypedLabel?: string;
+  }
+): string {
+  if (!Array.isArray(sources) || sources.length === 0) {
+    return '';
+  }
+
+  const sorted = [...sources].sort((a, b) =>
+    a.applicationName.localeCompare(b.applicationName, undefined, { sensitivity: 'base' })
+  );
+
+  const heading = String(options?.relatedHeading || 'Related application versions').trim()
+    || 'Related application versions';
+
+  const relatedItems = sorted
+    .map((source) => {
+      const label = `${source.applicationName} ${source.versionNumber}`.trim();
+      const name = source.versionName ? String(source.versionName).trim() : '';
+      const text = name ? `${label} (${name})` : label;
+      return `<li>${escapeHtml(text)}</li>`;
+    })
+    .join('');
+
+  const relatedSection = `<h2>${escapeHtml(heading)}</h2>\n<ul>${relatedItems}</ul>`;
+  const changelog = buildPatchNotesFromTasksAndCommits({
+    tasks: options?.tasks || [],
+    commits: options?.commits || [],
+    generalProjectLabel: options?.generalProjectLabel,
+    untypedLabel: options?.untypedLabel,
+  });
+  return changelog ? `${relatedSection}\n${changelog}` : relatedSection;
 }
 
 /**
