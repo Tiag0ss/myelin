@@ -6,8 +6,30 @@ import {
   getProductReleaseCandidateTasks,
   type ProductReleaseCandidateTask,
 } from '@/lib/api/products';
+import { resolvePatchNoteIssueRef } from '@/lib/releasePatchNotes';
 
-export type ProductReleasePickerTask = ProductReleaseCandidateTask;
+export type ProductReleasePickerTask = ProductReleaseCandidateTask & {
+  IssueKey?: string | null;
+  IssueUrl?: string | null;
+};
+
+function withResolvedIssueLinks(task: ProductReleaseCandidateTask): ProductReleasePickerTask {
+  const ref = resolvePatchNoteIssueRef({
+    JiraIssueKey: task.JiraIssueKey,
+    ExternalIssueId: task.ExternalIssueId,
+    TicketId: task.TicketId,
+    TicketNumber: task.TicketNumber,
+    JiraUrl: task.JiraUrl,
+    JiraProjectsUrl: task.JiraProjectsUrl,
+    GitHubIssueNumber: task.GitHubIssueNumber,
+    GiteaIssueNumber: task.GiteaIssueNumber,
+  });
+  return {
+    ...task,
+    IssueKey: ref?.key ?? null,
+    IssueUrl: ref?.url ?? null,
+  };
+}
 
 type Props = {
   isOpen: boolean;
@@ -66,7 +88,7 @@ export default function ProductReleaseTasksPickerModal({
             : [],
         });
         if (cancelled) return;
-        const tasks = data.data.tasks || [];
+        const tasks = (data.data.tasks || []).map(withResolvedIssueLinks);
         setListedTasks(tasks);
         setKnownTasksById((prev) => {
           const next = new Map(prev);
@@ -101,6 +123,10 @@ export default function ProductReleaseTasksPickerModal({
         String(task.ProjectName || '').toLowerCase().includes(q) ||
         String(task.StatusName || '').toLowerCase().includes(q) ||
         String(task.LinkedAssociationsLabel || '').toLowerCase().includes(q) ||
+        String(task.IssueKey || '').toLowerCase().includes(q) ||
+        String(task.JiraIssueKey || '').toLowerCase().includes(q) ||
+        String(task.ExternalIssueId || '').toLowerCase().includes(q) ||
+        String(task.TicketNumber || '').toLowerCase().includes(q) ||
         String(task.Id).includes(q)
       );
     });
@@ -167,7 +193,7 @@ export default function ProductReleaseTasksPickerModal({
               onChange={(e) => setSearch(e.target.value)}
               placeholder={
                 t('lit.searchOrgTasksPlaceholder') ||
-                'Search tasks by name, project, status, or id…'
+                'Search tasks by name, ticket/board, project, status, or id…'
               }
               className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             />
@@ -240,6 +266,23 @@ export default function ProductReleaseTasksPickerModal({
                           {task.TaskName}
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">#{task.Id}</span>
+                        {task.IssueKey ? (
+                          task.IssueUrl ? (
+                            <a
+                              href={task.IssueUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                              {task.IssueKey}
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {task.IssueKey}
+                            </span>
+                          )
+                        ) : null}
                         {task.StatusName ? (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             {task.StatusName}

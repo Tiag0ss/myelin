@@ -27,6 +27,10 @@ import { useTaskFieldVisibility } from '@/hooks/useTaskFieldVisibility';
 import TaskDetailSearchableSelect from '@/components/taskDetail/TaskDetailSearchableSelect';
 import { blendHexColors, normalizeHexColor, withAlpha } from '@/lib/colorBlend';
 import { sanitizeRichTextHtml } from '@/lib/sanitizeHtml';
+import {
+  applicationVersionHref,
+  productVersionHref,
+} from '@/lib/versionDeepLinks';
 
 interface TaskDetailModalProps {
   projectId: number;
@@ -4121,11 +4125,26 @@ export default function TaskDetailModal({
                     {(formData.applicationIds || []).length === 1 && (
                       <button
                         type="button"
-                        onClick={() => router.push(`/applications/${formData.applicationIds![0]}`)}
+                        onClick={() => {
+                          const appId = formData.applicationIds![0];
+                          const releaseId = formData.releaseVersionId;
+                          const selected = applicationVersions.find((v) => v.Id === releaseId);
+                          if (
+                            releaseId &&
+                            selected &&
+                            Number(selected.ApplicationId) === Number(appId)
+                          ) {
+                            router.push(applicationVersionHref(appId, releaseId));
+                            return;
+                          }
+                          router.push(`/applications/${appId}`);
+                        }}
                         className="inline-flex h-7 items-center gap-1 rounded-md bg-indigo-100 px-2 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
                         title={t('lit.openApplicationPage')}
                       >
-                        {t('lit.openApplication')}
+                        {formData.releaseVersionId
+                          ? t('lit.openVersion') || 'Open version'
+                          : t('lit.openApplication')}
                         <span aria-hidden>↗</span>
                       </button>
                     )}
@@ -4161,9 +4180,32 @@ export default function TaskDetailModal({
 
               {(formData.applicationIds || []).length > 0 && isFieldVisible('releaseVersion') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('lit.releaseVersionOptional')}
-                  </label>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t('lit.releaseVersionOptional')}
+                    </label>
+                    {(() => {
+                      const selected = applicationVersions.find(
+                        (v) => v.Id === formData.releaseVersionId
+                      );
+                      if (!selected) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(
+                              applicationVersionHref(selected.ApplicationId, selected.Id)
+                            )
+                          }
+                          className="inline-flex h-7 items-center gap-1 rounded-md bg-indigo-100 px-2 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                          title={t('lit.openVersion') || 'Open version'}
+                        >
+                          {t('lit.openVersion') || 'Open version'}
+                          <span aria-hidden>↗</span>
+                        </button>
+                      );
+                    })()}
+                  </div>
                   <SearchableSelectComponent
                     value={formData.releaseVersionId?.toString() ?? ''}
                     onChange={(val) => {
@@ -4220,7 +4262,9 @@ export default function TaskDetailModal({
                         <button
                           key={`${pv.ProductVersionId}-${pv.ApplicationVersionId}`}
                           type="button"
-                          onClick={() => router.push(`/products/${pv.ProductId}`)}
+                          onClick={() =>
+                            router.push(productVersionHref(pv.ProductId, pv.ProductVersionId))
+                          }
                           className="w-full flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           <div className="min-w-0">

@@ -2393,6 +2393,7 @@
   "showsHidesAiFeaturesGloballyConfigureOpenaiOllamaOrOpenrouterBelow": "Shows/hides AI features globally. Configure OpenAI, Ollama, or OpenRouter below.",
   "skOr": "sk-or-...",
   "openApplication": "Open application",
+  "openVersion": "Open version",
   "openApplicationPage": "Open application page",
   "openASupportTicket": "Open a support ticket",
   "openCustomer": "Open customer",

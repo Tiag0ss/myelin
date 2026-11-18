@@ -8,7 +8,7 @@ import { getApiUrl } from '@/lib/api/config';
 import { useState, useEffect, use, useMemo, useRef, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -35,6 +35,10 @@ import {
   resolvePatchNoteIssueRef,
 } from '@/lib/releasePatchNotes';
 import { versionRowMatchesSearch } from '@/lib/versionSearch';
+import {
+  parseVersionIdParam,
+  productVersionHref,
+} from '@/lib/versionDeepLinks';
 import { statusValuesApi, type StatusValue } from '@/lib/api/statusValues';
 import VersionCommitsPickerModal from './_components/VersionCommitsPickerModal';
 import VersionTasksPickerModal from './_components/VersionTasksPickerModal';
@@ -220,11 +224,15 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
   const { user, token, isLoading: authLoading } = useAuth();
   const { permissions, isLoading: _permissionsLoading } = usePermissions();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [application, setApplication] = useState<Application | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useUrlTab<Tab>(APPLICATION_DETAIL_TABS, 'overview');
+  const [activeTab, setActiveTab] = useUrlTab<Tab>(APPLICATION_DETAIL_TABS, 'overview', {
+    clearParamsOnChange: ['versionId'],
+  });
   const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   const [commits, setCommits] = useState<RemoteCommit[]>([]);
@@ -610,12 +618,27 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
     }
   };
 
-  const loadVersionDetail = async (version: AppVersion) => {
+  const syncApplicationVersionInUrl = (versionId: number | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', 'versions');
+    if (versionId && versionId > 0) params.set('versionId', String(versionId));
+    else params.delete('versionId');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const loadVersionDetail = async (
+    version: AppVersion,
+    options?: { syncUrl?: boolean }
+  ) => {
     setSelectedVersion(version);
     setVersionDetailTab('tasks');
     setShowPatchNotes(false);
     setIsLoadingTasks(true);
     setVersionProductVersions([]);
+    if (options?.syncUrl !== false) {
+      syncApplicationVersionInUrl(Number(version.Id));
+    }
     try {
       const res = await fetch(`${getApiUrl()}/api/applications/${id}/versions/${version.Id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -640,6 +663,24 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
       setIsLoadingTasks(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab !== 'versions') {
+      setSelectedVersion(null);
+      setVersionTasks([]);
+      setVersionCommits([]);
+      setVersionProductVersions([]);
+      return;
+    }
+    if (!token || !application?.Versions?.length) return;
+    const versionId = parseVersionIdParam(searchParams.get('versionId'));
+    if (!versionId) return;
+    if (selectedVersion?.Id === versionId) return;
+    const target = application.Versions.find((version) => Number(version.Id) === versionId);
+    if (!target) return;
+    void loadVersionDetail(target, { syncUrl: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, token, application?.Versions, searchParams]);
 
   const loadAvailableTasks = async (excludeVersionId?: number) => {
     try {
@@ -1942,10 +1983,11 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                     ) : (
                       <div className="space-y-2">
                         {versionProductVersions.map((pv) => (
-                          <div
+                          <button
                             key={`${pv.ProductId}-${pv.Id}`}
-                            className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                            onClick={() => router.push(`/products/${pv.ProductId}`)}
+                            type="button"
+                            className="w-full flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
+                            onClick={() => router.push(productVersionHref(pv.ProductId, pv.Id))}
                           >
                             <div className="min-w-0">
                               <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -1961,7 +2003,7 @@ function ApplicationDetailPageContent({ params }: { params: Promise<{ id: string
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
                               {pv.Status}
                             </span>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}

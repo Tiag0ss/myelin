@@ -195,6 +195,49 @@ export async function getProductVersion(
   return parseJson<{ success: boolean; version: ProductVersion }>(res);
 }
 
+export type ProductVersionTask = {
+  Id: number;
+  ProjectId: number | null;
+  TaskName: string;
+  ProjectName?: string | null;
+  StatusName?: string | null;
+  StatusColor?: string | null;
+  PriorityName?: string | null;
+  PriorityColor?: string | null;
+  TaskTypeName?: string | null;
+  AssigneeFN?: string | null;
+  AssigneeLN?: string | null;
+  JiraIssueKey?: string | null;
+  ExternalIssueId?: string | null;
+  TicketId?: number | null;
+  TicketNumber?: string | number | null;
+  GitHubIssueNumber?: string | number | null;
+  GiteaIssueNumber?: string | number | null;
+  JiraUrl?: string | null;
+  JiraProjectsUrl?: string | null;
+  IssueKey?: string | null;
+  IssueUrl?: string | null;
+  linkedVersions?: Array<{
+    applicationId: number;
+    applicationName: string;
+    versionId: number;
+    versionNumber: string;
+  }>;
+  LinkedAssociationsLabel?: string | null;
+};
+
+export async function listProductVersionTasks(
+  token: string,
+  productId: number | string,
+  versionId: number | string
+) {
+  const res = await fetch(
+    `${getApiUrl()}/api/products/${productId}/versions/${versionId}/tasks`,
+    { headers: authHeaders(token) }
+  );
+  return parseJson<{ success: boolean; data: { tasks: ProductVersionTask[] } }>(res);
+}
+
 export async function createProductVersion(
   token: string,
   productId: number | string,

@@ -234,7 +234,8 @@ Each product can have versioned releases (`ProductVersions`):
 
 - Fields: Version Number, Version Name, Status (same enum as application versions), Release Date, Patch Notes (rich text snapshot), `IsCustomerSpecific` / Customer, `CreatedVia` (`manual` | `product_wizard`), optional `WizardProjectIds` (comma-separated project filter from the wizard)
 - Links (`ProductVersionApplicationVersions`): **at most one** `ApplicationVersion` per catalog application (subset allowed while drafting)
-- Tasks stay on application versions — no product-level task pool
+- Tasks stay on application versions — no product-level task pool; product version detail shows a **Tasks** tab aggregating tasks from linked application versions (status, priority, ticket/board key)
+- Version detail uses **PageTabs**: Patch notes | Tasks
 - Application versions also store `CreatedVia`; wizard-created AVs are tagged `product_wizard` (linked existing AVs keep their original value)
 
 ### Product release wizard
@@ -245,15 +246,15 @@ Wizard steps:
 1. Product metadata + optional project filter (narrows candidate tasks; intersection with catalog apps suggested for include)
 2. Per catalog app: include, **Create new** or **Link existing** application version
 3. Select tasks with per-app checkboxes (multi-app allowed); linked AVs seed their existing tasks
-4. Review product patch notes (baseline = Related application versions list + per-app merge). **Reset** rebuilds the baseline; **Improve with AI** uses the existing product improve endpoint. Create/Save persists reviewed HTML.
+4. Review product patch notes (baseline = Related application versions list + task changelog with ticket/board links). **Reset** rebuilds the baseline; **Improve with AI** uses the product improve endpoint and keeps the Related section. Create/Save persists reviewed HTML.
 
-Wizard-created app versions get simple task-based patch notes (no AI, no commits). Linked AVs keep their notes. Edit on a `product_wizard` product version asks to reopen the wizard (prefilled) or use normal edit. Normal form remains the single-modal link-existing path.
+Wizard-created app versions get task-based patch notes (with ticket/board links; no commits). Linked AVs keep their notes unless **Recreate application patch notes** is checked. Edit on a `product_wizard` product version asks to reopen the wizard (prefilled) or use normal edit. Normal form remains the single-modal link-existing path. Task pickers show ticket/board keys like application releases.
 
 ### Patch notes snapshot
 - On version create (when links are provided) and on explicit **Fill from applications** / rebuild, linked ApplicationVersions’ `PatchNotes` are merged into `ProductVersions.PatchNotes` with one HTML section per application (`<h2>{AppName} {VersionNumber}</h2>` + body), ordered by application name
-- Wizard baseline additionally prepends a **Related application versions** list section
+- Wizard baseline prepends a **Related application versions** list, then builds the changelog from associated tasks (same ticket/board link format as application releases)
 - Edits are a snapshot; later changes to application notes do **not** auto-update the product version
-- **Improve with AI** (when org LLM is configured) rewrites notes while preserving per-application section structure (also available in wizard step 4)
+- **Improve with AI** (when org LLM is configured) rewrites the changelog body while keeping the Related application versions section and restoring ticket/board links (also available in wizard step 4)
 - **Single version PDF**: product/version/date header, list of included app versions, body via shared release-notes PDF renderer (section headings kept)
 
 ---

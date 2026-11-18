@@ -30,7 +30,11 @@ import {
   validateProductVersionAppLinks,
   ProductAppVersionNoteSource,
 } from '../../utils/productPatchNotes';
-import { reapplyPatchNoteIssueLinks } from '../../utils/releasePatchNotes';
+import {
+  reapplyPatchNoteIssueLinks,
+  resolvePatchNoteIssueKey,
+  resolvePatchNoteIssueUrl,
+} from '../../utils/releasePatchNotes';
 import { validateRequest, productReleaseWizardSchema } from '../../utils/validation';
 import {
   loadProductReleaseWizardState,
@@ -776,6 +780,157 @@ router.get('/:id/versions/:versionId', authenticateToken, async (req: AuthReques
   } catch (error) {
     logger.error('Error fetching product version:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch version' });
+  }
+});
+
+// GET /api/products/:id/versions/:versionId/tasks — tasks linked via included application versions
+router.get('/:id/versions/:versionId/tasks', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const productId = Number(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const versionId = Number(
+      Array.isArray(req.params.versionId) ? req.params.versionId[0] : req.params.versionId
+    );
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    if (!Number.isFinite(productId) || productId <= 0 || !Number.isFinite(versionId) || versionId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid product or version id' });
+    }
+
+    const context = await getProductVersionContext(productId, versionId);
+    if (!context) {
+      return res.status(404).json({ success: false, message: 'Version not found' });
+    }
+
+    const [accessRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT p.Id
+       FROM Products p
+       INNER JOIN OrganizationMembers om ON om.OrganizationId = p.OrganizationId
+       WHERE p.Id = ? AND om.UserId = ? AND p.IsActive = 1
+       LIMIT 1`,
+      [productId, userId]
+    );
+    if (!accessRows.length) {
+      return res.status(404).json({ success: false, message: 'Product not found or access denied' });
+    }
+
+    const organizationId = context.organizationId;
+
+    const [taskRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT DISTINCT t.Id, t.ProjectId, t.TaskName, t.Status, t.Priority, t.TaskType,
+              t.ApplicationId, t.ReleaseVersionId,
+              t.JiraIssueKey, t.ExternalIssueId, t.TicketId, t.GitHubIssueNumber, t.GiteaIssueNumber,
+              tsv.StatusName, tsv.ColorCode as StatusColor,
+              tpv.PriorityName, tpv.ColorCode as PriorityColor,
+              ttv.TypeName as TaskTypeName,
+              p.ProjectName,
+              u.FirstName as AssigneeFN, u.LastName as AssigneeLN,
+              tk.TicketNumber,
+              oji.JiraUrl, oji.JiraProjectsUrl
+       FROM Tasks t
+       INNER JOIN ApplicationVersionTasks avt ON avt.TaskId = t.Id
+       INNER JOIN ProductVersionApplicationVersions pvav
+         ON pvav.ApplicationVersionId = avt.VersionId
+       LEFT JOIN TaskStatusValues tsv ON t.Status = tsv.Id
+       LEFT JOIN TaskPriorityValues tpv ON t.Priority = tpv.Id
+       LEFT JOIN TaskTypeValues ttv ON t.TaskType = ttv.Id
+       LEFT JOIN Projects p ON t.ProjectId = p.Id
+       LEFT JOIN Users u ON t.AssignedTo = u.Id
+       LEFT JOIN Tickets tk ON t.TicketId = tk.Id
+       LEFT JOIN OrganizationJiraIntegrations oji
+         ON oji.OrganizationId = ? AND oji.IsEnabled = 1
+       WHERE pvav.ProductVersionId = ?
+       ORDER BY p.ProjectName ASC, t.TaskName ASC, t.Id ASC`,
+      [organizationId, versionId]
+    );
+
+    const taskIds = taskRows
+      .map((row) => Number(row.Id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    const linkedByTask = new Map<
+      number,
+      Array<{
+        applicationId: number;
+        applicationName: string;
+        versionId: number;
+        versionNumber: string;
+      }>
+    >();
+
+    if (taskIds.length > 0) {
+      const placeholders = taskIds.map(() => '?').join(',');
+      const [linkRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT avt.TaskId, a.Id as ApplicationId, a.Name as ApplicationName,
+                av.Id as VersionId, av.VersionNumber
+         FROM ApplicationVersionTasks avt
+         INNER JOIN ProductVersionApplicationVersions pvav
+           ON pvav.ApplicationVersionId = avt.VersionId
+         INNER JOIN ApplicationVersions av ON av.Id = avt.VersionId
+         INNER JOIN Applications a ON a.Id = av.ApplicationId
+         WHERE pvav.ProductVersionId = ?
+           AND avt.TaskId IN (${placeholders})
+         ORDER BY a.Name ASC, av.VersionNumber ASC`,
+        [versionId, ...taskIds]
+      );
+      for (const row of linkRows) {
+        const taskId = Number(row.TaskId);
+        if (!linkedByTask.has(taskId)) linkedByTask.set(taskId, []);
+        linkedByTask.get(taskId)!.push({
+          applicationId: Number(row.ApplicationId),
+          applicationName: String(row.ApplicationName || ''),
+          versionId: Number(row.VersionId),
+          versionNumber: String(row.VersionNumber || ''),
+        });
+      }
+    }
+
+    const tasks = taskRows.map((row) => {
+      const refInput = {
+        JiraIssueKey: row.JiraIssueKey,
+        ExternalIssueId: row.ExternalIssueId,
+        TicketId: row.TicketId,
+        TicketNumber: row.TicketNumber,
+        JiraUrl: row.JiraUrl,
+        JiraProjectsUrl: row.JiraProjectsUrl,
+        GitHubIssueNumber: row.GitHubIssueNumber,
+        GiteaIssueNumber: row.GiteaIssueNumber,
+      };
+      const linkedVersions = linkedByTask.get(Number(row.Id)) || [];
+      return {
+        Id: Number(row.Id),
+        ProjectId: row.ProjectId != null ? Number(row.ProjectId) : null,
+        TaskName: String(row.TaskName || ''),
+        ProjectName: row.ProjectName ?? null,
+        StatusName: row.StatusName ?? null,
+        StatusColor: row.StatusColor ?? null,
+        PriorityName: row.PriorityName ?? null,
+        PriorityColor: row.PriorityColor ?? null,
+        TaskTypeName: row.TaskTypeName ?? null,
+        AssigneeFN: row.AssigneeFN ?? null,
+        AssigneeLN: row.AssigneeLN ?? null,
+        JiraIssueKey: row.JiraIssueKey ?? null,
+        ExternalIssueId: row.ExternalIssueId ?? null,
+        TicketId: row.TicketId != null ? Number(row.TicketId) : null,
+        TicketNumber: row.TicketNumber ?? null,
+        GitHubIssueNumber: row.GitHubIssueNumber ?? null,
+        GiteaIssueNumber: row.GiteaIssueNumber ?? null,
+        JiraUrl: row.JiraUrl ?? null,
+        JiraProjectsUrl: row.JiraProjectsUrl ?? null,
+        IssueKey: resolvePatchNoteIssueKey(refInput),
+        IssueUrl: resolvePatchNoteIssueUrl(refInput),
+        linkedVersions,
+        LinkedAssociationsLabel: linkedVersions
+          .map((link) => `${link.applicationName} v${link.versionNumber}`)
+          .join(' · '),
+      };
+    });
+
+    res.json({ success: true, data: { tasks } });
+  } catch (error) {
+    logger.error('Error fetching product version tasks:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch version tasks' });
   }
 });
 

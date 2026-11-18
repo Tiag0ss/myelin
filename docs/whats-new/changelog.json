@@ -256,7 +256,10 @@
         "Optional project filter scopes catalog apps and candidate tasks; tasks from projects linked to product apps appear even without a prior version",
         "Product patch notes list related application versions, then a task changelog with ticket/board links (same format as application releases)",
         "When linking an existing application version, optionally recreate that version’s patch notes from the selected tasks (off by default)",
-        "Improve with AI keeps the Related application versions section and restores ticket/board links after rewriting"
+        "Improve with AI keeps the Related application versions section and restores ticket/board links after rewriting",
+        "Product version detail splits Patch notes and Tasks tabs, with status and ticket/board keys on each task",
+        "Product release task picker shows ticket/board keys with links, matching application release selection",
+        "Deep links open the exact product or application version (`?tab=versions&versionId=`), including from tasks and cross-links"
       ]
     }
   ]

@@ -16,6 +16,7 @@ import {
   type ProductReleaseWizardPayload,
 } from '@/lib/api/products';
 import { buildWizardProductPatchNotes } from '@/lib/productPatchNotes';
+import { resolvePatchNoteIssueRef } from '@/lib/releasePatchNotes';
 import { defaultApplicationIdsForTask } from '@/lib/productReleaseWizard';
 import { projectsApi } from '@/lib/api/projects';
 import { getApiUrl } from '@/lib/api/config';
@@ -932,9 +933,34 @@ export default function ProductReleaseWizardModal({
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {task.TaskName}
                               </p>
-                              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                #{task.taskId}
-                                {task.ProjectName ? ` · ${task.ProjectName}` : ''}
+                              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span>#{task.taskId}</span>
+                                {(() => {
+                                  const ref = resolvePatchNoteIssueRef({
+                                    JiraIssueKey: task.JiraIssueKey,
+                                    ExternalIssueId: task.ExternalIssueId,
+                                    TicketId: task.TicketId,
+                                    TicketNumber: task.TicketNumber,
+                                    JiraUrl: task.JiraUrl,
+                                    JiraProjectsUrl: task.JiraProjectsUrl,
+                                    GitHubIssueNumber: task.GitHubIssueNumber,
+                                    GiteaIssueNumber: task.GiteaIssueNumber,
+                                  });
+                                  if (!ref?.key) return null;
+                                  return ref.url ? (
+                                    <a
+                                      href={ref.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    >
+                                      {ref.key}
+                                    </a>
+                                  ) : (
+                                    <span>{ref.key}</span>
+                                  );
+                                })()}
+                                {task.ProjectName ? <span>{task.ProjectName}</span> : null}
                               </p>
                             </div>
                             <button

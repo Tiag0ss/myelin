@@ -7,6 +7,7 @@ import { getApiUrl } from '@/lib/api/config';
 import {
   Product,
   ProductVersion,
+  ProductVersionTask,
   createProductVersion,
   deleteProduct,
   deleteProductVersion,
@@ -15,6 +16,7 @@ import {
   getProductVersion,
   getProductsAiAvailability,
   improveProductPatchNotes,
+  listProductVersionTasks,
   listProductVersions,
   setProductApplications,
   setProductCustomers,
@@ -22,21 +24,29 @@ import {
   updateProduct,
   updateProductVersion,
 } from '@/lib/api/products';
+import { Task, tasksApi } from '@/lib/api/tasks';
+import { Project, projectsApi } from '@/lib/api/projects';
 import { mergeProductPatchNotesByApplication } from '@/lib/productPatchNotes';
 import { versionRowMatchesSearch } from '@/lib/versionSearch';
 import { useState, useEffect, use, useMemo, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useToast } from '@/contexts/ToastContext';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import RichTextEditor from '@/components/RichTextEditor';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import ConfirmAlertModal from '@/components/ConfirmAlertModal';
+import TaskDetailModal from '@/components/TaskDetailModal';
 import { useUrlTab } from '@/hooks/useUrlTab';
+import { useColorVision } from '@/hooks/useColorVision';
 import { recordRecentNavAccess } from '@/lib/recentNavAccess';
 import { NavModuleIcon } from '@/lib/navIcons';
+import {
+  applicationVersionHref,
+  parseVersionIdParam,
+} from '@/lib/versionDeepLinks';
 import PageTabs from '@/components/PageTabs';
 import PageStickyChrome from '@/components/PageStickyChrome';
 import PageStickyActions, { pageActionButtonClass } from '@/components/PageStickyActions';
@@ -77,13 +87,18 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
   const { user, token, isLoading: authLoading } = useAuth();
   const { permissions } = usePermissions();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { pillStyle } = useColorVision();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [versions, setVersions] = useState<ProductVersion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useUrlTab<Tab>(PRODUCT_DETAIL_TABS, 'overview');
+  const [activeTab, setActiveTab] = useUrlTab<Tab>(PRODUCT_DETAIL_TABS, 'overview', {
+    clearParamsOnChange: ['versionId'],
+  });
 
   const [orgApplications, setOrgApplications] = useState<
     { Id: number; Name: string; ImagePath?: string | null }[]
@@ -96,6 +111,13 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
   const [isEditingCatalog, setIsEditingCatalog] = useState(false);
 
   const [selectedVersion, setSelectedVersion] = useState<ProductVersion | null>(null);
+  const [versionDetailTab, setVersionDetailTab] = useState<'patch-notes' | 'tasks'>('patch-notes');
+  const [versionTasks, setVersionTasks] = useState<ProductVersionTask[]>([]);
+  const [isLoadingVersionTasks, setIsLoadingVersionTasks] = useState(false);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
+  const [taskModalProject, setTaskModalProject] = useState<Project | null>(null);
+  const [taskModalTasks, setTaskModalTasks] = useState<Task[]>([]);
   const [versionListSearch, setVersionListSearch] = useState('');
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [editingVersion, setEditingVersion] = useState<ProductVersion | null>(null);
@@ -199,20 +221,92 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
     }
   };
 
-  const loadVersionDetail = async (versionId: number) => {
+  const loadVersionTasks = async (versionId: number) => {
+    if (!token) return;
+    setIsLoadingVersionTasks(true);
+    try {
+      const result = await listProductVersionTasks(token, id, versionId);
+      setVersionTasks(result.data?.tasks || []);
+    } catch (err) {
+      setVersionTasks([]);
+      showToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : t('lit.failedToLoadTasks'),
+      });
+    } finally {
+      setIsLoadingVersionTasks(false);
+    }
+  };
+
+  const syncProductVersionInUrl = (versionId: number | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', 'versions');
+    if (versionId && versionId > 0) params.set('versionId', String(versionId));
+    else params.delete('versionId');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const loadVersionDetail = async (versionId: number, options?: { syncUrl?: boolean }) => {
     if (!token) return;
     try {
       const { version } = await getProductVersion(token, id, versionId);
       setSelectedVersion(version);
+      setVersionDetailTab('patch-notes');
       const nextLinks: Record<number, number> = {};
       for (const link of version.ApplicationVersions || []) {
         nextLinks[link.ApplicationId] = link.ApplicationVersionId;
       }
       setLinkSelections(nextLinks);
+      void loadVersionTasks(versionId);
+      if (options?.syncUrl !== false) {
+        syncProductVersionInUrl(versionId);
+      }
     } catch (err) {
       showToast({
         type: 'error',
         message: err instanceof Error ? err.message : t('lit.failedToLoadVersion'),
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'versions') {
+      setSelectedVersion(null);
+      setVersionTasks([]);
+      return;
+    }
+    if (!token || versions.length === 0) return;
+    const versionId = parseVersionIdParam(searchParams.get('versionId'));
+    if (!versionId) return;
+    if (selectedVersion?.Id === versionId) return;
+    if (!versions.some((version) => Number(version.Id) === versionId)) return;
+    void loadVersionDetail(versionId, { syncUrl: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, token, versions, searchParams]);
+
+  const handleOpenVersionTask = async (versionTask: ProductVersionTask) => {
+    if (!token || !versionTask?.ProjectId) return;
+    try {
+      const [projectRes, tasksRes] = await Promise.all([
+        projectsApi.getById(Number(versionTask.ProjectId), token),
+        tasksApi.getByProject(Number(versionTask.ProjectId), token),
+      ]);
+      const fullTask = (tasksRes.tasks || []).find(
+        (task) => Number(task.Id) === Number(versionTask.Id)
+      );
+      if (!fullTask) {
+        showToast({ type: 'error', message: t('lit.taskNotFoundInProjectContext') });
+        return;
+      }
+      setTaskModalProject(projectRes.project);
+      setTaskModalTasks(tasksRes.tasks || []);
+      setSelectedTaskForModal(fullTask);
+      setShowTaskDetailModal(true);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : t('lit.failedToOpenTaskDetails'),
       });
     }
   };
@@ -979,18 +1073,37 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                       <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                         {(selectedVersion.ApplicationVersions || []).map((link) => (
                           <li key={`${link.ApplicationId}-${link.ApplicationVersionId}`}>
-                            {link.ApplicationName} {link.VersionNumber}
+                            <Link
+                              href={applicationVersionHref(
+                                link.ApplicationId,
+                                link.ApplicationVersionId
+                              )}
+                              className="text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                              {link.ApplicationName} {link.VersionNumber}
+                            </Link>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
 
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      {t('lit.patchNotes')}
-                    </h4>
-                    {selectedVersion.PatchNotes ? (
+                  <PageTabs
+                    tabs={[
+                      { id: 'patch-notes', label: t('lit.patchNotes') },
+                      {
+                        id: 'tasks',
+                        label: `${t('lit.tasks')} (${versionTasks.length})`,
+                      },
+                    ]}
+                    activeId={versionDetailTab}
+                    onChange={(tabId) =>
+                      setVersionDetailTab(tabId as 'patch-notes' | 'tasks')
+                    }
+                  />
+
+                  {versionDetailTab === 'patch-notes' ? (
+                    selectedVersion.PatchNotes ? (
                       <div
                         className="prose dark:prose-invert max-w-none text-sm"
                         dangerouslySetInnerHTML={{
@@ -998,9 +1111,107 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
                         }}
                       />
                     ) : (
-                      <p className="text-sm text-gray-500">{t('lit.noPatchNotesWrittenForThisVersionYet')}</p>
-                    )}
-                  </div>
+                      <p className="text-sm text-gray-500">
+                        {t('lit.noPatchNotesWrittenForThisVersionYet')}
+                      </p>
+                    )
+                  ) : isLoadingVersionTasks ? (
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-4">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      {t('lit.loadingTasks')}
+                    </div>
+                  ) : versionTasks.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('lit.noTasksAssignedToThisVersionYet')}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {versionTasks.map((task) => (
+                        <div
+                          key={task.Id}
+                          className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => void handleOpenVersionTask(task)}
+                            className="min-w-0 flex-1 text-left"
+                          >
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">
+                              {task.TaskName}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                              {task.IssueKey ? (
+                                task.IssueUrl ? (
+                                  <a
+                                    href={task.IssueUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                  >
+                                    {task.IssueKey}
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {task.IssueKey}
+                                  </span>
+                                )
+                              ) : null}
+                              {task.ProjectName ? (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {task.ProjectName}
+                                </span>
+                              ) : null}
+                              {(task.linkedVersions || []).length > 0 ? (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 inline-flex flex-wrap gap-x-2 gap-y-0.5">
+                                  {(task.linkedVersions || []).map((link, index) => (
+                                    <span key={`${link.applicationId}-${link.versionId}`}>
+                                      {index > 0 ? ' · ' : null}
+                                      <Link
+                                        href={applicationVersionHref(
+                                          link.applicationId,
+                                          link.versionId
+                                        )}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-blue-600 hover:underline dark:text-blue-400"
+                                      >
+                                        {link.applicationName} v{link.versionNumber}
+                                      </Link>
+                                    </span>
+                                  ))}
+                                </span>
+                              ) : null}
+                              {task.AssigneeFN ? (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  · {task.AssigneeFN} {task.AssigneeLN}
+                                </span>
+                              ) : null}
+                            </div>
+                          </button>
+                          <div className="flex items-center gap-2 ml-3 shrink-0">
+                            {task.StatusName ? (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={pillStyle(task.StatusColor || '#374151', { alpha: '33' })}
+                              >
+                                {task.StatusName}
+                              </span>
+                            ) : null}
+                            {task.PriorityName ? (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={pillStyle(task.PriorityColor || '#374151', {
+                                  alpha: '33',
+                                })}
+                              >
+                                {task.PriorityName}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1286,6 +1497,35 @@ function ProductDetailPageContent({ params }: { params: Promise<{ id: string }> 
             await loadAll();
             await loadVersionDetail(versionId);
           }}
+        />
+      )}
+
+      {showTaskDetailModal && selectedTaskForModal && taskModalProject && token && (
+        <TaskDetailModal
+          projectId={taskModalProject.Id}
+          organizationId={taskModalProject.OrganizationId}
+          task={selectedTaskForModal}
+          project={taskModalProject}
+          tasks={taskModalTasks}
+          onOpenTask={(targetTask) => {
+            void handleOpenVersionTask({
+              Id: Number(targetTask.Id),
+              ProjectId: Number(targetTask.ProjectId),
+              TaskName: String(targetTask.TaskName || ''),
+            });
+          }}
+          onClose={() => {
+            setShowTaskDetailModal(false);
+            setSelectedTaskForModal(null);
+          }}
+          onSaved={async () => {
+            if (selectedVersion) {
+              await loadVersionTasks(selectedVersion.Id);
+            }
+            setShowTaskDetailModal(false);
+            setSelectedTaskForModal(null);
+          }}
+          token={token}
         />
       )}
 
