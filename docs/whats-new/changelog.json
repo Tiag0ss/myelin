@@ -246,6 +246,18 @@
       "items": [
         "Fix loading linked product versions on a task"
       ]
+    },
+    {
+      "version": "1.4.0",
+      "date": "2026-11-18",
+      "title": "Product release wizard",
+      "items": [
+        "New product release wizard: create or link application versions, pick tasks with an Applications-style selector, and review patch notes before save",
+        "Optional project filter scopes catalog apps and candidate tasks; tasks from projects linked to product apps appear even without a prior version",
+        "Product patch notes list related application versions, then a task changelog with ticket/board links (same format as application releases)",
+        "When linking an existing application version, optionally recreate that version’s patch notes from the selected tasks (off by default)",
+        "Improve with AI keeps the Related application versions section and restores ticket/board links after rewriting"
+      ]
     }
   ]
 }
